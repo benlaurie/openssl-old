@@ -42,8 +42,6 @@
 
   NEEDS PATCH
 
-    o  engine_list.c memory leaks in 0.9.7-dev (built-in engines)
-
     o  apps/ca.c: "Sign the certificate?" - "n" creates empty certificate file
 
     o  OpenSSL_0_9_6-stable:

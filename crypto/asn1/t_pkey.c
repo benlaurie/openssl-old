@@ -141,14 +141,10 @@ int RSA_print(BIO *bp, const RSA *x, int off)
 		goto err;
 		}
 
-	if (off)
-		{
-		if (off > 128) off=128;
-		memset(str,' ',off);
-		}
 	if (x->d != NULL)
 		{
-		if (off && (BIO_write(bp,str,off) <= 0)) goto err;
+		if(!BIO_indent(bp,off,128))
+		   goto err;
 		if (BIO_printf(bp,"Private-Key: (%d bit)\n",BN_num_bits(x->n))
 			<= 0) goto err;
 		}
@@ -194,7 +190,6 @@ int DSA_print_fp(FILE *fp, const DSA *x, int off)
 
 int DSA_print(BIO *bp, const DSA *x, int off)
 	{
-	char str[128];
 	unsigned char *m=NULL;
 	int ret=0;
 	size_t buf_len=0,i;
@@ -221,14 +216,10 @@ int DSA_print(BIO *bp, const DSA *x, int off)
 		goto err;
 		}
 
-	if (off)
-		{
-		if (off > 128) off=128;
-		memset(str,' ',off);
-		}
 	if (x->priv_key != NULL)
 		{
-		if (off && (BIO_write(bp,str,off) <= 0)) goto err;
+		if(!BIO_indent(bp,off,128))
+		   goto err;
 		if (BIO_printf(bp,"Private-Key: (%d bit)\n",BN_num_bits(x->p))
 			<= 0) goto err;
 		}
@@ -284,7 +275,6 @@ int EC_KEY_print_fp(FILE *fp, const EC_KEY *x, int off)
 
 int ECPKParameters_print(BIO *bp, const EC_GROUP *x, int off)
 	{
-	char str[128];
 	unsigned char *buffer=NULL;
 	size_t	buf_len=0, i;
 	int     ret=0, reason=ERR_R_BIO_LIB;
@@ -310,14 +300,8 @@ int ECPKParameters_print(BIO *bp, const EC_GROUP *x, int off)
 		/* the curve parameter are given by an asn1 OID */
 		int nid;
 
-		if (off)
-			{
-			if (off > 128)
-				off=128;
-			memset(str, ' ', off);
-			if (BIO_write(bp, str, off) <= 0)
-				goto err;
-			}
+		if (!BIO_indent(bp, off, 128))
+			goto err;
 
 		nid = EC_GROUP_get_nid(x);
 		if (nid == 0)
@@ -405,13 +389,10 @@ int ECPKParameters_print(BIO *bp, const EC_GROUP *x, int off)
 			reason = ERR_R_MALLOC_FAILURE;
 			goto err;
 			}
-		if (off)
-			{
-			if (off > 128) off=128;
-			memset(str,' ',off);
-			if (BIO_write(bp, str, off) <= 0)
-				goto err;
-			}
+
+		if (!BIO_indent(bp, off, 128))
+			goto err;
+
 		/* print the 'short name' of the field type */
 		if (BIO_printf(bp, "Field Type: %s\n", OBJ_nid2sn(tmp_nid))
 			<= 0)
@@ -424,13 +405,8 @@ int ECPKParameters_print(BIO *bp, const EC_GROUP *x, int off)
 			if (basis_type == 0)
 				goto err;
 
-			if (off)
-				{
-				if (off > 128) off=128;
-				memset(str,' ',off);
-				if (BIO_write(bp, str, off) <= 0)
-					goto err;
-				}
+			if (!BIO_indent(bp, off, 128))
+				goto err;
 
 			if (BIO_printf(bp, "Basis Type: %s\n", 
 				OBJ_nid2sn(basis_type)) <= 0)
@@ -500,7 +476,6 @@ err:
 
 int EC_KEY_print(BIO *bp, const EC_KEY *x, int off)
 	{
-	char str[128];
 	unsigned char *buffer=NULL;
 	size_t	buf_len=0, i;
 	int     ret=0, reason=ERR_R_BIO_LIB;
@@ -533,14 +508,11 @@ int EC_KEY_print(BIO *bp, const EC_KEY *x, int off)
 		reason = ERR_R_MALLOC_FAILURE;
 		goto err;
 		}
-	if (off)
-		{
-		if (off > 128) off=128;
-		memset(str,' ',off);
-		}
+
 	if (x->priv_key != NULL)
 		{
-		if (off && (BIO_write(bp, str, off) <= 0)) goto err;
+		if (!BIO_indent(bp, off, 128))
+			goto err;
 		if (BIO_printf(bp, "Private-Key: (%d bit)\n", 
 			BN_num_bits(x->priv_key)) <= 0) goto err;
 		}
@@ -571,18 +543,12 @@ static int print(BIO *bp, const char *number, BIGNUM *num, unsigned char *buf,
 	     int off)
 	{
 	int n,i;
-	char str[128];
 	const char *neg;
 
 	if (num == NULL) return(1);
 	neg = (BN_get_sign(num))?"-":"";
-	if (off)
-		{
-		if (off > 128) off=128;
-		memset(str,' ',off);
-		if (BIO_write(bp,str,off) <= 0) return(0);
-		}
-
+	if(!BIO_indent(bp,off,128))
+		return 0;
 	if (BN_is_zero(num))
 		{
 		if (BIO_printf(bp, "%s 0\n", number) <= 0)
@@ -612,9 +578,9 @@ static int print(BIO *bp, const char *number, BIGNUM *num, unsigned char *buf,
 			{
 			if ((i%15) == 0)
 				{
-				str[0]='\n';
-				memset(&(str[1]),' ',off+4);
-				if (BIO_write(bp,str,off+1+4) <= 0) return(0);
+				if(BIO_puts(bp,"\n") <= 0
+				   || !BIO_indent(bp,off+4,128))
+				    return 0;
 				}
 			if (BIO_printf(bp,"%02x%s",buf[i],((i+1) == n)?"":":")
 				<= 0) return(0);

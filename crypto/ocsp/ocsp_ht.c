@@ -64,6 +64,9 @@
 #include <openssl/ocsp.h>
 #include <openssl/err.h>
 #include <openssl/buffer.h>
+#ifdef OPENSSL_SYS_SUNOS
+#define strtoul (unsigned long)strtol
+#endif /* OPENSSL_SYS_SUNOS */
 
 /* Quick and dirty HTTP OCSP request handler.
  * Could make this a bit cleverer by adding
@@ -94,7 +97,7 @@ Content-Length: %d\r\n\r\n";
 	}
 	if(!(mem = BIO_new(BIO_s_mem()))) goto err;
 	/* Copy response to a memory BIO: socket bios can't do gets! */
-	while ((len = BIO_read(b, tmpbuf, 1024))) {
+	while ((len = BIO_read(b, tmpbuf, sizeof tmpbuf))) {
 		if(len < 0) {
 			OCSPerr(OCSP_F_OCSP_SENDREQ_BIO,OCSP_R_SERVER_READ_ERROR);
 			goto err;

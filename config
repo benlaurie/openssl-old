@@ -351,6 +351,10 @@ case "${SYSTEM}:${RELEASE}:${VERSION}:${MACHINE}" in
     *CRAY*)
        echo "j90-cray-unicos"; exit 0;
        ;;
+
+    NONSTOP_KERNEL*)
+       echo "nsr-tandem-nsk"; exit 0;
+       ;;
 esac
 
 #
@@ -725,6 +729,7 @@ EOF
   *-*-cygwin) OUT="Cygwin" ;;
   t3e-cray-unicosmk) OUT="cray-t3e" ;;
   j90-cray-unicos) OUT="cray-j90" ;;
+  nsr-tandem-nsk) OUT="tandem-c89" ;;
   *) OUT=`echo $GUESSOS | awk -F- '{print $3}'`;;
 esac
 
@@ -759,7 +764,7 @@ case "$GUESSOS" in
   i386-*) options="$options 386" ;;
 esac
 
-for i in bf cast des dh dsa ec hmac idea md2 md5 mdc2 rc2 rc4 rc5 rijndael ripemd rsa sha
+for i in bf cast des dh dsa ec hmac idea md2 md5 mdc2 rc2 rc4 rc5 aes ripemd rsa sha
 do
   if [ ! -d crypto/$i ]
   then

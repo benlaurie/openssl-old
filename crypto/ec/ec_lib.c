@@ -98,7 +98,12 @@ EC_GROUP *EC_GROUP_new(const EC_METHOD *meth)
 	BN_init(&ret->order);
 	BN_init(&ret->cofactor);
 
-	ret->nid = 0;	
+	ret->curve_name = 0;	
+	ret->asn1_flag  = 0;
+	ret->asn1_form  = POINT_CONVERSION_COMPRESSED;
+
+	ret->seed = NULL;
+	ret->seed_len = 0;
 
 	if (!meth->group_init(ret))
 		{
@@ -124,6 +129,9 @@ void EC_GROUP_free(EC_GROUP *group)
 	BN_free(&group->order);
 	BN_free(&group->cofactor);
 
+	if (group->seed)
+		OPENSSL_free(group->seed);
+
 	OPENSSL_free(group);
 	}
  
@@ -143,6 +151,12 @@ void EC_GROUP_clear_free(EC_GROUP *group)
 		EC_POINT_clear_free(group->generator);
 	BN_clear_free(&group->order);
 	BN_clear_free(&group->cofactor);
+
+	if (group->seed)
+		{
+		memset(group->seed, 0, group->seed_len);
+		OPENSSL_free(group->seed);
+		}
 
 	memset(group, 0, sizeof *group);
 	OPENSSL_free(group);
@@ -201,7 +215,29 @@ int EC_GROUP_copy(EC_GROUP *dest, const EC_GROUP *src)
 	if (!BN_copy(&dest->order, &src->order)) return 0;
 	if (!BN_copy(&dest->cofactor, &src->cofactor)) return 0;
 
-	dest->nid = src->nid;
+	dest->curve_name = src->curve_name;
+	dest->asn1_flag  = src->asn1_flag;
+	dest->asn1_form  = src->asn1_form;
+
+	if (src->seed)
+		{
+		if (dest->seed)
+			OPENSSL_free(dest->seed);
+		dest->seed = OPENSSL_malloc(src->seed_len);
+		if (dest->seed == NULL)
+			return 0;
+		if (!memcpy(dest->seed, src->seed, src->seed_len))
+			return 0;
+		dest->seed_len = src->seed_len;
+		}
+	else
+		{
+		if (dest->seed)
+			OPENSSL_free(dest->seed);
+		dest->seed = NULL;
+		dest->seed_len = 0;
+		}
+	
 
 	return dest->meth->group_copy(dest, src);
 	}
@@ -211,6 +247,12 @@ const EC_METHOD *EC_GROUP_method_of(const EC_GROUP *group)
 	{
 	return group->meth;
 	}
+
+
+int EC_METHOD_get_field_type(const EC_METHOD *meth)
+        {
+        return meth->field_type;
+        }
 
 
 int EC_GROUP_set_generator(EC_GROUP *group, const EC_POINT *generator, const BIGNUM *order, const BIGNUM *cofactor)
@@ -268,13 +310,38 @@ int EC_GROUP_get_cofactor(const EC_GROUP *group, BIGNUM *cofactor, BN_CTX *ctx)
 
 void EC_GROUP_set_nid(EC_GROUP *group, int nid)
 	{
-	group->nid = nid;
+	group->curve_name = nid;
 	}
 
 
 int EC_GROUP_get_nid(const EC_GROUP *group)
 	{
-	return group->nid;
+	return group->curve_name;
+	}
+
+
+void EC_GROUP_set_asn1_flag(EC_GROUP *group, int flag)
+	{
+	group->asn1_flag = flag;
+	}
+
+
+int EC_GROUP_get_asn1_flag(const EC_GROUP *group)
+	{
+	return group->asn1_flag;
+	}
+
+
+void EC_GROUP_set_point_conversion_form(EC_GROUP *group, 
+                                        point_conversion_form_t form)
+	{
+	group->asn1_form = form;
+	}
+
+
+point_conversion_form_t EC_GROUP_get_point_conversion_form(const EC_GROUP *group)
+	{
+	return group->asn1_form;
 	}
 
 

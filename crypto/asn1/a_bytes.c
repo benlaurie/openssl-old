@@ -58,7 +58,7 @@
 
 #include <stdio.h>
 #include "cryptlib.h"
-#include <openssl/asn1_mac.h>
+#include <openssl/asn1.h>
 
 static unsigned long tag2bit[32]={
 0,	0,	0,	B_ASN1_BIT_STRING,	/* tags  0 -  3 */

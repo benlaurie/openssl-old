@@ -59,7 +59,6 @@
 #include <stdio.h>
 #include "cryptlib.h"
 #include <openssl/asn1t.h>
-#include <openssl/asn1_mac.h>
 #include <openssl/x509.h>
 
 static int x509_name_ex_d2i(ASN1_VALUE **val, unsigned char **in, long len, const ASN1_ITEM *it,

@@ -127,7 +127,7 @@ v3_alt.o: ../../include/openssl/sha.h ../../include/openssl/stack.h
 v3_alt.o: ../../include/openssl/symhacks.h ../../include/openssl/x509.h
 v3_alt.o: ../../include/openssl/x509_vfy.h ../../include/openssl/x509v3.h
 v3_alt.o: ../cryptlib.h
-v3_bcons.o: ../../include/openssl/asn1.h ../../include/openssl/asn1_mac.h
+v3_bcons.o: ../../include/openssl/asn1.h ../../include/openssl/asn1t.h
 v3_bcons.o: ../../include/openssl/bio.h ../../include/openssl/blowfish.h
 v3_bcons.o: ../../include/openssl/bn.h ../../include/openssl/buffer.h
 v3_bcons.o: ../../include/openssl/cast.h ../../include/openssl/conf.h
@@ -195,7 +195,7 @@ v3_conf.o: ../../include/openssl/sha.h ../../include/openssl/stack.h
 v3_conf.o: ../../include/openssl/symhacks.h ../../include/openssl/x509.h
 v3_conf.o: ../../include/openssl/x509_vfy.h ../../include/openssl/x509v3.h
 v3_conf.o: ../cryptlib.h
-v3_cpols.o: ../../include/openssl/asn1.h ../../include/openssl/asn1_mac.h
+v3_cpols.o: ../../include/openssl/asn1.h ../../include/openssl/asn1t.h
 v3_cpols.o: ../../include/openssl/bio.h ../../include/openssl/blowfish.h
 v3_cpols.o: ../../include/openssl/bn.h ../../include/openssl/buffer.h
 v3_cpols.o: ../../include/openssl/cast.h ../../include/openssl/conf.h
@@ -218,7 +218,7 @@ v3_cpols.o: ../../include/openssl/sha.h ../../include/openssl/stack.h
 v3_cpols.o: ../../include/openssl/symhacks.h ../../include/openssl/x509.h
 v3_cpols.o: ../../include/openssl/x509_vfy.h ../../include/openssl/x509v3.h
 v3_cpols.o: ../cryptlib.h
-v3_crld.o: ../../include/openssl/asn1.h ../../include/openssl/asn1_mac.h
+v3_crld.o: ../../include/openssl/asn1.h ../../include/openssl/asn1t.h
 v3_crld.o: ../../include/openssl/bio.h ../../include/openssl/blowfish.h
 v3_crld.o: ../../include/openssl/bn.h ../../include/openssl/buffer.h
 v3_crld.o: ../../include/openssl/cast.h ../../include/openssl/conf.h
@@ -329,7 +329,7 @@ v3_ia5.o: ../../include/openssl/sha.h ../../include/openssl/stack.h
 v3_ia5.o: ../../include/openssl/symhacks.h ../../include/openssl/x509.h
 v3_ia5.o: ../../include/openssl/x509_vfy.h ../../include/openssl/x509v3.h
 v3_ia5.o: ../cryptlib.h
-v3_info.o: ../../include/openssl/asn1.h ../../include/openssl/asn1_mac.h
+v3_info.o: ../../include/openssl/asn1.h ../../include/openssl/asn1t.h
 v3_info.o: ../../include/openssl/bio.h ../../include/openssl/blowfish.h
 v3_info.o: ../../include/openssl/bn.h ../../include/openssl/buffer.h
 v3_info.o: ../../include/openssl/cast.h ../../include/openssl/conf.h

@@ -654,6 +654,8 @@ extern const ASN1_ITEM ASN1_FBOOLEAN_it;
 extern const ASN1_ITEM ASN1_OBJECT_it;
 extern const ASN1_ITEM ASN1_ANY_it;
 extern const ASN1_ITEM ASN1_SEQUENCE_it;
+extern const ASN1_ITEM CBIGNUM_it;
+extern const ASN1_ITEM SBIGNUM_it;
 
 /* Functions used internally by the ASN1 code */
 

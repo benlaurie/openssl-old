@@ -346,6 +346,7 @@ static int asn1_i2d_ex_primitive(ASN1_VALUE **pval, unsigned char **out, const A
 {
 	int len;
 	int utype;
+	int usetag;
 
 	utype = it->utype;
 
@@ -354,6 +355,17 @@ static int asn1_i2d_ex_primitive(ASN1_VALUE **pval, unsigned char **out, const A
 	 */
 
 	len = asn1_ex_i2c(pval, NULL, &utype, it);
+
+	/* If SEQUENCE, SET or OTHER then header is
+	 * included in pseudo content octets so don't
+	 * include tag+length. We need to check here
+	 * because the call to asn1_ex_i2c() could change
+	 * utype.
+	 */
+	if((utype == V_ASN1_SEQUENCE) || (utype == V_ASN1_SET) ||
+	   (utype == V_ASN1_OTHER))
+		usetag = 0;
+	else usetag = 1;
 
 	/* -1 means omit type */
 
@@ -364,18 +376,13 @@ static int asn1_i2d_ex_primitive(ASN1_VALUE **pval, unsigned char **out, const A
 
 	/* Output tag+length followed by content octets */
 	if(out) {
-		/* If SEQUENCE, SET or OTHER then header is
-		 * included in pseudo content octets
-		 */
-		if((utype != V_ASN1_SEQUENCE) &&
-		   (utype != V_ASN1_SET) &&
-		   (utype != V_ASN1_OTHER))
-			ASN1_put_object(out, 0, len, tag, aclass);
+		if(usetag) ASN1_put_object(out, 0, len, tag, aclass);
 		asn1_ex_i2c(pval, *out, &utype, it);
 		*out += len;
 	}
 
-	return ASN1_object_size(0, len, tag);
+	if(usetag) return ASN1_object_size(0, len, tag);
+	return len;
 }
 
 /* Produce content octets from a structure */

@@ -70,7 +70,7 @@ static int pubkey_cb(int operation, ASN1_VALUE **pval, const ASN1_ITEM *it)
 	}
 	return 1;
 }
-	
+
 ASN1_SEQUENCE_cb(X509_PUBKEY, pubkey_cb) = {
 	ASN1_SIMPLE(X509_PUBKEY, algor, X509_ALGOR),
 	ASN1_SIMPLE(X509_PUBKEY, public_key, ASN1_BIT_STRING)

@@ -1128,31 +1128,17 @@ X509 *X509_find_by_issuer_and_serial(STACK_OF(X509) *sk,X509_NAME *name,
 				     ASN1_INTEGER *serial);
 X509 *X509_find_by_subject(STACK_OF(X509) *sk,X509_NAME *name);
 
-int i2d_PBEPARAM(PBEPARAM *a, unsigned char **pp);
-PBEPARAM *PBEPARAM_new(void);
-PBEPARAM *d2i_PBEPARAM(PBEPARAM **a, unsigned char **pp, long length);
-void PBEPARAM_free(PBEPARAM *a);
+DECLARE_ASN1_FUNCTIONS(PBEPARAM)
+DECLARE_ASN1_FUNCTIONS(PBE2PARAM)
+DECLARE_ASN1_FUNCTIONS(PBKDF2PARAM)
+
 X509_ALGOR *PKCS5_pbe_set(int alg, int iter, unsigned char *salt, int saltlen);
 X509_ALGOR *PKCS5_pbe2_set(const EVP_CIPHER *cipher, int iter,
 					 unsigned char *salt, int saltlen);
 
-int i2d_PBKDF2PARAM(PBKDF2PARAM *a, unsigned char **pp);
-PBKDF2PARAM *PBKDF2PARAM_new(void);
-PBKDF2PARAM *d2i_PBKDF2PARAM(PBKDF2PARAM **a, unsigned char **pp, long length);
-void PBKDF2PARAM_free(PBKDF2PARAM *a);
-
-int i2d_PBE2PARAM(PBE2PARAM *a, unsigned char **pp);
-PBE2PARAM *PBE2PARAM_new(void);
-PBE2PARAM *d2i_PBE2PARAM(PBE2PARAM **a, unsigned char **pp, long length);
-void PBE2PARAM_free(PBE2PARAM *a);
-
 /* PKCS#8 utilities */
 
-int i2d_PKCS8_PRIV_KEY_INFO(PKCS8_PRIV_KEY_INFO *a, unsigned char **pp);
-PKCS8_PRIV_KEY_INFO *PKCS8_PRIV_KEY_INFO_new(void);
-PKCS8_PRIV_KEY_INFO *d2i_PKCS8_PRIV_KEY_INFO(PKCS8_PRIV_KEY_INFO **a,
-					 unsigned char **pp, long length);
-void PKCS8_PRIV_KEY_INFO_free(PKCS8_PRIV_KEY_INFO *a);
+DECLARE_ASN1_FUNCTIONS(PKCS8_PRIV_KEY_INFO)
 
 EVP_PKEY *EVP_PKCS82PKEY(PKCS8_PRIV_KEY_INFO *p8);
 PKCS8_PRIV_KEY_INFO *EVP_PKEY2PKCS8(EVP_PKEY *pkey);

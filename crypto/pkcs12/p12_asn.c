@@ -1,4 +1,4 @@
-/* p12_bags.c */
+/* p12_asn.c */
 /* Written by Dr Stephen N Henson (shenson@bigfoot.com) for the OpenSSL
  * project 1999.
  */
@@ -58,135 +58,57 @@
 
 #include <stdio.h>
 #include "cryptlib.h"
-#include <openssl/asn1_mac.h>
+#include <openssl/asn1t.h>
 #include <openssl/pkcs12.h>
 
-int i2d_PKCS12_BAGS(PKCS12_BAGS *a, unsigned char **pp)
-{
-	int bagnid, v = 0;
-	M_ASN1_I2D_vars(a);
-	bagnid = OBJ_obj2nid (a->type);
-	M_ASN1_I2D_len (a->type, i2d_ASN1_OBJECT);
-	
-	switch (bagnid) {
+/* PKCS#12 ASN1 module */
 
-		case NID_x509Certificate:
-			M_ASN1_I2D_len_EXP_opt (a->value.x509cert,
-						 i2d_ASN1_OCTET_STRING, 0, v);
-		break;
+ASN1_SEQUENCE(PKCS12) = {
+	ASN1_SIMPLE(PKCS12, version, ASN1_INTEGER),
+	ASN1_SIMPLE(PKCS12, authsafes, PKCS7),
+	ASN1_OPT(PKCS12, mac, PKCS12_MAC_DATA)
+} ASN1_SEQUENCE_END(PKCS12);
 
-		case NID_x509Crl:
-			M_ASN1_I2D_len_EXP_opt (a->value.x509crl,
-						 i2d_ASN1_OCTET_STRING, 0, v);
-		break;
+IMPLEMENT_ASN1_FUNCTIONS(PKCS12)
 
-		case NID_sdsiCertificate:
-			M_ASN1_I2D_len_EXP_opt (a->value.sdsicert,
-						 i2d_ASN1_IA5STRING, 0, v);
-		break;
+ASN1_SEQUENCE(PKCS12_MAC_DATA) = {
+	ASN1_SIMPLE(PKCS12_MAC_DATA, dinfo, X509_SIG),
+	ASN1_SIMPLE(PKCS12_MAC_DATA, salt, ASN1_OCTET_STRING),
+	ASN1_SIMPLE(PKCS12_MAC_DATA, iter, ASN1_INTEGER)
+} ASN1_SEQUENCE_END(PKCS12_MAC_DATA);
 
-		default:
-			M_ASN1_I2D_len_EXP_opt (a->value.other,
-						 i2d_ASN1_TYPE, 0, v);
-		break;
-	}
+IMPLEMENT_ASN1_FUNCTIONS(PKCS12_MAC_DATA)
 
-	M_ASN1_I2D_seq_total ();
-	
-	M_ASN1_I2D_put (a->type, i2d_ASN1_OBJECT);
-	
-	switch (bagnid) {
+ASN1_ADB_TEMPLATE(bag_default) = ASN1_EXP(PKCS12_BAGS, value.other, ASN1_ANY, 0);
 
-		case NID_x509Certificate:
-			M_ASN1_I2D_put_EXP_opt (a->value.x509cert,
-						 i2d_ASN1_OCTET_STRING, 0, v);
-		break;
+ASN1_ADB(PKCS12_BAGS) = {
+	ADB_ENTRY(NID_x509Certificate, ASN1_EXP(PKCS12_BAGS, value.x509cert, ASN1_OCTET_STRING, 0)),
+	ADB_ENTRY(NID_x509Certificate, ASN1_EXP(PKCS12_BAGS, value.x509crl, ASN1_OCTET_STRING, 0)),
+	ADB_ENTRY(NID_x509Certificate, ASN1_EXP(PKCS12_BAGS, value.sdsicert, ASN1_IA5STRING, 0)),
+} ASN1_ADB_END(PKCS12_BAGS, 0, type, 0, &bag_default_tt, NULL);
 
-		case NID_x509Crl:
-			M_ASN1_I2D_put_EXP_opt (a->value.x509crl,
-						 i2d_ASN1_OCTET_STRING, 0, v);
-		break;
+ASN1_SEQUENCE(PKCS12_BAGS) = {
+	ASN1_SIMPLE(PKCS12_BAGS, type, ASN1_OBJECT),
+	ASN1_ADB_OBJECT(PKCS12_BAGS),
+} ASN1_SEQUENCE_END(PKCS12_BAGS);
 
-		case NID_sdsiCertificate:
-			M_ASN1_I2D_put_EXP_opt (a->value.sdsicert,
-						 i2d_ASN1_IA5STRING, 0, v);
-		break;
+IMPLEMENT_ASN1_FUNCTIONS(PKCS12_BAGS)
 
-		default:
-		M_ASN1_I2D_put_EXP_opt (a->value.other, i2d_ASN1_TYPE, 0, v);
-		break;
-	}
-	M_ASN1_I2D_finish();
-}
+ASN1_ADB_TEMPLATE(safebag_default) = ASN1_EXP(PKCS12_SAFEBAG, value.other, ASN1_ANY, 0);
 
-PKCS12_BAGS *PKCS12_BAGS_new(void)
-{
-	PKCS12_BAGS *ret=NULL;
-	ASN1_CTX c;
-	M_ASN1_New_Malloc(ret, PKCS12_BAGS);
-	ret->type=NULL;
-	ret->value.other=NULL;
-	return (ret);
-	M_ASN1_New_Error(ASN1_F_PKCS12_BAGS_NEW);
-}
+ASN1_ADB(PKCS12_SAFEBAG) = {
+	ADB_ENTRY(NID_keyBag, ASN1_EXP(PKCS12_SAFEBAG, value.keybag, PKCS8_PRIV_KEY_INFO, 0)),
+	ADB_ENTRY(NID_pkcs8ShroudedKeyBag, ASN1_EXP(PKCS12_SAFEBAG, value.keybag, X509_SIG, 0)),
+	ADB_ENTRY(NID_safeContentsBag, ASN1_EXP_SET_OF(PKCS12_SAFEBAG, value.safes, PKCS12_SAFEBAG, 0)),
+	ADB_ENTRY(NID_certBag, ASN1_EXP(PKCS12_SAFEBAG, value.bag, PKCS12_BAGS, 0)),
+	ADB_ENTRY(NID_crlBag, ASN1_EXP(PKCS12_SAFEBAG, value.bag, PKCS12_BAGS, 0)),
+	ADB_ENTRY(NID_secretBag, ASN1_EXP(PKCS12_SAFEBAG, value.bag, PKCS12_BAGS, 0))
+} ASN1_ADB_END(PKCS12_SAFEBAG, 0, type, 0, &safebag_default_tt, NULL);
 
-PKCS12_BAGS *d2i_PKCS12_BAGS(PKCS12_BAGS **a, unsigned char **pp,
-	     long length)
-{
-	int bagnid;
-	M_ASN1_D2I_vars(a,PKCS12_BAGS *,PKCS12_BAGS_new);
-	M_ASN1_D2I_Init();
-	M_ASN1_D2I_start_sequence();
-	M_ASN1_D2I_get (ret->type, d2i_ASN1_OBJECT);
-	bagnid = OBJ_obj2nid (ret->type);
-	switch (bagnid) {
+ASN1_SEQUENCE(PKCS12_SAFEBAG) = {
+	ASN1_SIMPLE(PKCS12_SAFEBAG, type, ASN1_OBJECT),
+	ASN1_ADB_OBJECT(PKCS12_SAFEBAG),
+	ASN1_SET_OF_OPT(PKCS12_SAFEBAG, attrib, X509_ATTRIBUTE)
+} ASN1_SEQUENCE_END(PKCS12_SAFEBAG);
 
-		case NID_x509Certificate:
-			M_ASN1_D2I_get_EXP_opt (ret->value.x509cert,
-						 d2i_ASN1_OCTET_STRING, 0);
-		break;
-
-		case NID_x509Crl:
-			M_ASN1_D2I_get_EXP_opt (ret->value.x509crl,
-						 d2i_ASN1_OCTET_STRING, 0);
-		break;
-
-		case NID_sdsiCertificate:
-			M_ASN1_D2I_get_EXP_opt (ret->value.sdsicert,
-						 d2i_ASN1_IA5STRING, 0);
-		break;
-
-		default:
-			M_ASN1_D2I_get_EXP_opt (ret->value.other,
-							 d2i_ASN1_TYPE, 0);
-		break;
-	}
-
-	M_ASN1_D2I_Finish(a, PKCS12_BAGS_free, ASN1_F_D2I_PKCS12_BAGS);
-}
-
-void PKCS12_BAGS_free (PKCS12_BAGS *a)
-{
-	if (a == NULL) return;
-	switch (OBJ_obj2nid(a->type)) {
-
-		case NID_x509Certificate:
-			M_ASN1_OCTET_STRING_free (a->value.x509cert);
-		break;
-
-		case NID_x509Crl:
-			M_ASN1_OCTET_STRING_free (a->value.x509crl);
-		break;
-
-		case NID_sdsiCertificate:
-			M_ASN1_IA5STRING_free (a->value.sdsicert);
-		break;
-
-		default:
-			ASN1_TYPE_free (a->value.other);
-		break;
-	}
-
-	ASN1_OBJECT_free (a->type);
-	OPENSSL_free (a);
-}
+IMPLEMENT_ASN1_FUNCTIONS(PKCS12_SAFEBAG)

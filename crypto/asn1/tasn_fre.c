@@ -119,7 +119,7 @@ static void asn1_item_combine_free(ASN1_VALUE *val, const ASN1_ITEM *it, int com
 		case ASN1_ITYPE_SEQUENCE:
 		if(asn1_do_lock(val, -1, it) > 0) return;
 		if(asn1_cb) asn1_cb(ASN1_OP_FREE_PRE, &val, it);
-		/* If we free up as normal we will free and zero any
+		/* If we free up as normal we will invalidate any
 		 * ANY DEFINED BY field and we wont be able to 
 		 * determine the type of the field it defines. So
 		 * free up in reverse order.

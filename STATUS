@@ -16,6 +16,8 @@
 
   RELEASE SHOWSTOPPERS
 
+    o
+
   AVAILABLE PATCHES
 
     o CA.pl patch (Damien Miller)
@@ -42,9 +44,7 @@
 
   NEEDS PATCH
 
-    o  non-blocking socket on AIX
-    o  $(PERL) in */Makefile.ssl
-    o  "Sign the certificate?" - "n" creates empty certificate file
+    o  apps/ca.c: "Sign the certificate?" - "n" creates empty certificate file
 
   OPEN ISSUES
 

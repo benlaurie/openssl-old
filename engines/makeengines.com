@@ -23,16 +23,19 @@ $!	UCX		for UCX
 $!	SOCKETSHR	for SOCKETSHR+NETLIB
 $!	TCPIP		for TCPIP (post UCX)
 $!
-$!  P5	if defined, tells the compiler not to use special threads.
+$!  P5, if defined, sets the pointer size to build with.  The values can be
+$!  be "32" or "64".  Any other value will default to "32"
 $!
-$!  P6	if defined, denotes which engines to build.  If not defined,
+$!  P6	if defined, tells the compiler not to use special threads.
+$!
+$!  P7	if defined, denotes which engines to build.  If not defined,
 $!	all available engines are built.
 $!
 $!-----------------------------------------------------------------------------
 $!
 $! Set the names of the engines we want to build
 $!
-$ ENGINES = "," + P6
+$ ENGINES = "," + P7
 $ IF ENGINES .EQS. "," THEN -
 	ENGINES = ",4758_cca,aep,atalla,cswift,ncipher,nuron,sureware,ubsec"
 $!
@@ -45,6 +48,20 @@ $!
 $ ARCH := VAX
 $ IF F$GETSYI("CPU") .GE. 128 THEN ARCH := AXP
 $!
+$! OK, time to check options and initialise
+$!
+$ OPT_PHASE = P1
+$ ACCEPT_PHASE = "ALL,ENGINES"
+$ OPT_DEBUG = P2
+$ OPT_COMPILER = P3
+$ OPT_TCPIP_LIB = P4
+$ OPT_POINTER_SIZE = P5
+$ OPT_SPECIAL_THREADS = P6
+$
+$ GOSUB CHECK_OPTIONS
+$ GOSUB INITIALISE
+$ GOSUB CHECK_OPT_FILE
+$!
 $! Set the goal directories, and creat them if necessary
 $!
 $ OBJ_DIR := SYS$DISK:[-.'ARCH'.OBJ.ENGINES]
@@ -54,22 +71,9 @@ $ IF F$PARSE(EXE_DIR) .EQS. "" THEN CREATE/DIRECTORY 'EXE_DIR'
 $!
 $! Set the goal files, and create them if necessary
 $!
-$ CRYPTO_LIB :=SYS$DISK:[-.'ARCH'.EXE.CRYPTO]LIBCRYPTO.OLB
-$ CRYPTO_EXE :=SYS$DISK:[-.'ARCH'.EXE.CRYPTO]LIBCRYPTO.EXE
+$ CRYPTO_LIB :=SYS$DISK:[-.'ARCH'.EXE.CRYPTO]LIBCRYPTO'FILE_POINTER_SIZE'.OLB
+$ CRYPTO_EXE :=SYS$DISK:[-.'ARCH'.EXE.CRYPTO]LIBCRYPTO'FILE_POINTER_SIZE'.EXE
 $ IF F$SEARCH(CRYPTO_LIB) .EQS. "" THEN LIBRARY/CREATE/OBJECT 'CRYPTO_LIB'
-$!
-$! OK, time to check options and initialise
-$!
-$ OPT_PHASE = P1
-$ ACCEPT_PHASE = "ALL,ENGINES"
-$ OPT_DEBUG = P2
-$ OPT_COMPILER = P3
-$ OPT_TCPIP_LIB = P4
-$ OPT_SPECIAL_THREADS = P5
-$
-$ GOSUB CHECK_OPTIONS
-$ GOSUB INITIALISE
-$ GOSUB CHECK_OPT_FILE
 $!
 $! Define what goes into each engine
 $!
@@ -706,6 +710,65 @@ $!  End The GNU C Check.
 $!
 $   ENDIF
 $!
+$!  On Alpha, pointers can be 32 or 64 bit wide.  Libraries for both variants
+$!  can be built, and will then have "32" in the name for the 32-bit variant.
+$!  On VAX as well as the 64-bit variant on Alpha, the name carries no extra
+$!  information about pointer size (i.e., 64 bits is default on Alpha and 32
+$!  bits is default on VAX).
+$!
+$   IF (OPT_POINTER_SIZE.NES."32" .AND. OPT_POINTER_SIZE.NES."64")
+$   THEN
+$!
+$!    Set The Default
+$!
+$     OPT_POINTER_SIZE = ""
+$!
+$!    End of First Check Of OPT_POINTER_SIZE
+$!
+$   ENDIF
+$!
+$!  Check If OPT_POINTER_SIZE Isn't Set (Or Set Properly)
+$!
+$   IF (OPT_POINTER_SIZE.EQS."" .OR. (OPT_POINTER_SIZE.NES."32" .AND. ARCH.EQS."VAX"))
+$   THEN
+$!
+$!    Check If We're On A VAX
+$!
+$     IF ARCH.EQS."VAX"
+$     THEN
+$!
+$!      On VAX, We Force 32 Bit Pointers
+$!
+$       OPT_POINTER_SIZE = "32"
+$!
+$!      Else...
+$!
+$     ELSE
+$!
+$!      On Alpha, We Use 64 Bit Pointers By Default
+$!
+$       OPT_POINTER_SIZE = "64"
+$!
+$!      End Of Check For VAX
+$!
+$     ENDIF
+$!
+$!  End Check Of OPT_POINTER_SIZE
+$!
+$   ENDIF
+$!
+$!  Set POINTER_SIZE
+$!
+$   POINTER_SIZE = OPT_POINTER_SIZE
+$   QUAL_POINTER_SIZE = ""
+$   FILE_POINTER_SIZE = ""
+$   IF ARCH.EQS."AXP"
+$   THEN
+$     QUAL_POINTER_SIZE = "/POINTER_SIZE="+POINTER_SIZE
+$     IF POINTER_SIZE.EQS."32" THEN FILE_POINTER_SIZE = "32"
+$   ENDIF
+$!
+$!
 $!  Set up default defines
 $!
 $   CCDEFS = """FLAT_INC=1""," + CCDEFS
@@ -721,6 +784,7 @@ $     ENDIF
 $   ELSE
 $     CCDISABLEWARNINGS = ""
 $   ENDIF
+$   CC = CC + QUAL_POINTER_SIZE
 $   CC = CC + "/DEFINE=(" + CCDEFS + ")" + CCDISABLEWARNINGS
 $!
 $!  Show user the result

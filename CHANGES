@@ -4,6 +4,22 @@
 
  Changes between 0.9.7 and 0.9.8  [xx XXX 2002]
 
+  *) Add the ASN.1 structures and functions for CertificatePair, which
+     is defined as follows (according to X.509_4thEditionDraftV6.pdf):
+
+     CertificatePair ::= SEQUENCE {
+	forward		[0]	Certificate OPTIONAL,
+	reverse		[1]	Certificate OPTIONAL,
+	-- at least one of the pair shall be present -- }
+
+     Also implement the PEM functions to read and write certificate
+     pairs, and defined the PEM tag as "CERTIFICATE PAIR".
+
+     This needed to be defined, mostly for the sake of the LDAP
+     attribute crossCertificatePair, but may prove useful elsewhere as
+     well.
+     [Richard Levitte]
+
   *) Make it possible to inhibit symlinking of shared libraries in
      Makefile.shared, for Cygwin's sake.
      [Richard Levitte]
@@ -318,6 +334,11 @@ TODO: bug: pad  x  with leading zeros if necessary
      [Nils Larsch <nla@trustcenter.de, Bodo Moeller]
  
  Changes between 0.9.6h and 0.9.7  [XX xxx 2002]
+
+  *) Disable Heimdal support, since it hasn't been fully implemented.
+     Still give the possibility to force the use of Heimdal, but with
+     warnings and a request that patches get sent to openssl-dev.
+     [Richard Levitte]
 
   *) Add the VC-CE target, introduce the WINCE sysname, and add
      INSTALL.WCE and appropriate conditionals to make it build.
@@ -2094,6 +2115,21 @@ des-cbc           3624.96k     5258.21k     5530.91k     5624.30k     5628.26k
      [Richard Levitte]
 
  Changes between 0.9.6g and 0.9.6h  [xx XXX xxxx]
+
+  *) New function OPENSSL_cleanse(), which is used to cleanse a section of
+     memory from it's contents.  This is done with a counter that will
+     place alternating values in each byte.  This can be used to solve
+     two issues: 1) the removal of calls to memset() by highly optimizing
+     compilers, and 2) cleansing with other values than 0, since those can
+     be read through on certain media, for example a swap space on disk.
+     [Geoff Thorpe]
+
+  *) Bugfix: client side session caching did not work with external caching,
+     because the session->cipher setting was not restored when reloading
+     from the external cache. This problem was masked, when
+     SSL_OP_NETSCAPE_REUSE_CIPHER_CHANGE_BUG (part of SSL_OP_ALL) was set.
+     (Found by Steve Haslam <steve@araqnid.ddts.net>.)
+     [Lutz Jaenicke]
 
   *) Fix client_certificate (ssl/s2_clnt.c): The permissible total
      length of the REQUEST-CERTIFICATE message is 18 .. 34, not 17 .. 33.

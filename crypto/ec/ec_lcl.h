@@ -317,11 +317,7 @@ int ec_GFp_recp_field_sqr(const EC_GROUP *, BIGNUM *r, const BIGNUM *a, BN_CTX *
 
 
 /* method functions in ecp_nist.c */
-int ec_GFp_nist_group_init(EC_GROUP *);
 int ec_GFp_nist_group_set_curve(EC_GROUP *, const BIGNUM *p, const BIGNUM *a, const BIGNUM *b, BN_CTX *);
-void ec_GFp_nist_group_finish(EC_GROUP *);
-void ec_GFp_nist_group_clear_finish(EC_GROUP *);
-int ec_GFp_nist_group_copy(EC_GROUP *, const EC_GROUP *);
 int ec_GFp_nist_field_mul(const EC_GROUP *, BIGNUM *r, const BIGNUM *a, const BIGNUM *b, BN_CTX *);
 int ec_GFp_nist_field_sqr(const EC_GROUP *, BIGNUM *r, const BIGNUM *a, BN_CTX *);
 
@@ -364,6 +360,6 @@ int ec_GF2m_simple_field_div(const EC_GROUP *, BIGNUM *r, const BIGNUM *a, const
 
 
 /* method functions in ec2_mult.c */
-int ec_GF2m_mont_mul(const EC_GROUP *group, EC_POINT *r, const BIGNUM *scalar,
+int ec_GF2m_simple_mul(const EC_GROUP *group, EC_POINT *r, const BIGNUM *scalar,
 	size_t num, const EC_POINT *points[], const BIGNUM *scalars[], BN_CTX *);
-int ec_GF2m_mont_precompute_mult(EC_GROUP *group, BN_CTX *ctx);
+int ec_GF2m_precompute_mult(EC_GROUP *group, BN_CTX *ctx);

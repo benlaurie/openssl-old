@@ -12,7 +12,8 @@
 
   RELEASE SHOWSTOPPERS
 
-    o
+    o internal_verify doesn't know about X509.v3 (basicConstraints
+      CA flag ...)
 
   AVAILABLE PATCHES
 

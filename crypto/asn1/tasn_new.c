@@ -138,6 +138,11 @@ static int asn1_item_ex_combine_new(ASN1_VALUE **pval, const ASN1_ITEM *it, int 
 		break;
 
 		case ASN1_ITYPE_SEQUENCE:
+		if(asn1_cb) {
+			i = asn1_cb(ASN1_OP_NEW_PRE, pval, it);
+			if(!i) goto auxerr;
+			if(i==2) return 1;
+		}
 		if(!combine) {
 			*pval = OPENSSL_malloc(it->size);
 			if(!*pval) goto memerr;
@@ -145,8 +150,6 @@ static int asn1_item_ex_combine_new(ASN1_VALUE **pval, const ASN1_ITEM *it, int 
 			asn1_do_lock(pval, 0, it);
 			asn1_enc_init(pval, it);
 		}
-		if(asn1_cb && !asn1_cb(ASN1_OP_NEW_PRE, pval, it))
-				goto auxerr;
 		for(i = 0, tt = it->templates; i < it->tcount; tt++, i++) {
 			pseqval = asn1_get_field_ptr(pval, tt);
 			if(!ASN1_template_new(pseqval, tt)) goto memerr;

@@ -1,9 +1,9 @@
-/* p8_pkey.c */
+/* x_long.c */
 /* Written by Dr Stephen N Henson (shenson@bigfoot.com) for the OpenSSL
- * project 1999.
+ * project 2000.
  */
 /* ====================================================================
- * Copyright (c) 1999 The OpenSSL Project.  All rights reserved.
+ * Copyright (c) 2000 The OpenSSL Project.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -59,26 +59,98 @@
 #include <stdio.h>
 #include "cryptlib.h"
 #include <openssl/asn1t.h>
-#include <openssl/x509.h>
 
-/* Minor tweak to operation: zero private key data */
-static int pkey_cb(int operation, ASN1_VALUE **pval, const ASN1_ITEM *it)
+/* Custom primitive type for long handling. This converts between an ASN1 INTEGER
+ * and a long directly.
+ */
+
+
+static int long_new(ASN1_VALUE **pval, const ASN1_ITEM *it);
+static void long_free(ASN1_VALUE **pval, const ASN1_ITEM *it);
+
+static int long_i2c(ASN1_VALUE **pval, unsigned char *cont, int *putype, const ASN1_ITEM *it);
+static int long_c2i(ASN1_VALUE **pval, unsigned char *cont, int len, int utype, char *free_cont, const ASN1_ITEM *it);
+
+static ASN1_PRIMITIVE_FUNCS long_pf = {
+	NULL, 0,
+	long_new,
+	long_free,
+	long_c2i,
+	long_i2c
+};
+
+const ASN1_ITEM LONG_it = { ASN1_ITYPE_PRIMITIVE, V_ASN1_INTEGER, NULL, 0, &long_pf, 0, "LONG"};
+
+static int long_new(ASN1_VALUE **pval, const ASN1_ITEM *it)
 {
-	/* Since the structure must still be valid use ASN1_OP_FREE_PRE */
-	if(operation == ASN1_OP_FREE_PRE) {
-		PKCS8_PRIV_KEY_INFO *key = (PKCS8_PRIV_KEY_INFO *)*pval;
-		if (key->pkey->value.octet_string)
-		memset(key->pkey->value.octet_string->data,
-				 0, key->pkey->value.octet_string->length);
-	}
+	*(long *)pval = ASN1_LONG_UNDEF;
 	return 1;
 }
 
-ASN1_SEQUENCE_cb(PKCS8_PRIV_KEY_INFO, pkey_cb) = {
-	ASN1_SIMPLE(PKCS8_PRIV_KEY_INFO, version, ASN1_INTEGER),
-	ASN1_SIMPLE(PKCS8_PRIV_KEY_INFO, pkeyalg, X509_ALGOR),
-	ASN1_SIMPLE(PKCS8_PRIV_KEY_INFO, pkey, ASN1_ANY),
-	ASN1_IMP_SET_OF_OPT(PKCS8_PRIV_KEY_INFO, attributes, X509_ATTRIBUTE, 0)
-} ASN1_SEQUENCE_END_cb(PKCS8_PRIV_KEY_INFO, PKCS8_PRIV_KEY_INFO);
+static void long_free(ASN1_VALUE **pval, const ASN1_ITEM *it)
+{
+	*(long *)pval = ASN1_LONG_UNDEF;
+}
 
-IMPLEMENT_ASN1_FUNCTIONS(PKCS8_PRIV_KEY_INFO)
+static int long_i2c(ASN1_VALUE **pval, unsigned char *cont, int *putype, const ASN1_ITEM *it)
+{
+	long ltmp;
+	unsigned long utmp;
+	int clen, pad, i;
+	ltmp = *(long *)pval;
+	if(ltmp == ASN1_LONG_UNDEF) return -1;
+	/* Convert the long to positive: we subtract one if negative so
+	 * we can cleanly handle the padding if only the MSB of the leading
+	 * octet is set. 
+	 */
+	if(ltmp < 0) utmp = -ltmp - 1;
+	else utmp = ltmp;
+	clen = BN_num_bits_word(utmp);
+	/* If MSB of leading octet set we need to pad */
+	if(!(clen & 0x7)) pad = 1;
+	else pad = 0;
+
+	/* Convert number of bits to number of octets */
+	clen = (clen + 7) >> 3;
+
+	if(cont) {
+		if(pad) *cont++ = (ltmp < 0) ? 0xff : 0;
+		for(i = clen - 1; i >= 0; i--) {
+			cont[i] = (unsigned char)(utmp & 0xff);
+			if(ltmp < 0) cont[i] ^= 0xff;
+			utmp >>= 8;
+		}
+	}
+	return clen + pad;
+}
+
+static int long_c2i(ASN1_VALUE **pval, unsigned char *cont, int len, int utype, char *free_cont, const ASN1_ITEM *it)
+{
+	int neg, i;
+	long ltmp;
+	unsigned long utmp = 0;
+	if(len > sizeof(long)) {
+		ASN1err(ASN1_F_LONG_C2I, ASN1_R_INTEGER_TOO_LARGE_FOR_LONG);
+		return 0;
+	}
+	/* Is it negative? */
+	if(len && (cont[0] & 0x80)) neg = 1;
+	else neg = 0;
+	utmp = 0;
+	for(i = 0; i < len; i++) {
+		utmp <<= 8;
+		if(neg) utmp |= cont[i] ^ 0xff;
+		else utmp |= cont[i];
+	}
+	ltmp = (long)utmp;
+	if(neg) {
+		ltmp++;
+		ltmp = -ltmp;
+	}
+	if(ltmp == ASN1_LONG_UNDEF) {
+		ASN1err(ASN1_F_LONG_C2I, ASN1_R_INTEGER_TOO_LARGE_FOR_LONG);
+		return 0;
+	}
+	*(long *)pval = ltmp;
+	return 1;
+}

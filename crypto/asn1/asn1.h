@@ -208,6 +208,9 @@ typedef struct ASN1_ENCODING_st
 	int modified;		 /* set to 1 if 'enc' is invalid */
 	} ASN1_ENCODING;
 
+/* Used with ASN1 LONG type: if a long is set to this it is omitted */
+#define ASN1_LONG_UNDEF	0x7fffffffL
+
 #define STABLE_FLAGS_MALLOC	0x01
 #define STABLE_NO_MASK		0x02
 #define DIRSTRING_TYPE	\
@@ -1015,6 +1018,7 @@ int ASN1_item_i2d(ASN1_VALUE *val, unsigned char **out, const ASN1_ITEM *it);
 #define ASN1_F_I2D_RSA_PUBKEY				 289
 #define ASN1_F_I2D_X509_ATTRIBUTE			 187
 #define ASN1_F_I2T_ASN1_OBJECT				 188
+#define ASN1_F_LONG_C2I					 304
 #define ASN1_F_NETSCAPE_CERT_SEQUENCE_NEW		 229
 #define ASN1_F_NETSCAPE_PKEY_NEW			 189
 #define ASN1_F_NETSCAPE_SPKAC_NEW			 190
@@ -1108,6 +1112,7 @@ int ASN1_item_i2d(ASN1_VALUE *val, unsigned char **out, const ASN1_ITEM *it);
 #define ASN1_R_ILLEGAL_NULL				 169
 #define ASN1_R_ILLEGAL_OPTIONAL_ANY			 179
 #define ASN1_R_ILLEGAL_TAGGED_ANY			 170
+#define ASN1_R_INTEGER_TOO_LARGE_FOR_LONG		 183
 #define ASN1_R_INVALID_BMPSTRING_LENGTH			 159
 #define ASN1_R_INVALID_DIGIT				 121
 #define ASN1_R_INVALID_SEPARATOR			 122

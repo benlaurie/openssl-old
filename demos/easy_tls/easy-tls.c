@@ -568,7 +568,7 @@ no_passphrase_callback(char *buf, int num, int w, void *arg)
 }
 
 static int
-verify_dont_fail_cb(X509_STORE_CTX *c)
+verify_dont_fail_cb(X509_STORE_CTX *c, void *unused_arg)
 {
     int i;
     

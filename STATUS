@@ -47,9 +47,6 @@
 
   RELEASE SHOWSTOPPERS
 
-    o BN_mod_mul verification fails for mips3-sgi-irix
-      unless configured with no-asm
-
     o [2002-11-21]
       PR 343 mentions that scrubbing memory with 'memset(ptr, 0, n)' may
       be optimized away in modern compilers.  This is definitely not good

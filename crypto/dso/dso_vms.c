@@ -56,6 +56,11 @@
  *
  */
 
+/* In newer versions of Compaq C, this macro is predefined when /STANDARD=ANSI89
+   is used.  Unfortunately, the existence of that macro hides symbols like
+   _malloc32() and _malloc64(), so let's make sure we don't hide them. */
+#undef __HIDE_FORBIDDEN_NAMES
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -402,8 +407,8 @@ static char *vms_merger(DSO *dso, const char *filespec1, const char *filespec2)
 	if (!filespec2) filespec2 = "";
 	filespec1len = strlen(filespec1);
 	filespec2len = strlen(filespec2);
-	filespec1copy = malloc32(filespec2len+1);
-	filespec2copy = malloc32(filespec2len+1);
+	filespec1copy = _malloc32(filespec2len+1);
+	filespec2copy = _malloc32(filespec2len+1);
 	if (!filespec1copy || !filespec2copy) goto malloc_err;
 	memcpy(filespec1copy, filespec1, filespec1len+1);
 	memcpy(filespec2copy, filespec2, filespec2len+1);

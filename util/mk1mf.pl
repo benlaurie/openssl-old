@@ -23,6 +23,7 @@ die "Makefile.ssl is not the toplevel Makefile!\n" if $ssl_version eq "";
 $infile="MINFO";
 
 %ops=(
+	"VC-WIN64",   "Microsoft Visual C++ [7/64] - Windows XP/64 or .NET/64",
 	"VC-WIN32",   "Microsoft Visual C++ [4-6] - Windows NT or 9X",
 	"VC-NT",   "Microsoft Visual C++ [4-6] - Windows NT ONLY",
 	"VC-W31-16",  "Microsoft Visual C++ 1.52 - Windows 3.1 - 286",
@@ -132,6 +133,11 @@ elsif (($platform eq "VC-W31-32") || ($platform eq "VC-WIN16"))
 	$asmbits=32;
 	$msdos=1; $win16=1;
 	require 'VC-16.pl';
+	}
+elsif (($platform eq "VC-WIN64") || ($platform eq "VC-NT"))
+	{
+	$win64 = 1;
+	require 'VC-64.pl';
 	}
 elsif (($platform eq "VC-WIN32") || ($platform eq "VC-NT"))
 	{

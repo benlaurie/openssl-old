@@ -96,7 +96,7 @@ if ($shlib)
 	$tmp_def="tmp32dll";
 	}
 
-$cflags.=" /Fd$out_def";
+$cflags.=" /Fd$out_def".($debug ? ".dbg" : "")."/";
 
 sub do_lib_rule
 	{

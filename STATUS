@@ -68,9 +68,11 @@
 	UTIL (a new set of library functions to support some higher level
 	      functionality that is currently missing).
 	Shared library support for VMS.
-	Kerberos 5 authentication
+	Kerberos 5 authentication (Heimdal)
 	Constification
-	OCSP
+	Attribute Certificate support
+	Certificate Pair support
+	Storage Engines (primarly an LDAP storage engine)
 
   NEEDS PATCH
 

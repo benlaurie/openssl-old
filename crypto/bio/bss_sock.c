@@ -93,6 +93,12 @@ void *_memset32(void *__s, int __c, size_t __n);
 #endif
 
 
+#ifdef WATT32
+#define sock_write SockWrite  /* Watt-32 uses same names */
+#define sock_read  SockRead
+#define sock_puts  SockPuts
+#endif
+
 static int sock_write(BIO *h, const char *buf, int num);
 static int sock_read(BIO *h, char *buf, int size);
 static int sock_puts(BIO *h, const char *str);

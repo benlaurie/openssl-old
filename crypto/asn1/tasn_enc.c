@@ -393,10 +393,9 @@ int asn1_ex_i2c(ASN1_VALUE **pval, unsigned char *cout, int *putype, const ASN1_
 	if(pf && pf->prim_i2c) return pf->prim_i2c(pval, cout, putype, it);
 
 	/* Should type be omitted? */
-	if((it->itype == ASN1_ITYPE_PRIMITIVE) && (it->utype == V_ASN1_BOOLEAN)) {
-		tbool = (ASN1_BOOLEAN *)pval;
-		if(*tbool == -1) return -1;
-	} else if(!*pval) return -1;
+	if((it->itype != ASN1_ITYPE_PRIMITIVE) || (it->utype != V_ASN1_BOOLEAN)) {
+		if(!*pval) return -1;
+	}
 
 	if(it->itype == ASN1_ITYPE_MSTRING) {
 		/* If MSTRING type set the underlying type */
@@ -426,12 +425,10 @@ int asn1_ex_i2c(ASN1_VALUE **pval, unsigned char *cout, int *putype, const ASN1_
 
 		case V_ASN1_BOOLEAN:
 		tbool = (ASN1_BOOLEAN *)pval;
-		/* Strictly speaking this is invalid: an normal BOOLEAN
-		 * type will be caught earlier so we are left with a
-		 * BOOLEAN in an ASN1_TYPE structure. ASN1_TYPE shouldn't
-		 * set BOOLEAN to -1, the whole structure should be NULL
-		 */
 		if(*tbool == -1) return -1;
+		/* Default handling if value == size field then omit */
+		if(*tbool && (it->size > 0)) return -1;
+		if(!*tbool && !it->size) return -1;
 		c = (unsigned char)*tbool;
 		cont = &c;
 		len = 1;

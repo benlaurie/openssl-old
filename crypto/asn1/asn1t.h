@@ -582,9 +582,10 @@ typedef struct ASN1_AUX_st {
 #define ASN1_OP_I2D_POST	7
 
 /* Macro to implement a primitive type */
-#define IMPLEMENT_ASN1_TYPE(stname) IMPLEMENT_ASN1_TYPE_name(stname, stname)
-#define IMPLEMENT_ASN1_TYPE_name(stname, itname) const ASN1_ITEM itname##_it = \
-				{ ASN1_ITYPE_PRIMITIVE, V_##itname, NULL, 0, NULL, sizeof(stname), #itname};
+#define IMPLEMENT_ASN1_TYPE(stname) IMPLEMENT_ASN1_TYPE_ex(stname, stname, 0)
+#define IMPLEMENT_ASN1_TYPE_ex(itname, vname, ex) const ASN1_ITEM itname##_it = \
+				{ ASN1_ITYPE_PRIMITIVE, V_##vname, NULL, 0, NULL, ex, #itname};
+
 /* Macro to implement a multi string type */
 #define IMPLEMENT_ASN1_MSTRING(itname, mask) const ASN1_ITEM itname##_it = \
 				{ ASN1_ITYPE_MSTRING, mask, NULL, 0, NULL, sizeof(ASN1_STRING), #itname};
@@ -648,6 +649,8 @@ typedef struct ASN1_AUX_st {
 /* external definitions for primitive types */
 
 extern const ASN1_ITEM ASN1_BOOLEAN_it;
+extern const ASN1_ITEM ASN1_TBOOLEAN_it;
+extern const ASN1_ITEM ASN1_FBOOLEAN_it;
 extern const ASN1_ITEM ASN1_OBJECT_it;
 extern const ASN1_ITEM ASN1_ANY_it;
 extern const ASN1_ITEM ASN1_SEQUENCE_it;

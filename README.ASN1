@@ -147,6 +147,20 @@ The values of 'type' in the GENERAL_NAME structure have changed. This is
 because the old code use the ASN1 initial octet as the selector. The new
 code uses the index in the ASN1_CHOICE template.
 
+The DIST_POINT_NAME structure has changed to be a true CHOICE type.
+
+typedef struct DIST_POINT_NAME_st {
+int type;
+union {
+	STACK_OF(GENERAL_NAME) *fullname;
+	STACK_OF(X509_NAME_ENTRY) *relativename;
+} name;
+} DIST_POINT_NAME;
+
+This means that name.fullname or name.relativename should be set
+and type reflects the option. That is if name.fullname is set then
+type is 0 and if name.relativename is set type is 1.
+
 With the old code using the i2d functions would typically involve:
 
 unsigned char *buf, *p;

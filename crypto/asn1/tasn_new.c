@@ -213,7 +213,7 @@ int ASN1_primitive_new(ASN1_VALUE **pval, const ASN1_ITEM *it)
 		return 1;
 
 		case V_ASN1_BOOLEAN:
-		*(ASN1_BOOLEAN *)pval = -1;
+		*(ASN1_BOOLEAN *)pval = it->size;
 		return 1;
 
 		case V_ASN1_NULL:

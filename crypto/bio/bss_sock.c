@@ -59,19 +59,34 @@
 #ifndef OPENSSL_NO_SOCK
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <errno.h>
 #define USE_SOCKETS
 #include "cryptlib.h"
 #include <openssl/bio.h>
 
-#ifdef OPENSSL_SYS_VMS
-/* For 64-bit API */
-#if __INITIAL_POINTER_SIZE == 64
+/* The following types are required to work in a 64-bit environment on
+   OpenVMS for Alpha.  In that environment, the pointer types char_pp
+   and char_p will be 32 bits wide.  In all other environments (including
+   all other platforms), they will have whatever size is the appropriate
+   default there.
+   Additionally, let's define special variants of malloc and friends that
+   give the expected result visavi 32-bit pointers in an otherwise 64-bit
+   environment.  These would normally be declared with the OpenVMSy string.h,
+   if we wouldn't compile with /STANDARD=ANSI.  */
+#if !defined(OPENSSL_SYS_VMS) && __INITIAL_POINTER_SIZE == 64
 #pragma __required_pointer_size __save
 #pragma __required_pointer_size 32
 #endif
 typedef char * char_32p;
-#if __INITIAL_POINTER_SIZE == 64
+#ifdef OPENSSL_SYS_VMS
+void *_malloc32(size_t);
+void *_memset32(void *__s, int __c, size_t __n);
+#else
+#define _malloc32 malloc
+#define _memset32 memset
+#endif
+#if !defined(OPENSSL_SYS_VMS) && __INITIAL_POINTER_SIZE == 64
 #pragma __required_pointer_size __restore
 #endif
 
@@ -148,38 +163,33 @@ static int sock_read(BIO *b, char *out, int outl)
 #pragma __required_pointer_size __save
 #pragma __required_pointer_size 32
 
-	char_32p out32;
+	char_p out32 = NULL;
 
-	out32 = (char_32p)_malloc32(outl*sizeof(char_32p));  	/* changed for 64-bit */
-	_memset32(out32, 0, outl*sizeof(char_32p));		/* changed for 64-bit */
-	memcpy(out32,out,outl);					/* changed for 64-bit */
+	if (out != NULL)
+		{
+		out32 = (char_p)_malloc32(outl*sizeof(char_p));  	/* changed for 64-bit */
+		_memset32(out32, 0, outl*sizeof(char_p));		/* changed for 64-bit */
+		memcpy(out32,out,outl);					/* changed for 64-bit */
+		}
 
 #pragma __required_pointer_size __restore
 #endif
 #endif
 
-#ifdef OPENSSL_SYS_VMS
-# if __INITIAL_POINTER_SIZE == 64
+#if defined(OPENSSL_SYS_VMS) && __INITIAL_POINTER_SIZE == 64
 	if (out32 != NULL)
-# else
-	if (out != NULL)
-# endif
 #else
 	if (out != NULL)
 #endif
 		{
 		clear_socket_error();
-#ifdef OPENSSL_SYS_VMS
-#  if __INITIAL_POINTER_SIZE == 64
+#if defined(OPENSSL_SYS_VMS) &&  __INITIAL_POINTER_SIZE == 64
 		ret=readsocket(b->num,out32,outl);
 		memcpy(out,out32,outl);
 		free(out32);
-#  else
-		ret=readsocket(b->num,out,outl);
-#  endif		
 #else
 		ret=readsocket(b->num,out,outl);
-#endif
+#endif		
 		BIO_clear_retry_flags(b);
 		if (ret <= 0)
 			{
@@ -193,7 +203,7 @@ static int sock_read(BIO *b, char *out, int outl)
 static int sock_write(BIO *b, const char *in, int inl)
 	{
 	int ret;
-
+	
 #ifdef OPENSSL_SYS_VMS
 #if __INITIAL_POINTER_SIZE == 64
 #pragma __required_pointer_size __save
@@ -201,8 +211,8 @@ static int sock_write(BIO *b, const char *in, int inl)
 
         char_32p in32;
 
-        in32 = (char_32p)_malloc32(inl*sizeof(char_32p));     /* changed for 64-bit */
-        _memset32(in32, 0, inl*sizeof(char_32p));             /* changed for 64-bit */
+        in32 = (char_p)_malloc32(inl*sizeof(char_p));     /* changed for 64-bit */
+        _memset32(in32, 0, inl*sizeof(char_p));             /* changed for 64-bit */
         memcpy(in32,in,inl);                                 /* changed for 64-bit */
 
 #pragma __required_pointer_size __restore
@@ -211,16 +221,13 @@ static int sock_write(BIO *b, const char *in, int inl)
 
 	clear_socket_error();
 
-#ifdef OPENSSL_SYS_VMS
-#  if __INITIAL_POINTER_SIZE == 64
-                ret=writesocket(b->num,in32,inl);
-		free(in32);
-#  else
-                ret=writesocket(b->num,in,inl);
-#  endif
+#if defined(OPENSSL_SYS_VMS) && __INITIAL_POINTER_SIZE == 64
+	ret=writesocket(b->num,in32,inl);
+	free(in32);
 #else
-                ret=writesocket(b->num,in,inl);
+	ret=writesocket(b->num,in,inl);
 #endif
+
 	BIO_clear_retry_flags(b);
 	if (ret <= 0)
 		{

@@ -64,6 +64,7 @@
 
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <errno.h>
 
 #include "cryptlib.h"
@@ -75,7 +76,6 @@
 #  include <descrip.h>
 #  include <lib$routines.h>
 #  include <starlet.h>
-#  include <stdlib.h>
 #elif defined(__ultrix)
 #  include <sys/syslog.h>
 #elif !defined(MSDOS) && !defined(OPENSSL_SYS_VXWORKS) && !defined(NO_SYSLOG) /* Unix */

@@ -101,12 +101,14 @@ typedef struct bio_connect_st
 	int (*info_callback)(const BIO *bio,int state,int ret);
 	} BIO_CONNECT;
 
+#ifdef OPENSSL_SYS_VMS
 struct iosb /* i/o status block */
 	{
     	unsigned short status;              /* i/o completion status */
     	unsigned short bytcnt;              /* bytes transferred if read/write */
     	void *details;                      /* address of buffer or parameter */
 	};
+#endif
 
 static int conn_write(BIO *h, const char *buf, int num);
 static int conn_read(BIO *h, char *buf, int size);
@@ -416,9 +418,7 @@ static int conn_read(BIO *b, char *out, int outl)
 
 #ifdef OPENSSL_SYS_VMS
 	int sts;
-	struct iosb *iosb;
-
-	iosb = malloc(sizeof(iosb));
+	struct iosb iosb;
 #endif
 
 	data=(BIO_CONNECT *)b->ptr;
@@ -433,7 +433,7 @@ static int conn_read(BIO *b, char *out, int outl)
 		{
 		clear_socket_error();
 
-#ifndef OPENSSL_SYS_VMS
+#if 1 /* would be '#ifndef OPENSSL_SYS_VMS' if the error handling from $QIO was done right */
 		ret=readsocket(b->num,out,outl);
 #else
 		sts = SYS$QIOW(
@@ -449,17 +449,17 @@ static int conn_read(BIO *b, char *out, int outl)
 #endif		
 		BIO_clear_retry_flags(b);
 
-#ifdef OPENSSL_SYS_VMS
-		if (sts != 1 || iosb->status != 1)  /* SYS$QIOW failed */
-                        {
-                        if (BIO_sock_should_retry(ret))
-                                BIO_set_retry_read(b);
-                        }
+#if 0 /* would be '#ifdef OPENSSL_SYS_VMS' if the error handling from $QIO was done right */
+		if (sts != 1 || iosb.status != 1)  /* SYS$QIOW failed */
+			ret = -1; /* should be 0 for EOF! */
 		else
 			ret = outl;
-
-		free(iosb);
 #endif		
+		if (ret <= 0)
+			{
+			if (BIO_sock_should_retry(ret))
+				BIO_set_retry_read(b);
+			}
                 }
 
 	return(ret);
@@ -472,9 +472,7 @@ static int conn_write(BIO *b, const char *in, int inl)
 
 #ifdef OPENSSL_SYS_VMS
 	int sts;
-	struct iosb *iosb;
-
-        iosb = malloc(sizeof(iosb));
+	struct iosb iosb;
 #endif
 
 	data=(BIO_CONNECT *)b->ptr;
@@ -486,7 +484,7 @@ static int conn_write(BIO *b, const char *in, int inl)
 
 	clear_socket_error();
 
-#ifndef OPENSSL_SYS_VMS
+#if 1 /* would be '#ifndef OPENSSL_SYS_VMS' if the error handling from $QIO was done right */
 	ret=writesocket(b->num,in,inl);
 #else
 	sts = SYS$QIOW(
@@ -502,17 +500,18 @@ static int conn_write(BIO *b, const char *in, int inl)
 #endif
        	BIO_clear_retry_flags(b);
 
-#ifdef OPENSSL_SYS_VMS
-    	if (sts != 1 || iosb->status != 1)  /* SYS$QIO failed */
-      		{
-      		if (BIO_sock_should_retry(ret))
-                BIO_set_retry_read(b);
-        	}
+#if 0 /* would be '#ifdef OPENSSL_SYS_VMS' if the error handling from $QIO was done right */
+    	if (sts != 1 || iosb.status != 1)  /* SYS$QIO failed */
+		ret = -1; /* should be 0 for EOF! */
 	else
 		ret = inl;
-
-	free(iosb);
 #endif
+	if (ret <= 0)
+		{
+		if (BIO_sock_should_retry(ret))
+			BIO_set_retry_write(b);
+		}
+
 	return(ret);
 	}
 

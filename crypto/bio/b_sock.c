@@ -86,14 +86,29 @@ static int wsa_init_done=0;
 static unsigned long BIO_ghbn_hits=0L;
 static unsigned long BIO_ghbn_miss=0L;
 
-/* For 64-bit API */
-#if __INITIAL_POINTER_SIZE == 64
+/* The following types are required to work in a 64-bit environment on
+   OpenVMS for Alpha.  In that environment, the pointer types char_pp
+   and char_p will be 32 bits wide.  In all other environments (including
+   all other platforms), they will have whatever size is the appropriate
+   default there.
+   Additionally, let's define special variants of malloc and friends that
+   give the expected result visavi 32-bit pointers in an otherwise 64-bit
+   environment.  These would normally be declared with the OpenVMSy string.h,
+   if we wouldn't compile with /STANDARD=ANSI.  */
+#if !defined(OPENSSL_SYS_VMS) && __INITIAL_POINTER_SIZE == 64
 #pragma __required_pointer_size __save
 #pragma __required_pointer_size 32
 #endif
-typedef char ** char_32pp;
-typedef char * char_32p;
-#if __INITIAL_POINTER_SIZE == 64
+typedef char ** char_pp;
+typedef char * char_p;
+#ifdef OPENSSL_SYS_VMS
+void *_malloc32(size_t);
+void *_memset32(void *__s, int __c, size_t __n);
+#else
+#define _malloc32 malloc
+#define _memset32 memset
+#endif
+#if !defined(OPENSSL_SYS_VMS) && __INITIAL_POINTER_SIZE == 64
 #pragma __required_pointer_size __restore
 #endif
 
@@ -293,34 +308,18 @@ static struct hostent *ghbn_dup(struct hostent *a)
 	for (i=0; a->h_aliases[i] != NULL; i++)
 		;
 	i++;
-#ifdef OPENSSL_SYS_VMS
-	ret->h_aliases = (char_32pp)_malloc32(i*sizeof(char_32p));  /* changed for both 32-bit & 64-bit */
-#else
-	ret->h_aliases = (char **)OPENSSL_malloc(i*sizeof(char *));
-#endif
+	ret->h_aliases = (char_pp)_malloc32(i*sizeof(char_p));  /* changed for both 32-bit & 64-bit */
 	if (ret->h_aliases == NULL)
 		goto err;
-#ifdef OPENSSL_SYS_VMS
-	_memset32(ret->h_aliases, 0, i*sizeof(char_32p)); /* changed for both 32-bit & 64-bit */
-#else
-	memset(ret->h_aliases, 0, i*sizeof(char *));
-#endif
+	_memset32(ret->h_aliases, 0, i*sizeof(char_p)); /* changed for both 32-bit & 64-bit */
 
 	for (i=0; a->h_addr_list[i] != NULL; i++)
 		;
 	i++;
-#ifdf OPENSSL_SYS_VMS
-	ret->h_addr_list=(char_32pp)_malloc32(i*sizeof(char_32p)); /* changed for both 32-bit & 64-bit */
-#else
-	ret->h_addr_list=(char **)OPENSSL_malloc(i*sizeof(char *));
-#endif
+	ret->h_addr_list=(char_pp)_malloc32(i*sizeof(char_p)); /* changed for both 32-bit & 64-bit */
 	if (ret->h_addr_list == NULL)
 		goto err;
-#ifdef OPENSSL_SYS_VMS
-	_memset32(ret->h_addr_list, 0, i*sizeof(char_32p)); /* changed for both 32-bit & 64-bit */
-#else
-	memset(ret->h_addr_list, 0, i*sizeof(char *));
-#endif
+	_memset32(ret->h_addr_list, 0, i*sizeof(char_p)); /* changed for both 32-bit & 64-bit */
 
 	j=strlen(a->h_name)+1;
 	if ((ret->h_name=OPENSSL_malloc(j)) == NULL) goto err;
@@ -328,11 +327,7 @@ static struct hostent *ghbn_dup(struct hostent *a)
 	for (i=0; a->h_aliases[i] != NULL; i++)
 		{
 		j=strlen(a->h_aliases[i])+1;
-#ifdef OPENSSL_SYS_VMS
-		if ((ret->h_aliases[i]=(char_32p)_malloc32(j)) == NULL) goto err;  /* changed for both 32-bit & 64-bit */
-#else
-		if ((ret->h_aliases[i]=OPENSSL_malloc(j)) == NULL) goto err;
-#endif
+		if ((ret->h_aliases[i]=(char_p)_malloc32(j)) == NULL) goto err;  /* changed for both 32-bit & 64-bit */
 		memcpy(ret->h_aliases[i],a->h_aliases[i],j);
 		}
 	ret->h_length=a->h_length;
@@ -340,12 +335,8 @@ static struct hostent *ghbn_dup(struct hostent *a)
 	for (i=0; a->h_addr_list[i] != NULL; i++)
 		{
 #ifdef OPENSSL_SYS_VMS
-		if ((ret->h_addr_list[i]=(char_32p)_malloc32(a->h_length)) == NULL)  /* changed for both 32-bit & 64-bit */
+		if ((ret->h_addr_list[i]=(char_p)_malloc32(a->h_length)) == NULL)  /* changed for both 32-bit & 64-bit */
 			goto err;
-#else
-		if ((ret->h_addr_list[i]=OPENSSL_malloc(a->h_length)) == NULL)
-			goto err;
-#endif
 		memcpy(ret->h_addr_list[i],a->h_addr_list[i],a->h_length);
 		}
 	if (0)
@@ -528,7 +519,11 @@ void BIO_sock_cleanup(void)
 
 #if !defined(OPENSSL_SYS_VMS) || __VMS_VER >= 70000000
 
+#ifdef OPENSSL_SYS_VMS
 int BIO_socket_ioctl(int fd, long type, UINT_L32p arg)  /* changed for 64-bit API */
+#else
+int BIO_socket_ioctl(int fd, long type, unsigned long *arg)
+#endif
 	{
 	int i;
 

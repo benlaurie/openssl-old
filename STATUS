@@ -61,8 +61,6 @@
        weakness in SSL/TLS should be added; see
        http://www.openssl.org/~bodo/tls-cbc.txt
 
-    o  'openssl speed' should include AES support (0.9.7-dev)
-
     o  apps/ca.c: "Sign the certificate?" - "n" creates empty certificate file
 
     o  Whenever strncpy is used, make sure the resulting string is NULL-terminated

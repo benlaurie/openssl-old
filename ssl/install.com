@@ -4,6 +4,8 @@ $! Author: Richard Levitte <richard@levitte.org>
 $! Time of creation: 22-MAY-1998 10:13
 $!
 $! P1	root of the directory tree
+$! P2	prefix for certain file (this is really for Compaq, who need to
+$!	use the SSL$ prefix)
 $!
 $	IF P1 .EQS. ""
 $	THEN
@@ -11,11 +13,14 @@ $	    WRITE SYS$OUTPUT "First argument missing."
 $	    WRITE SYS$OUTPUT "Should be the directory where you want things installed."
 $	    EXIT
 $	ENDIF
-$!
-$! Define some VMS specific symbols.
-$!
-$ @[-]vms_build_info
-$!
+$
+$	IF P2 .NES. ""
+$	THEN
+$	    FILE_PREFIX = P2
+$	ELSE
+$	    FILE_PREFIX = ""
+$	ENDIF
+$
 $	ROOT = F$PARSE(P1,"[]A.;0",,,"SYNTAX_ONLY,NO_CONCEAL") - "A.;0"
 $	ROOT_DEV = F$PARSE(ROOT,,,"DEVICE","SYNTAX_ONLY")
 $	ROOT_DIR = F$PARSE(ROOT,,,"DIRECTORY","SYNTAX_ONLY") -
@@ -43,13 +48,8 @@ $	IF F$PARSE("WRK_SSLAEXE:") .EQS. "" THEN -
 	   CREATE/DIR/LOG WRK_SSLAEXE:
 $
 $	EXHEADER := ssl.h,ssl2.h,ssl3.h,ssl23.h,tls1.h,kssl.h
-$	if build_bits .eqs. "32"
-$       then
-$	   E_EXE := ssl_task,ssl$libssl_shr'build_bits'
-$	else
-$	   E_EXE := ssl_task,ssl$libssl_shr
-$	endif
-$	LIBS := LIBSSL'build_bits'
+$	E_EXE := ssl_task
+$	LIBS := LIBSSL64,LIBSSL32,LIBSSL,LIBSSL_SHR64,LIBSSL_SHR32,LIBSSL_SHR
 $
 $	VEXE_DIR := [-.VAX.EXE.SSL]
 $	AEXE_DIR := [-.AXP.EXE.SSL]
@@ -88,10 +88,22 @@ $	THEN
 $	  COPY 'VEXE_DIR''E'.OLB WRK_SSLVLIB:'E'.OLB/log
 $	  SET FILE/PROT=W:RE WRK_SSLVLIB:'E'.OLB
 $	ENDIF
+$	! Preparing for the time when we have shareable images
+$	IF F$SEARCH(VEXE_DIR+E+".EXE") .NES. ""
+$	THEN
+$	  COPY 'VEXE_DIR''E'.EXE WRK_SSLVLIB:'FILE_PREFIX''E'.EXE/log
+$	  SET FILE/PROT=W:RE WRK_SSLVLIB:'FILE_PREFIX''E'.EXE
+$	ENDIF
 $	IF F$SEARCH(AEXE_DIR+E+".OLB") .NES. ""
 $	THEN
 $	  COPY 'AEXE_DIR''E'.OLB WRK_SSLALIB:'E'.OLB/log
 $	  SET FILE/PROT=W:RE WRK_SSLALIB:'E'.OLB
+$	ENDIF
+$	! Preparing for the time when we have shareable images
+$	IF F$SEARCH(AEXE_DIR+E+".EXE") .NES. ""
+$	THEN
+$	  COPY 'AEXE_DIR''E'.EXE WRK_SSLVLIB:'FILE_PREFIX''E'.EXE/log
+$	  SET FILE/PROT=W:RE WRK_SSLVLIB:'FILE_PREFIX''E'.EXE
 $	ENDIF
 $	SET ON
 $	GOTO LOOP_LIB

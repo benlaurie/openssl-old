@@ -4,7 +4,6 @@
  * RAND_poll() written by Taka Shinagawa <takaaki.shinagawa@compaq.com>
  * for the OpenSSL project.
  */
- */
 /* ====================================================================
  * Copyright (c) 1998-2000 The OpenSSL Project.  All rights reserved.
  *
@@ -157,7 +156,7 @@ static struct items_data_st
 int RAND_poll(void)
 	{
 	IOSB iosb;
-	long pid;
+	unsigned int pid;
 	int status = 0;
 #if __INITIAL_POINTER_SIZE == 64
 	ILEB_64 item[32], *pitem;
@@ -181,14 +180,14 @@ int RAND_poll(void)
 		pitem->ileb_64$l_mbmo = -1;
                 pitem->ileb_64$q_length = pitems_data->length;
                 pitem->ileb_64$pq_bufaddr = &data_buffer[total_length];
-                pitem->ileb_64$pq_retlen_addr = (unsigned __int64 *)&length;
+                pitem->ileb_64$pq_retlen_addr = 0;
 		
                 total_length += pitems_data->length/4;
 #else
                 pitem->ile3$w_length = (short)pitems_data->length;
                 pitem->ile3$w_code = (short)pitems_data->code;
                 pitem->ile3$ps_bufaddr = &data_buffer[total_length];
-                pitem->ile3$ps_retlen_addr = &length;
+                pitem->ile3$ps_retlen_addr = 0;
                
 		total_length += pitems_data->length/4;
 #endif
@@ -208,7 +207,7 @@ int RAND_poll(void)
 	 * However, view the information as only half trustable.
 	 */
 	pid = -1;			/* search context */
-	while ((status = sys$getjpiw(EFN$C_ENF, &pid,  0, item, iosb, 0, 0))
+	while ((status = sys$getjpiw(EFN$C_ENF, &pid,  0, item, &iosb, 0, 0))
 		!= SS$_NOMOREPROC)
 		{
 		if (status == SS$_NORMAL)
@@ -220,11 +219,17 @@ int RAND_poll(void)
 				{
 				unsigned int sys_time[2];
 
+#ifdef __NEW_STARLET
+				sys$gettim((struct _generic_64 *)sys_time);
+#else
 				sys$gettim(sys_time);
+#endif
 				srand(sys_time[0]*data_buffer[0]*data_buffer[1]+i);
 				if(i==(total_length-1)) /* for JPI$_FINALEXC */
 					{
 					long int *ptr = (long *)data_buffer[i];
+					int j;
+
 					tmp_length = 0;
 
 					for(j=0; j<4; j++)
@@ -233,7 +238,7 @@ int RAND_poll(void)
 						/* OK to use rand() just
 						   to scramble the seed */
 						data_buffer[i+j] ^=
-							(sys_time ^ rand());
+							(sys_time[0] ^ rand());
 						tmp_length++;
 						}
 					}
@@ -241,7 +246,8 @@ int RAND_poll(void)
 					{
 					/* OK to use rand() just
 					   to scramble the seed */
-					data_buffer[i] ^= (sys_time ^ rand());
+					data_buffer[i] ^=
+						(sys_time[0] ^ rand());
 					}
 				}
 			total_length += (tmp_length - 1);

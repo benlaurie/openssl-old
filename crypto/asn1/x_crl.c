@@ -87,7 +87,7 @@ static int crl_inf_cb(int operation, ASN1_VALUE **pval, const ASN1_ITEM *it)
 	int (*old_cmp)(const X509_REVOKED * const *,
 			const X509_REVOKED * const *);
 
-	if(!a->revoked) return 1;
+	if(!a || !a->revoked) return 1;
 	switch(operation) {
 
 		/* Save original order */
@@ -115,7 +115,6 @@ ASN1_SEQUENCE_cb(X509_CRL_INFO, crl_inf_cb) = {
 	ASN1_SIMPLE(X509_CRL_INFO, lastUpdate, ASN1_TIME),
 	ASN1_OPT(X509_CRL_INFO, nextUpdate, ASN1_TIME),
 	ASN1_SEQUENCE_OF_OPT(X509_CRL_INFO, revoked, X509_REVOKED),
-	/* This is ASN1_SEQUENCE_OF_OPT with no empty sequence allowed */
 	ASN1_EXP_SEQUENCE_OF_OPT(X509_CRL_INFO, extensions, X509_EXTENSION, 0)
 } ASN1_SEQUENCE_END_cb(X509_CRL_INFO, X509_CRL_INFO);
 

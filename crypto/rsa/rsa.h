@@ -113,7 +113,7 @@ struct rsa_st
 	/* The first parameter is used to pickup errors where
 	 * this is passed instead of aEVP_PKEY, it is set to 0 */
 	int pad;
-	int version;
+	long version;
 #if 0
 	RSA_METHOD *meth;
 #else

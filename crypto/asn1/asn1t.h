@@ -628,6 +628,9 @@ typedef struct ASN1_AUX_st {
 
 #define IMPLEMENT_ASN1_FUNCTIONS_name(stname, itname) IMPLEMENT_ASN1_FUNCTIONS_fname(stname, itname, itname)
 
+#define IMPLEMENT_ASN1_FUNCTIONS_ENCODE_name(stname, itname) \
+			IMPLEMENT_ASN1_FUNCTIONS_ENCODE_fname(stname, itname, itname)
+
 #define IMPLEMENT_ASN1_FUNCTIONS_fname(stname, itname, fname) \
 	stname *fname##_new(void) \
 	{ \
@@ -637,6 +640,9 @@ typedef struct ASN1_AUX_st {
 	{ \
 		ASN1_item_free((ASN1_VALUE *)a, &itname##_it); \
 	} \
+	IMPLEMENT_ASN1_ENCODE_FUNCTIONS_fname(stname, itname, fname)
+
+#define IMPLEMENT_ASN1_ENCODE_FUNCTIONS_fname(stname, itname, fname) \
 	stname *d2i_##fname(stname **a, unsigned char **in, long len) \
 	{ \
 		return (stname *)ASN1_item_d2i((ASN1_VALUE **)a, in, len, &itname##_it);\
@@ -655,7 +661,7 @@ extern const ASN1_ITEM ASN1_OBJECT_it;
 extern const ASN1_ITEM ASN1_ANY_it;
 extern const ASN1_ITEM ASN1_SEQUENCE_it;
 extern const ASN1_ITEM CBIGNUM_it;
-extern const ASN1_ITEM SBIGNUM_it;
+extern const ASN1_ITEM BIGNUM_it;
 extern const ASN1_ITEM LONG_it;
 
 /* Functions used internally by the ASN1 code */

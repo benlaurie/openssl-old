@@ -61,6 +61,7 @@
 #include "cryptlib.h"
 #include <openssl/rsa.h>
 #include <openssl/objects.h>
+#include <openssl/asn1t.h>
 #include <openssl/asn1_mac.h>
 #include <openssl/evp.h>
 #include <openssl/x509.h>
@@ -75,10 +76,13 @@ typedef struct netscape_pkey_st
 	ASN1_OCTET_STRING *private_key;
 	} NETSCAPE_PKEY;
 
-static int i2d_NETSCAPE_PKEY(NETSCAPE_PKEY *a, unsigned char **pp);
-static NETSCAPE_PKEY *d2i_NETSCAPE_PKEY(NETSCAPE_PKEY **a,unsigned char **pp, long length);
-static NETSCAPE_PKEY *NETSCAPE_PKEY_new(void);
-static void NETSCAPE_PKEY_free(NETSCAPE_PKEY *);
+ASN1_SEQUENCE(NETSCAPE_PKEY) = {
+	ASN1_SIMPLE(NETSCAPE_PKEY, version, ASN1_INTEGER),
+	ASN1_SIMPLE(NETSCAPE_PKEY, algor, X509_ALGOR),
+	ASN1_SIMPLE(NETSCAPE_PKEY, private_key, ASN1_OCTET_STRING)
+} ASN1_SEQUENCE_END(NETSCAPE_PKEY);
+
+IMPLEMENT_ASN1_FUNCTIONS(NETSCAPE_PKEY)
 
 int i2d_Netscape_RSA(RSA *a, unsigned char **pp, int (*cb)())
 {
@@ -322,59 +326,6 @@ err:
 	if (os != NULL) M_ASN1_BIT_STRING_free(os);
 	if (alg != NULL) X509_ALGOR_free(alg);
 	return(ret);
-	}
-
-static int i2d_NETSCAPE_PKEY(NETSCAPE_PKEY *a, unsigned char **pp)
-	{
-	M_ASN1_I2D_vars(a);
-
-
-	M_ASN1_I2D_len(a->version,	i2d_ASN1_INTEGER);
-	M_ASN1_I2D_len(a->algor,	i2d_X509_ALGOR);
-	M_ASN1_I2D_len(a->private_key,	i2d_ASN1_OCTET_STRING);
-
-	M_ASN1_I2D_seq_total();
-
-	M_ASN1_I2D_put(a->version,	i2d_ASN1_INTEGER);
-	M_ASN1_I2D_put(a->algor,	i2d_X509_ALGOR);
-	M_ASN1_I2D_put(a->private_key,	i2d_ASN1_OCTET_STRING);
-
-	M_ASN1_I2D_finish();
-	}
-
-static NETSCAPE_PKEY *d2i_NETSCAPE_PKEY(NETSCAPE_PKEY **a, unsigned char **pp,
-	     long length)
-	{
-	M_ASN1_D2I_vars(a,NETSCAPE_PKEY *,NETSCAPE_PKEY_new);
-
-	M_ASN1_D2I_Init();
-	M_ASN1_D2I_start_sequence();
-	M_ASN1_D2I_get(ret->version,d2i_ASN1_INTEGER);
-	M_ASN1_D2I_get(ret->algor,d2i_X509_ALGOR);
-	M_ASN1_D2I_get(ret->private_key,d2i_ASN1_OCTET_STRING);
-	M_ASN1_D2I_Finish(a,NETSCAPE_PKEY_free,ASN1_F_D2I_NETSCAPE_PKEY);
-	}
-
-static NETSCAPE_PKEY *NETSCAPE_PKEY_new(void)
-	{
-	NETSCAPE_PKEY *ret=NULL;
-	ASN1_CTX c;
-
-	M_ASN1_New_Malloc(ret,NETSCAPE_PKEY);
-	M_ASN1_New(ret->version,M_ASN1_INTEGER_new);
-	M_ASN1_New(ret->algor,X509_ALGOR_new);
-	M_ASN1_New(ret->private_key,M_ASN1_OCTET_STRING_new);
-	return(ret);
-	M_ASN1_New_Error(ASN1_F_NETSCAPE_PKEY_NEW);
-	}
-
-static void NETSCAPE_PKEY_free(NETSCAPE_PKEY *a)
-	{
-	if (a == NULL) return;
-	M_ASN1_INTEGER_free(a->version);
-	X509_ALGOR_free(a->algor);
-	M_ASN1_OCTET_STRING_free(a->private_key);
-	OPENSSL_free(a);
 	}
 
 #endif /* NO_RC4 */

@@ -58,6 +58,9 @@
 
   NEEDS PATCH
 
+    o  0.9.8-dev: COMPLEMENTOFALL and COMPLEMENTOFDEFAULT do not
+       handle ECCdraft cipher suites correctly.
+
     o  apps/ca.c: "Sign the certificate?" - "n" creates empty certificate file
 
     o  "OpenSSL STATUS" is never up-to-date.

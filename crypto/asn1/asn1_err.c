@@ -307,6 +307,7 @@ static ERR_STRING_DATA ASN1_str_reasons[]=
 {ASN1_R_HEADER_TOO_LONG                  ,"header too long"},
 {ASN1_R_ILLEGAL_CHARACTERS               ,"illegal characters"},
 {ASN1_R_ILLEGAL_NULL                     ,"illegal null"},
+{ASN1_R_ILLEGAL_OPTIONAL_ANY             ,"illegal optional any"},
 {ASN1_R_ILLEGAL_TAGGED_ANY               ,"illegal tagged any"},
 {ASN1_R_INVALID_BMPSTRING_LENGTH         ,"invalid bmpstring length"},
 {ASN1_R_INVALID_DIGIT                    ,"invalid digit"},

@@ -1,4 +1,4 @@
-/* asnt.h */
+/* asn1t.h */
 /* Written by Dr Stephen N Henson (shenson@bigfoot.com) for the OpenSSL
  * project 2000.
  */
@@ -55,8 +55,10 @@
  * Hudson (tjh@cryptsoft.com).
  *
  */
-#ifndef HEADER_ASNT_H
-#define HEADER_ASNT_H
+#ifndef HEADER_ASN1T_H
+#define HEADER_ASN1T_H
+
+#include <openssl/asn1.h>
 
 /* ASN1 template defines, structures and functions */
 

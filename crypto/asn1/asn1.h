@@ -84,7 +84,7 @@ extern "C" {
 
 #define V_ASN1_APP_CHOOSE		-2	/* let the recipient choose */
 #define V_ASN1_OTHER			-3	/* used in ASN1_TYPE */
-#define V_ASN1_ANY			-3	/* used in ASN1 template code */
+#define V_ASN1_ANY			-4	/* used in ASN1 template code */
 
 #define V_ASN1_NEG			0x100	/* negative flag */
 
@@ -1168,6 +1168,7 @@ int asn1_item_is_bool(const ASN1_ITEM *it);
 #define ASN1_R_HEADER_TOO_LONG				 120
 #define ASN1_R_ILLEGAL_CHARACTERS			 158
 #define ASN1_R_ILLEGAL_NULL				 169
+#define ASN1_R_ILLEGAL_OPTIONAL_ANY			 179
 #define ASN1_R_ILLEGAL_TAGGED_ANY			 170
 #define ASN1_R_INVALID_BMPSTRING_LENGTH			 159
 #define ASN1_R_INVALID_DIGIT				 121

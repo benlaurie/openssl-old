@@ -346,9 +346,8 @@ static int asn1_i2d_ex_primitive(ASN1_VALUE *val, unsigned char **out, int utype
 		case V_ASN1_BOOLEAN:
 		btmp = *(ASN1_BOOLEAN *)val;
 		/* -1 means undefined and thus omitted */
-		if(btmp == -1) return 0;
-		if(btmp) c = 0xff;
-		else c = 0;
+		if(btmp < 0 ) return 0;
+		c = (unsigned char)btmp;
 		cont = &c;
 		len = 1;
 		break;
@@ -402,7 +401,10 @@ static int asn1_i2d_ex_primitive(ASN1_VALUE *val, unsigned char **out, int utype
 		case V_ASN1_SET:
 		default:
 		stmp = (ASN1_STRING *)val;
-		if(stmp->data && out) memcpy(*out, stmp->data, stmp->length);
+		if(stmp->data && out) {
+			memcpy(*out, stmp->data, stmp->length);
+			*out += stmp->length;
+		}
 		return stmp->length;
 
 	}

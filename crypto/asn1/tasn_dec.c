@@ -111,7 +111,7 @@ int ASN1_template_d2i(ASN1_VALUE **pval, unsigned char **in, long len, const ASN
 int ASN1_item_ex_d2i(ASN1_VALUE **pval, unsigned char **in, long len, const ASN1_ITEM *it,
 				int tag, int aclass, char opt, ASN1_TLC *ctx)
 {
-	const ASN1_TEMPLATE *tt;
+	const ASN1_TEMPLATE *tt, *errtt = NULL;
 	const ASN1_COMPAT_FUNCS *cf;
 	const ASN1_EXTERN_FUNCS *ef;
 	unsigned char *p, *q, imphack = 0, oclass;
@@ -121,8 +121,6 @@ int ASN1_item_ex_d2i(ASN1_VALUE **pval, unsigned char **in, long len, const ASN1
 	int ret = 0;
 	ASN1_VALUE *pchval, **pchptr, *ptmpval;
 	if(!pval) return 0;
-
-	tt = NULL;
 
 	switch(it->itype) {
 
@@ -223,6 +221,7 @@ int ASN1_item_ex_d2i(ASN1_VALUE **pval, unsigned char **in, long len, const ASN1
 			/* If positive return, read OK, break loop */
 			if(ret > 0) break;
 			/* Otherwise must be an ASN1 parsing error */
+			errtt = tt;
 			ASN1err(ASN1_F_ASN1_ITEM_EX_D2I, ERR_R_NESTED_ASN1_ERROR);
 			/* FIXME: note choice type that did this */
 			return 0;
@@ -237,6 +236,7 @@ int ASN1_item_ex_d2i(ASN1_VALUE **pval, unsigned char **in, long len, const ASN1
 		/* Otherwise we got a match, allocate structure and populate it */
 		if(!*pval) {
 			if(!ASN1_item_ex_new(pval, it)) {
+				errtt = tt;
 				ASN1err(ASN1_F_ASN1_ITEM_EX_D2I, ERR_R_NESTED_ASN1_ERROR);
 				return 0;
 			}
@@ -300,7 +300,7 @@ int ASN1_item_ex_d2i(ASN1_VALUE **pval, unsigned char **in, long len, const ASN1
 			/* attempt to read in field, allowing each to be OPTIONAL */
 			ret = asn1_template_ex_d2i(pseqval, &p, len, seqtt, isopt, ctx);
 			if(!ret) {
-				/* Add error field info */
+				errtt = seqtt;
 				goto err;
 			} else if(ret == -1) {
 				/* OPTIONAL component absent.
@@ -338,7 +338,8 @@ int ASN1_item_ex_d2i(ASN1_VALUE **pval, unsigned char **in, long len, const ASN1
 		for(; i < it->tcount; tt++, i++) {
 			const ASN1_TEMPLATE *seqtt;
 			seqtt = asn1_do_adb(*pval, tt);
-			if(!(tt->flags & ASN1_TFLG_OPTIONAL)) {
+			if(!(seqtt->flags & ASN1_TFLG_OPTIONAL)) {
+				errtt = seqtt;
 				ASN1err(ASN1_F_ASN1_ITEM_EX_D2I, ASN1_R_FIELD_MISSING);
 				goto err;
 			}
@@ -353,7 +354,7 @@ int ASN1_item_ex_d2i(ASN1_VALUE **pval, unsigned char **in, long len, const ASN1
 	err:
 	ASN1_item_free(*pval, it);
 	*pval = NULL;
-	if(tt) ERR_add_error_data(4, "Field=", tt->field_name, ", Structure=", it->sname);
+	if(errtt) ERR_add_error_data(4, "Field=", errtt->field_name, ", Structure=", it->sname);
 	else ERR_add_error_data(2, "Structure=", it->sname);
 	return 0;
 }
@@ -502,13 +503,17 @@ static int asn1_d2i_ex_primitive(ASN1_VALUE **pval, unsigned char **in, long inl
 			ASN1err(ASN1_F_ASN1_D2I_EX_PRIMITIVE, ASN1_R_ILLEGAL_TAGGED_ANY);
 			return 0;
 		}
+		if(opt) {
+			ASN1err(ASN1_F_ASN1_D2I_EX_PRIMITIVE, ASN1_R_ILLEGAL_OPTIONAL_ANY);
+			return 0;
+		}
 		p = *in;
 		ret = asn1_check_tlen(NULL, &otag, &oclass, NULL, NULL, &p, inlen, -1, 0, 0, ctx);
 		if(!ret) {
 			ASN1err(ASN1_F_ASN1_D2I_EX_PRIMITIVE, ERR_R_NESTED_ASN1_ERROR);
 			return 0;
 		}
-		if(oclass != V_ASN1_UNIVERSAL) otag = V_ASN1_UNDEF;
+		if(oclass != V_ASN1_UNIVERSAL) otag = V_ASN1_OTHER;
 		anytype = NULL;
 		ret = asn1_d2i_ex_primitive(&anytype, in, inlen, otag, -1, 0, 0, ctx);
 		if(!ret) {
@@ -547,7 +552,11 @@ static int asn1_d2i_ex_primitive(ASN1_VALUE **pval, unsigned char **in, long inl
 		/* FIXME: if it is indefinite length constructed need to work out
 		 * actual length.
 		 */
-		len = inlen;
+
+		cont = *in;
+		len = p - cont + plen;
+		p += plen;
+		buf.data = NULL;
 	} else if(cst) {
 		buf.length = 0;
 		buf.max = 0;
@@ -638,6 +647,7 @@ static int asn1_d2i_ex_primitive(ASN1_VALUE **pval, unsigned char **in, long inl
 		 */
 
 		default:
+		case V_ASN1_OTHER:
 		case V_ASN1_SET:
 		case V_ASN1_SEQUENCE:
 		if(!*pval) {
@@ -805,6 +815,3 @@ static int asn1_check_tlen(long *olen, int *otag, unsigned char *oclass, char *i
 	*in = p;
 	return 1;
 }
-
-
-

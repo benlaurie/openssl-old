@@ -182,11 +182,8 @@ DECLARE_STACK_OF(X509_NAME)
 typedef struct X509_extension_st
 	{
 	ASN1_OBJECT *object;
-	short critical;
-	short netscape_hack;
+	ASN1_BOOLEAN critical;
 	ASN1_OCTET_STRING *value;
-	struct v3_ext_method *method;	/* V3 method to use */
-	void *ext_val;			/* extension value */
 	} X509_EXTENSION;
 
 DECLARE_STACK_OF(X509_EXTENSION)

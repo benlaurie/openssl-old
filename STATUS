@@ -62,10 +62,6 @@
 
   NEEDS PATCH
 
-    o  An (optional) countermeasure against the predictable-IV CBC
-       weakness in SSL/TLS should be added; see
-       http://www.openssl.org/~bodo/tls-cbc.txt
-
     o  apps/ca.c: "Sign the certificate?" - "n" creates empty certificate file
 
     o  "OpenSSL STATUS" is never up-to-date.

@@ -111,4 +111,16 @@ certificate extensions) then -1 is FALSE, if DEFAULT TRUE then -1 is TRUE.
 Usually the value will only ever be read via an API which will hide this from an
 application.
 
-
+There is an evil bug in the old ASN1 code that mishandles OPTIONAL with
+SEQUENCE OF or SET OF. These are both implemented as a STACK structure. The old
+code would omit the structure if the STACK was NULL (which is fine) or if it had
+zero elements (which is NOT OK). This causes problems because an empty SEQUENCE OF
+or SET OF will result in an empty STACK when it is decoded but when it is encoded
+it will be omitted resulting in different encodings. The new code only omits the
+encoding if the STACK is NULL, if it contains zero elements it is encoded and
+empty. There is an additional problem though: because an empty STACK was omitted
+sometimes the corresponding *_new() function would initialize the STACK to empty
+so an application could immediately use it, if this is done with the new code
+(i.e. a NULL) it wont work. Therefore a new STACK should be allocated first.
+One instance of this is the X509_CRL list of revoked certificates: a helper
+function X509_CRL_add0_revoked() has been added for this purpose.

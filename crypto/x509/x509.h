@@ -920,6 +920,7 @@ X509_CRL *	X509_CRL_new(void);
 void		X509_CRL_free(X509_CRL *a);
 int		i2d_X509_CRL(X509_CRL *a,unsigned char **pp);
 X509_CRL *	d2i_X509_CRL(X509_CRL **a,unsigned char **pp,long length);
+int X509_CRL_add0_revoked(X509_CRL *crl, X509_REVOKED *rev);
 
 X509_PKEY *	X509_PKEY_new(void );
 void		X509_PKEY_free(X509_PKEY *a);

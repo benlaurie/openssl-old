@@ -1129,6 +1129,7 @@ int asn1_item_is_bool(const ASN1_ITEM *it);
 #define ASN1_F_X509_ATTRIBUTE_NEW			 203
 #define ASN1_F_X509_CERT_AUX_NEW			 286
 #define ASN1_F_X509_CINF_NEW				 204
+#define ASN1_F_X509_CRL_ADD0_REVOKED			 303
 #define ASN1_F_X509_CRL_INFO_NEW			 205
 #define ASN1_F_X509_CRL_NEW				 206
 #define ASN1_F_X509_DHPARAMS_NEW			 207

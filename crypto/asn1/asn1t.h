@@ -124,7 +124,7 @@ extern "C" {
 		#stname \
 	}
 
-#define ASN1_SEQUENCE_aux(tname, cb) \
+#define ASN1_SEQUENCE_cb(tname, cb) \
 	const static ASN1_AUX tname##_aux = {NULL, 0, 0, 0, cb}; \
 	ASN1_SEQUENCE(tname)
 
@@ -132,7 +132,7 @@ extern "C" {
 	const static ASN1_AUX tname##_aux = {NULL, ASN1_AFLG_REFCOUNT, offsetof(tname, references), lck, cb}; \
 	ASN1_SEQUENCE(tname)
 
-#define ASN1_SEQUENCE_END_aux(stname, tname) ASN1_SEQUENCE_END_ref(stname, tname)
+#define ASN1_SEQUENCE_END_cb(stname, tname) ASN1_SEQUENCE_END_ref(stname, tname)
 
 #define ASN1_SEQUENCE_END_ref(stname, tname) \
 	;\

@@ -308,7 +308,8 @@ int ASN1_item_ex_d2i(ASN1_VALUE **pval, unsigned char **in, long len, const ASN1
 			 * still data to be read. This isn't strictly necessary but
 			 * it increases efficiency in some cases.
 			 */
-			isopt = (i == (it->tcount - 1)) ? 0 : seqtt->flags & ASN1_TFLG_OPTIONAL;
+			if(i == (it->tcount - 1)) isopt = 0;
+			else isopt = seqtt->flags & ASN1_TFLG_OPTIONAL;
 			/* attempt to read in field, allowing each to be OPTIONAL */
 			ret = asn1_template_ex_d2i(pseqval, &p, len, seqtt, isopt, ctx);
 			if(!ret) {

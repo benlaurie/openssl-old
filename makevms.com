@@ -765,8 +765,8 @@ $ ELSE
 $!
 $!  Else, Check To See If P1 Has A Valid Arguement.
 $!
-$   IF (P1.EQS."CONFIG").OR.(P1.EQS."BUILDCONFIG").OR.(P1.EQS."BUILDINF") -
-       .OR.(P1.EQS."SOFTLINKS") -
+$   IF (P1.EQS."CONFIGALL")-
+       .OR.(P1.EQS."CONFIG").OR.(P1.EQS."BUILDINF").OR.(P1.EQS."SOFTLINKS") -
        .OR.(P1.EQS."BUILDALL") -
        .OR.(P1.EQS."CRYPTO").OR.(P1.EQS."SSL").OR.(P1.EQS."RSAREF") -
        .OR.(P1.EQS."SSL_TASK").OR.(P1.EQS."TEST").OR.(P1.EQS."APPS") -
@@ -787,6 +787,7 @@ $     WRITE SYS$OUTPUT ""
 $     WRITE SYS$OUTPUT "The Option ",P1," Is Invalid.  The Valid Options Are:"
 $     WRITE SYS$OUTPUT ""
 $     WRITE SYS$OUTPUT "    ALL      :  Just Build Everything."
+$     WRITE SYS$OUTPUT "    CONFIGALL:  Same as CONFIG, BUILDINF and SOTLINIKS."
 $     WRITE SYS$OUTPUT "    CONFIG   :  Just build the [.CRYPTO]OPENSSLCONF.H file."
 $     WRITE SYS$OUTPUT "    BUILDINF :  Just build the [.CRYPTO]BUILDINF.H file."
 $     WRITE SYS$OUTPUT "    SOFTLINKS:  Just Fix The Unix soft links."

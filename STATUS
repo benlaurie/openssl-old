@@ -74,6 +74,7 @@
 	Attribute Certificate support
 	Certificate Pair support
 	Storage Engines (primarly an LDAP storage engine)
+	Certificate chain validation with full RFC 3280 compatibility
 
   NEEDS PATCH
 

@@ -65,17 +65,34 @@
 static int asn1_i2d_ex_primitive(ASN1_VALUE **pval, unsigned char **out, int utype, int tag, int aclass);
 static int asn1_set_seq_out(STACK *seq, unsigned char **out, int skcontlen, const ASN1_ITEM *item, int isset);
 
-/* Encode an ASN1 item, this currently behaves just 
- * like a standard 'i2d' function. 'out' points to 
+/* Encode an ASN1 item, this is compatible with the
+ * standard 'i2d' function. 'out' points to 
  * a buffer to output the data to, in future we will
  * have more advanced versions that can output data
  * a piece at a time and this will simply be a special
  * case.
+ *
+ * The new i2d has one additional feature. If the output
+ * buffer is NULL (i.e. *out == NULL) then a buffer is
+ * allocated and populated with the encoding.
  */
 
 
 int ASN1_item_i2d(ASN1_VALUE *val, unsigned char **out, const ASN1_ITEM *it)
 {
+	if(out && !*out) {
+		unsigned char *p, *buf;
+		int len;
+		len = ASN1_item_ex_i2d(&val, NULL, it, -1, 0);
+		if(len <= 0) return len;
+		buf = OPENSSL_malloc(len);
+		if(!buf) return -1;
+		p = buf;
+		ASN1_item_ex_i2d(&val, &p, it, -1, 0);
+		*out = buf;
+		return len;
+	}
+		
 	return ASN1_item_ex_i2d(&val, out, it, -1, 0);
 }
 

@@ -147,3 +147,33 @@ The values of 'type' in the GENERAL_NAME structure have changed. This is
 because the old code use the ASN1 initial octet as the selector. The new
 code uses the index in the ASN1_CHOICE template.
 
+With the old code using the i2d functions would typically involve:
+
+unsigned char *buf, *p;
+int len;
+/* Find length of encoding */
+len = i2d_SOMETHING(x, NULL);
+/* Allocate buffer */
+buf = OPENSSL_malloc(len);
+if(buf == NULL) {
+	/* Malloc error */
+}
+/* Use temp variable because &p gets updated to point to end of
+ * encoding.
+ */
+p = buf;
+i2d_SOMETHING(x, &p);
+
+
+Using the new i2d you can also do:
+
+unsigned char *buf = NULL;
+int len;
+len = i2d_SOMETHING(x, &buf);
+if(len < 0) {
+	/* Malloc error */
+}
+
+and it will automatically allocate and populate a buffer with the
+encoding. After this call 'buf' will point to the start of the
+encoding which is len bytes long.

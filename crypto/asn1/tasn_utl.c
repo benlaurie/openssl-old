@@ -250,16 +250,3 @@ const ASN1_TEMPLATE *asn1_do_adb(ASN1_VALUE **pval, const ASN1_TEMPLATE *tt, int
 	if(nullerr) ASN1err(ASN1_F_ASN1_DO_ADB, ASN1_R_UNSUPPORTED_ANY_DEFINED_BY_TYPE);
 	return NULL;
 }
-
-int asn1_template_is_bool(const ASN1_TEMPLATE *tt)
-{
-	if(tt->flags & ASN1_TFLG_SK_MASK) return 0;
-	else return asn1_item_is_bool(tt->item);
-}
-
-int asn1_item_is_bool(const ASN1_ITEM *it)
-{
-	if((it->utype == V_ASN1_BOOLEAN) &&
-	  (it->itype == ASN1_ITYPE_PRIMITIVE)) return 1;
-	return 0;
-}

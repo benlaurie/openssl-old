@@ -544,6 +544,7 @@ typedef struct ASN1_EXTERN_FUNCS_st {
 	void *app_data;
 	ASN1_ex_new_func *asn1_ex_new;
 	ASN1_ex_free_func *asn1_ex_free;
+	ASN1_ex_free_func *asn1_ex_clear;
 	ASN1_ex_d2i *asn1_ex_d2i;
 	ASN1_ex_i2d *asn1_ex_i2d;
 } ASN1_EXTERN_FUNCS;
@@ -553,6 +554,7 @@ typedef struct ASN1_PRIMITIVE_FUNCS_st {
 	unsigned long flags;
 	ASN1_ex_new_func *prim_new;
 	ASN1_ex_free_func *prim_free;
+	ASN1_ex_free_func *prim_clear;
 	ASN1_primitive_c2i *prim_c2i;
 	ASN1_primitive_i2c *prim_i2c;
 } ASN1_PRIMITIVE_FUNCS;
@@ -712,10 +714,11 @@ int asn1_ex_c2i(ASN1_VALUE **pval, unsigned char *cont, int len, int utype, char
 
 int asn1_get_choice_selector(ASN1_VALUE **pval, const ASN1_ITEM *it);
 int asn1_set_choice_selector(ASN1_VALUE **pval, int value, const ASN1_ITEM *it);
+
 ASN1_VALUE ** asn1_get_field_ptr(ASN1_VALUE **pval, const ASN1_TEMPLATE *tt);
+
 const ASN1_TEMPLATE *asn1_do_adb(ASN1_VALUE **pval, const ASN1_TEMPLATE *tt, int nullerr);
-int asn1_template_is_bool(const ASN1_TEMPLATE *tt);
-int asn1_item_is_bool(const ASN1_ITEM *it);
+
 int asn1_do_lock(ASN1_VALUE **pval, int op, const ASN1_ITEM *it);
 
 void asn1_enc_init(ASN1_VALUE **pval, const ASN1_ITEM *it);

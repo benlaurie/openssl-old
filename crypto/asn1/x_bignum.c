@@ -78,6 +78,7 @@ static ASN1_PRIMITIVE_FUNCS bignum_pf = {
 	NULL, 0,
 	bn_new,
 	bn_free,
+	0,
 	bn_c2i,
 	bn_i2c
 };

@@ -64,6 +64,9 @@
 #include <openssl/asn1t.h>
 
 static int asn1_item_ex_combine_new(ASN1_VALUE **pval, const ASN1_ITEM *it, int combine);
+static void asn1_item_clear(ASN1_VALUE **pval, const ASN1_ITEM *it);
+static void asn1_template_clear(ASN1_VALUE **pval, const ASN1_TEMPLATE *tt);
+void asn1_primitive_clear(ASN1_VALUE **pval, const ASN1_ITEM *it);
 
 ASN1_VALUE *ASN1_item_new(const ASN1_ITEM *it)
 {
@@ -173,23 +176,53 @@ static int asn1_item_ex_combine_new(ASN1_VALUE **pval, const ASN1_ITEM *it, int 
 	ASN1err(ASN1_F_ASN1_ITEM_NEW, ASN1_R_AUX_ERROR);
 	ASN1_item_ex_free(pval, it);
 	return 0;
-	
+
 }
+
+static void asn1_item_clear(ASN1_VALUE **pval, const ASN1_ITEM *it)
+{
+	const ASN1_EXTERN_FUNCS *ef;
+
+	switch(it->itype) {
+
+		case ASN1_ITYPE_EXTERN:
+		ef = it->funcs;
+		if(ef && ef->asn1_ex_clear) 
+			ef->asn1_ex_clear(pval, it);
+		else *pval = NULL;
+		break;
+
+
+		case ASN1_ITYPE_PRIMITIVE:
+		if(it->templates) 
+			asn1_template_clear(pval, it->templates);
+		else
+			asn1_primitive_clear(pval, it);
+		break;
+
+		case ASN1_ITYPE_MSTRING:
+		asn1_primitive_clear(pval, it);
+		break;
+
+		case ASN1_ITYPE_COMPAT:
+		case ASN1_ITYPE_CHOICE:
+		case ASN1_ITYPE_SEQUENCE:
+		*pval = NULL;
+		break;
+	}
+}
+
 
 int ASN1_template_new(ASN1_VALUE **pval, const ASN1_TEMPLATE *tt)
 {
 	const ASN1_ITEM *it = tt->item;
-	/* Special BOOLEAN handling */
-	if(asn1_template_is_bool(tt))
-		return ASN1_item_ex_new(pval, it);
-		
-	/* If OPTIONAL or ANY DEFINED BY nothing to do */
+	if(tt->flags & ASN1_TFLG_OPTIONAL) {
+		asn1_template_clear(pval, tt);
+		return 1;
+	}
+	/* If ANY DEFINED BY nothing to do */
 
-	/* FIXME: OPTIONAL shouldn't really do this in general
-	 * because it needs to set the type to its "undefined"
-	 * state which may not be NULL.
-	 */
-	if(tt->flags & (ASN1_TFLG_OPTIONAL|ASN1_TFLG_ADB_MASK)) {
+	if(tt->flags & ASN1_TFLG_ADB_MASK) {
 		*pval = NULL;
 		return 1;
 	}
@@ -207,6 +240,16 @@ int ASN1_template_new(ASN1_VALUE **pval, const ASN1_TEMPLATE *tt)
 	/* Otherwise pass it back to the item routine */
 	return asn1_item_ex_combine_new(pval, it, tt->flags & ASN1_TFLG_COMBINE);
 }
+
+void asn1_template_clear(ASN1_VALUE **pval, const ASN1_TEMPLATE *tt)
+{
+	/* If ADB or STACK just NULL the field */
+	if(tt->flags & (ASN1_TFLG_ADB_MASK|ASN1_TFLG_SK_MASK)) 
+		*pval = NULL;
+	else
+		asn1_item_clear(pval, tt->item);
+}
+
 
 /* NB: could probably combine most of the real XXX_new() behaviour and junk all the old
  * functions.
@@ -248,4 +291,23 @@ int ASN1_primitive_new(ASN1_VALUE **pval, const ASN1_ITEM *it)
 	}
 	if(*pval) return 1;
 	return 0;
+}
+
+void asn1_primitive_clear(ASN1_VALUE **pval, const ASN1_ITEM *it)
+{
+	int utype;
+	const ASN1_PRIMITIVE_FUNCS *pf;
+	pf = it->funcs;
+	if(pf) {
+		if(pf->prim_clear)
+			pf->prim_clear(pval, it);
+		else 
+			*pval = NULL;
+		return;
+	}
+	if(!it || (it->itype == ASN1_ITYPE_MSTRING)) utype = -1;
+	else utype = it->utype;
+	if(utype == V_ASN1_BOOLEAN)
+		*(ASN1_BOOLEAN *)pval = it->size;
+	else *pval = NULL;
 }

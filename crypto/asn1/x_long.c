@@ -75,6 +75,7 @@ static ASN1_PRIMITIVE_FUNCS long_pf = {
 	NULL, 0,
 	long_new,
 	long_free,
+	long_free,	/* Clear should set to initial value */
 	long_c2i,
 	long_i2c
 };

@@ -344,7 +344,7 @@ static int asn1_i2d_ex_primitive(ASN1_VALUE *val, unsigned char **out, int utype
 		break;
 
 		case V_ASN1_BOOLEAN:
-		btmp = *(int *)val;
+		btmp = *(ASN1_BOOLEAN *)val;
 		/* -1 means undefined and thus omitted */
 		if(btmp == -1) return 0;
 		if(btmp) c = 0xff;

@@ -310,7 +310,7 @@ int ASN1_item_ex_d2i(ASN1_VALUE **pval, unsigned char **in, long len, const ASN1
 				 * BOOLEAN is a special case as always and must be set to -1.
 				 */
 				if(asn1_template_is_bool(seqtt))
-					*(int *)pseqval = -1;
+					*(ASN1_BOOLEAN *)pseqval = -1;
 				else if(*pseqval) {
 					ASN1_template_free(*pseqval, seqtt);
 					*pseqval = NULL;
@@ -487,7 +487,7 @@ static int asn1_d2i_ex_primitive(ASN1_VALUE **pval, unsigned char **in, long inl
 	BUF_MEM buf;
 	unsigned char *cont = NULL;
 	ASN1_STRING *stmp;
-	int *tbool;
+	ASN1_BOOLEAN *tbool;
 	long len; 
 	if(!pval) {
 		ASN1err(ASN1_F_ASN1_D2I_EX_PRIMITIVE, ASN1_R_ILLEGAL_NULL);
@@ -579,7 +579,7 @@ static int asn1_d2i_ex_primitive(ASN1_VALUE **pval, unsigned char **in, long inl
 			ASN1err(ASN1_F_ASN1_D2I_EX_PRIMITIVE, ASN1_R_BOOLEAN_IS_WRONG_LENGTH);
 			goto err;
 		}
-		tbool = (int *)pval;
+		tbool = (ASN1_BOOLEAN *)pval;
 		*tbool = *cont;
 		break;
 

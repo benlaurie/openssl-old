@@ -100,7 +100,7 @@ ASN1_VALUE *asn1_get_field(ASN1_VALUE *val, const ASN1_TEMPLATE *tt)
 	 * BOOLEAN is an (int *).
 	 */
 	if(asn1_template_is_bool(tt)) {
-		int *bool = (int *)ptr;
+		ASN1_BOOLEAN *bool = (ASN1_BOOLEAN *)ptr;
 		/* If BOOLEAN is -1 it is absent so return
 		 * NULL for compatibility with other types
 		 */
@@ -178,7 +178,6 @@ int asn1_template_is_bool(const ASN1_TEMPLATE *tt)
 
 int asn1_item_is_bool(const ASN1_ITEM *it)
 {
-	/* Special BOOLEAN handling */
 	if((it->utype == V_ASN1_BOOLEAN) &&
 	  (it->itype == ASN1_ITYPE_PRIMITIVE)) return 1;
 	return 0;

@@ -110,11 +110,16 @@ int ASN1_item_ex_new(ASN1_VALUE **pval, const ASN1_ITEM *it)
 		break;
 
 		case ASN1_ITYPE_CHOICE:
+		*pval = OPENSSL_malloc(it->size);
+		if(!*pval) goto memerr;
+		memset(*pval, 0, it->size);
+		asn1_set_choice_selector(pval, -1, it);
+		break;
+
 		case ASN1_ITYPE_SEQUENCE:
 		*pval = OPENSSL_malloc(it->size);
 		if(!*pval) goto memerr;
 		memset(*pval, 0, it->size);
-		/* FIXME: set selector for CHOICE */
 		for(i = 0, tt = it->templates; i < it->tcount; tt++, i++) {
 			pseqval = asn1_get_field_ptr(pval, tt);
 			if(!ASN1_template_new(pseqval, tt)) goto memerr;
@@ -167,7 +172,7 @@ int ASN1_primitive_new(ASN1_VALUE **pval, long utype)
 		return 1;
 
 		case V_ASN1_BOOLEAN:
-		*(int *)pval = -1;
+		*(ASN1_BOOLEAN *)pval = -1;
 		return 1;
 
 		case V_ASN1_NULL:

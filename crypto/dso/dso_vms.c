@@ -58,6 +58,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 #include <errno.h>
 #include "cryptlib.h"
 #include <openssl/dso.h>

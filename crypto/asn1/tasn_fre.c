@@ -121,7 +121,8 @@ static void asn1_item_combine_free(ASN1_VALUE *val, const ASN1_ITEM *it, int com
 		if(asn1_cb) asn1_cb(ASN1_OP_FREE_PRE, &val, it);
 		for(i = 0, tt = it->templates; i < it->tcount; tt++, i++) {
 			ASN1_VALUE *seqval;
-			seqtt = asn1_do_adb(val, tt);
+			seqtt = asn1_do_adb(val, tt, 0);
+			if(!seqtt) continue;
 			seqval = asn1_get_field(val, seqtt);
 			ASN1_template_free(seqval, seqtt);
 		}
@@ -153,7 +154,6 @@ void ASN1_primitive_free(ASN1_VALUE *val, long utype)
 		break;
 
 		case V_ASN1_NULL:
-		ASN1_NULL_free((ASN1_NULL *)val);
 		break;
 
 		case V_ASN1_ANY:

@@ -206,7 +206,7 @@ int ASN1_primitive_new(ASN1_VALUE **pval, long utype)
 		return 1;
 
 		case V_ASN1_NULL:
-		*pval = (ASN1_VALUE *)ASN1_NULL_new();
+		*pval = (ASN1_VALUE *)1;
 		return 1;
 
 		case V_ASN1_ANY:

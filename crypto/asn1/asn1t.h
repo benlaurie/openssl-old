@@ -207,11 +207,18 @@ extern "C" {
 #define ASN1_EX_COMBINE(flags, tag, type) { \
 	(flags)|ASN1_TFLG_COMBINE, (tag), 0, NULL, &(type##_it) }
 
+/* implicit and explicit helper macros */
+
 #define ASN1_IMP_EX(stname, field, type, tag, ex) \
 		ASN1_EX_TYPE(ASN1_TFLG_IMPLICIT | ex, tag, stname, field, type)
 
 #define ASN1_EXP_EX(stname, field, type, tag, ex) \
 		ASN1_EX_TYPE(ASN1_TFLG_EXPLICIT | ex, tag, stname, field, type)
+
+/* Any defined by macros: the field used is in the table itself */
+
+#define ASN1_ADB_OBJECT(tblname) { ASN1_TFLG_ADB_OID, -1, 0, #tblname, &(tblname##_adb) }
+#define ASN1_ADB_INTEGER(tblname) { ASN1_TFLG_ADB_INT, -1, 0, #tblname, &(tblname##_adb) }
 
 /* Plain simple type */
 #define ASN1_SIMPLE(stname, field, type) ASN1_EX_TYPE(0,0, stname, field, type)
@@ -271,6 +278,25 @@ extern "C" {
 
 #define ASN1_EXP_SEQUENCE_OF_OPT(stname, field, type, tag) \
 			ASN1_EXP_EX(stname, field, type, tag, ASN1_TFLG_SEQUENCE_OF|ASN1_TFLG_OPTIONAL)
+
+/* Macros for the ASN1_ADB structure */
+
+#define ASN1_ADB(name) \
+	const static ASN1_ADB_TABLE name##_adbtbl[] 
+
+#define ASN1_ADB_END(name, flags, field, app, def, none) \
+	;\
+	const static ASN1_ADB name##_adb = {\
+		flags,\
+		offsetof(name, field),\
+		app,\
+		&name##_adbtbl,\
+		sizeof(name##_adbtbl) / sizeof(ASN1_ADB_TABLE),\
+		def,\
+		none\
+	}
+
+#define ADB_ENTRY(val, template) {val, template##_tt}
 
 /* This is the ASN1 template structure that defines
  * a wrapper round the actual type. It determines the

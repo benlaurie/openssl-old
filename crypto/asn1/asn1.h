@@ -480,6 +480,11 @@ typedef struct BIT_STRING_BITNAME_st {
 			B_ASN1_UNIVERSALSTRING|\
 			B_ASN1_UTF8STRING
 
+#define B_ASN1_DISPLAYTEXT \
+			B_ASN1_VISIBLESTRING| \
+			B_ASN1_BMPSTRING|\
+			B_ASN1_UTF8STRING
+
 #define M_ASN1_PRINTABLE_new()	ASN1_STRING_type_new(V_ASN1_T61STRING)
 #define M_ASN1_PRINTABLE_free(a)	ASN1_STRING_free((ASN1_STRING *)a)
 #define M_i2d_ASN1_PRINTABLE(a,pp) i2d_ASN1_bytes((ASN1_STRING *)a,\
@@ -502,9 +507,7 @@ typedef struct BIT_STRING_BITNAME_st {
 						pp,a->type,V_ASN1_UNIVERSAL)
 #define M_d2i_DISPLAYTEXT(a,pp,l) \
 		d2i_ASN1_type_bytes((ASN1_STRING **)a,pp,l, \
-			B_ASN1_VISIBLESTRING| \
-			B_ASN1_BMPSTRING|\
-			B_ASN1_UTF8STRING)
+			B_ASN1_DISPLAYTEXT)
 
 #define M_ASN1_PRINTABLESTRING_new() (ASN1_PRINTABLESTRING *)\
 		ASN1_STRING_type_new(V_ASN1_PRINTABLESTRING)
@@ -926,7 +929,7 @@ int asn1_get_choice_selector(ASN1_VALUE *data, const ASN1_ITEM *it);
 int asn1_set_choice_selector(ASN1_VALUE **data, int value, const ASN1_ITEM *it);
 ASN1_VALUE * asn1_get_field(ASN1_VALUE *data, const ASN1_TEMPLATE *tt);
 ASN1_VALUE ** asn1_get_field_ptr(ASN1_VALUE **data, const ASN1_TEMPLATE *tt);
-const ASN1_TEMPLATE *asn1_do_adb(ASN1_VALUE *val, const ASN1_TEMPLATE *tt);
+const ASN1_TEMPLATE *asn1_do_adb(ASN1_VALUE *val, const ASN1_TEMPLATE *tt, int nullerr);
 int asn1_template_is_bool(const ASN1_TEMPLATE *tt);
 int asn1_item_is_bool(const ASN1_ITEM *it);
 
@@ -951,6 +954,7 @@ int asn1_item_is_bool(const ASN1_ITEM *it);
 #define ASN1_F_ASN1_D2I_BIO				 104
 #define ASN1_F_ASN1_D2I_EX_PRIMITIVE			 295
 #define ASN1_F_ASN1_D2I_FP				 105
+#define ASN1_F_ASN1_DO_ADB				 302
 #define ASN1_F_ASN1_DUP					 106
 #define ASN1_F_ASN1_ENUMERATED_SET			 232
 #define ASN1_F_ASN1_ENUMERATED_TO_BN			 233
@@ -1219,6 +1223,7 @@ int asn1_item_is_bool(const ASN1_ITEM *it);
 #define ASN1_R_UNKNOWN_MESSAGE_DIGEST_ALGORITHM		 141
 #define ASN1_R_UNKNOWN_OBJECT_TYPE			 142
 #define ASN1_R_UNKNOWN_PUBLIC_KEY_TYPE			 143
+#define ASN1_R_UNSUPPORTED_ANY_DEFINED_BY_TYPE		 182
 #define ASN1_R_UNSUPPORTED_CIPHER			 144
 #define ASN1_R_UNSUPPORTED_ENCRYPTION_ALGORITHM		 145
 #define ASN1_R_UNSUPPORTED_PUBLIC_KEY_TYPE		 146

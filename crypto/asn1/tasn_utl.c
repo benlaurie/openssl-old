@@ -61,6 +61,7 @@
 #include <openssl/asn1.h>
 #include <openssl/asn1t.h>
 #include <openssl/objects.h>
+#include <openssl/err.h>
 
 /* Utility functions for manipulating fields and offsets */
 
@@ -159,7 +160,7 @@ ASN1_VALUE ** asn1_get_field_ptr(ASN1_VALUE **pval, const ASN1_TEMPLATE *tt)
  * the relevant ASN1_TEMPLATE in the table and return it.
  */
 
-const ASN1_TEMPLATE *asn1_do_adb(ASN1_VALUE *val, const ASN1_TEMPLATE *tt)
+const ASN1_TEMPLATE *asn1_do_adb(ASN1_VALUE *val, const ASN1_TEMPLATE *tt, int nullerr)
 {
 	const ASN1_ADB *adb;
 	const ASN1_ADB_TABLE *atbl;
@@ -175,7 +176,10 @@ const ASN1_TEMPLATE *asn1_do_adb(ASN1_VALUE *val, const ASN1_TEMPLATE *tt)
 	sfld = offset2ptr(val, adb->offset);
 
 	/* Check if NULL */
-	if(!sfld) return adb->null_tt;
+	if(!sfld) {
+		if(!adb->null_tt) goto err;
+		return adb->null_tt;
+	}
 
 	/* Convert type to a long:
 	 * NB: don't check for NID_undef here because it
@@ -200,7 +204,13 @@ const ASN1_TEMPLATE *asn1_do_adb(ASN1_VALUE *val, const ASN1_TEMPLATE *tt)
 	/* FIXME: need to search application table too */
 
 	/* No match, return default type */
-	return adb->default_tt;		
+	if(!adb->default_tt) goto err;		
+	return adb->default_tt;
+	
+	err:
+	/* FIXME: should log the value or OID of unsupported type */
+	if(nullerr) ASN1err(ASN1_F_ASN1_DO_ADB, ASN1_R_UNSUPPORTED_ANY_DEFINED_BY_TYPE);
+	return NULL;
 }
 
 int asn1_template_is_bool(const ASN1_TEMPLATE *tt)

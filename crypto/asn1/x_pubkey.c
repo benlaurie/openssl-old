@@ -71,14 +71,10 @@ static int pubkey_cb(int operation, ASN1_VALUE **pval, const ASN1_ITEM *it)
 	return 1;
 }
 	
-static const ASN1_AUX pubkey_aux = {
-	NULL, 0, 0, 0, pubkey_cb
-};
-
-ASN1_SEQUENCE(X509_PUBKEY) = {
+ASN1_SEQUENCE_aux(X509_PUBKEY, pubkey_cb) = {
 	ASN1_SIMPLE(X509_PUBKEY, algor, X509_ALGOR),
 	ASN1_SIMPLE(X509_PUBKEY, public_key, ASN1_BIT_STRING)
-} ASN1_SEQUENCE_END_aux(X509_PUBKEY, X509_PUBKEY, &pubkey_aux);
+} ASN1_SEQUENCE_END(X509_PUBKEY);
 
 IMPLEMENT_ASN1_FUNCTIONS(X509_PUBKEY)
 

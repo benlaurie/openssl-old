@@ -156,7 +156,7 @@ int ASN1_item_ex_i2d(ASN1_VALUE *val, unsigned char **out, const ASN1_ITEM *it, 
 		for(i = 0, tt = it->templates; i < it->tcount; tt++, i++) {
 			const ASN1_TEMPLATE *seqtt;
 			ASN1_VALUE *seqval;
-			seqtt = asn1_do_adb(val, tt);
+			seqtt = asn1_do_adb(val, tt, 1);
 			if(!seqtt) return 0;
 			seqval = asn1_get_field(val, seqtt);
 			/* FIXME: check for errors in enhanced version */
@@ -170,7 +170,7 @@ int ASN1_item_ex_i2d(ASN1_VALUE *val, unsigned char **out, const ASN1_ITEM *it, 
 		for(i = 0, tt = it->templates; i < it->tcount; tt++, i++) {
 			const ASN1_TEMPLATE *seqtt;
 			ASN1_VALUE *seqval;
-			seqtt = asn1_do_adb(val, tt);
+			seqtt = asn1_do_adb(val, tt, 1);
 			if(!seqtt) return 0;
 			seqval = asn1_get_field(val, seqtt);
 			/* FIXME: check for errors in enhanced version */
@@ -330,10 +330,7 @@ static int asn1_i2d_ex_primitive(ASN1_VALUE *val, unsigned char **out, int utype
 		ASN1_TYPE *atype;
 		atype = (ASN1_TYPE *)val;
 		utype = atype->type;
-		/* NB: not a leak because ASN1_NULL_new()
-		 * doesn't allocate anything
-		 */
-		if(utype == V_ASN1_NULL) val = (ASN1_VALUE *)ASN1_NULL_new();
+		if(utype == V_ASN1_NULL) val = (ASN1_VALUE *)1;
 		else val = (ASN1_VALUE *)atype->value.ptr;
 	}
 	if(tag == -1) {

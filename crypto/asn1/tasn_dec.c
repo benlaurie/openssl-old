@@ -287,7 +287,8 @@ int ASN1_item_ex_d2i(ASN1_VALUE **pval, unsigned char **in, long len, const ASN1
 		for(i = 0, tt = it->templates; i < it->tcount; i++, tt++) {
 			const ASN1_TEMPLATE *seqtt;
 			ASN1_VALUE **pseqval;
-			seqtt = asn1_do_adb(*pval, tt);
+			seqtt = asn1_do_adb(*pval, tt, 1);
+			if(!seqtt) goto err;
 			pseqval = asn1_get_field_ptr(pval, seqtt);
 			/* Have we ran out of data? */
 			if(!len) break;
@@ -348,7 +349,8 @@ int ASN1_item_ex_d2i(ASN1_VALUE **pval, unsigned char **in, long len, const ASN1
 		 */
 		for(; i < it->tcount; tt++, i++) {
 			const ASN1_TEMPLATE *seqtt;
-			seqtt = asn1_do_adb(*pval, tt);
+			seqtt = asn1_do_adb(*pval, tt, 1);
+			if(!seqtt) goto err;
 			if(!(seqtt->flags & ASN1_TFLG_OPTIONAL)) {
 				errtt = seqtt;
 				ASN1err(ASN1_F_ASN1_ITEM_EX_D2I, ASN1_R_FIELD_MISSING);
@@ -641,7 +643,7 @@ static int asn1_d2i_ex_primitive(ASN1_VALUE **pval, unsigned char **in, long inl
 			ASN1err(ASN1_F_ASN1_D2I_EX_PRIMITIVE, ASN1_R_NULL_IS_WRONG_LENGTH);
 			goto err;
 		}
-		*pval = (ASN1_VALUE *)ASN1_NULL_new();
+		*pval = (ASN1_VALUE *)1;
 		break;
 
 		case V_ASN1_BOOLEAN:

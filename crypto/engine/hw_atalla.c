@@ -236,8 +236,7 @@ static int atalla_init()
 	 * drivers really use - for now a symbollic link needs to be
 	 * created on the host system from libatasi.so to atasi.so on
 	 * unix variants. */
-	atalla_dso = DSO_load(NULL, ATALLA_LIBNAME, NULL,
-		DSO_FLAG_NAME_TRANSLATION);
+	atalla_dso = DSO_load(NULL, ATALLA_LIBNAME, NULL, 0);
 	if(atalla_dso == NULL)
 		{
 		ENGINEerr(ENGINE_F_ATALLA_INIT,ENGINE_R_DSO_FAILURE);

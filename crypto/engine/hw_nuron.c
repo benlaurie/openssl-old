@@ -68,8 +68,10 @@
 #ifndef NO_HW
 #ifndef NO_HW_NURON
 
-static int (*pfnModExp)(BIGNUM *r,BIGNUM *a,const BIGNUM *p,const BIGNUM *m);
-void *pvDSOHandle;
+typedef int tfnModExp(BIGNUM *r,BIGNUM *a,const BIGNUM *p,const BIGNUM *m);
+static tfnModExp *pfnModExp = NULL;
+
+static DSO *pvDSOHandle = NULL;
 
 static int nuron_init()
 	{
@@ -79,15 +81,15 @@ static int nuron_init()
 		return 0;
 		}
 
-	pvDSOHandle=dlopen("nuronssl.so",RTLD_NOW);
+	pvDSOHandle=DSO_load(NULL,"nuronssl",NULL,
+		DSO_FLAG_NAME_TRANSLATION_EXT_ONLY);
 	if(!pvDSOHandle)
 		{
 		ENGINEerr(ENGINE_F_NURON_INIT,ENGINE_R_DSO_NOT_FOUND);
 		return 0;
 		}
 
-	pfnModExp=(int (*)(BIGNUM *r,BIGNUM *a,const BIGNUM *p,
-			   const BIGNUM *m))dlsym(pvDSOHandle,"nuron_mod_exp");
+	pfnModExp=(tfnModExp *)DSO_bind_func(pvDSOHandle,"nuron_mod_exp");
 	if(!pfnModExp)
 		{
 		ENGINEerr(ENGINE_F_NURON_INIT,ENGINE_R_DSO_FUNCTION_NOT_FOUND);

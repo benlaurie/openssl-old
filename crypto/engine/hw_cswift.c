@@ -264,8 +264,7 @@ static int cswift_init()
 		goto err;
 		}
 	/* Attempt to load libswift.so/swift.dll/whatever. */
-	cswift_dso = DSO_load(NULL, CSWIFT_LIBNAME, NULL,
-		DSO_FLAG_NAME_TRANSLATION);
+	cswift_dso = DSO_load(NULL, CSWIFT_LIBNAME, NULL, 0);
 	if(cswift_dso == NULL)
 		{
 		ENGINEerr(ENGINE_F_CSWIFT_INIT,ENGINE_R_DSO_FAILURE);

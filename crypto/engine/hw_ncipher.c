@@ -393,8 +393,7 @@ static int hwcrhk_init()
 		goto err;
 		}
 	/* Attempt to load libnfhwcrhk.so/nfhwcrhk.dll/whatever. */
-	hwcrhk_dso = DSO_load(NULL, HWCRHK_LIBNAME, NULL,
-		DSO_FLAG_NAME_TRANSLATION);
+	hwcrhk_dso = DSO_load(NULL, HWCRHK_LIBNAME, NULL, 0);
 	if(hwcrhk_dso == NULL)
 		{
 		ENGINEerr(ENGINE_F_HWCRHK_INIT,ENGINE_R_DSO_FAILURE);

@@ -81,7 +81,8 @@ static int def_init_default(CONF *conf);
 static int def_init_WIN32(CONF *conf);
 static int def_destroy(CONF *conf);
 static int def_destroy_data(CONF *conf);
-static int def_load(CONF *conf, BIO *bp, long *eline);
+static int def_load(CONF *conf, const char *name, long *eline);
+static int def_load_bio(CONF *conf, BIO *bp, long *eline);
 static int def_dump(CONF *conf, BIO *bp);
 static int def_is_number(CONF *conf, char c);
 static int def_to_int(CONF *conf, char c);
@@ -94,10 +95,11 @@ static CONF_METHOD default_method = {
 	def_init_default,
 	def_destroy,
 	def_destroy_data,
-	def_load,
+	def_load_bio,
 	def_dump,
 	def_is_number,
-	def_to_int
+	def_to_int,
+	def_load
 	};
 
 static CONF_METHOD WIN32_method = {
@@ -106,10 +108,11 @@ static CONF_METHOD WIN32_method = {
 	def_init_WIN32,
 	def_destroy,
 	def_destroy_data,
-	def_load,
+	def_load_bio,
 	def_dump,
 	def_is_number,
-	def_to_int
+	def_to_int,
+	def_load
 	};
 
 CONF_METHOD *NCONF_default()
@@ -177,7 +180,29 @@ static int def_destroy_data(CONF *conf)
 	return 1;
 	}
 
-static int def_load(CONF *conf, BIO *in, long *line)
+static int def_load(CONF *conf, const char *name, long *line)
+	{
+	int ret;
+	BIO *in=NULL;
+
+#ifdef VMS
+	in=BIO_new_file(name, "r");
+#else
+	in=BIO_new_file(name, "rb");
+#endif
+	if (in == NULL)
+		{
+		CONFerr(CONF_F_CONF_LOAD,ERR_R_SYS_LIB);
+		return 0;
+		}
+
+	ret = def_load_bio(conf, in, line);
+	BIO_free(in);
+
+	return ret;
+	}
+
+static int def_load_bio(CONF *conf, BIO *in, long *line)
 	{
 #define BUFSIZE	512
 	char btmp[16];

@@ -420,7 +420,7 @@ void X509_STORE_CTX_set_time(X509_STORE_CTX *ctx, long flags, time_t t);
 void X509_STORE_CTX_set_verify_cb(X509_STORE_CTX *ctx,
 				  int (*verify_cb)(int, X509_STORE_CTX *));
 
-int X509_policy_check(X509_POLICY_TREE **ptree, int *explicit,
+int X509_policy_check(X509_POLICY_TREE **ptree, int *pexplicit_policy,
 			STACK_OF(X509) *certs,
 			STACK_OF(ASN1_OBJECT) *policy_oids,
 			unsigned int flags);
@@ -447,8 +447,6 @@ STACK_OF(POLICYQUALINFO) *
 	X509_policy_node_get0_qualifiers(const X509_POLICY_NODE *node);
 const X509_POLICY_NODE *
 	X509_policy_node_get0_parent(const X509_POLICY_NODE *node);
-
-void X509_policy_lib_init(void);
 
 #ifdef  __cplusplus
 }

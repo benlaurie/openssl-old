@@ -61,10 +61,7 @@
  * SUN MICROSYSTEMS, INC., and contributed to the OpenSSL project.
  */
 
-#include <openssl/crypto.h>
-#include "cryptlib.h"
 #include "eng_int.h"
-#include <openssl/engine.h>
 
 /* The linked-list of pointers to engine types. engine_list_head
  * incorporates an implicit structural reference but engine_list_tail
@@ -400,7 +397,7 @@ ENGINE *ENGINE_by_id(const char *id)
 #ifdef OPENSSL_SYS_VMS
 	if((load_dir = getenv("OPENSSL_ENGINES")) == 0) load_dir = "SSLROOT:[ENGINES]";
 #else
-	if((load_dir = getenv("OPENSSL_ENGINES")) == 0) load_dir = OPENSSLDIR "/engines";
+	if((load_dir = getenv("OPENSSL_ENGINES")) == 0) load_dir = ENGINESDIR;
 #endif
 	iterator = ENGINE_by_id("dynamic");
 	if(!iterator || !ENGINE_ctrl_cmd_string(iterator, "ID", id, 0) ||

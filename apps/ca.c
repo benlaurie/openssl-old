@@ -241,6 +241,7 @@ int MAIN(int argc, char **argv)
 	{
 	ENGINE *e = NULL;
 	char *key=NULL,*passargin=NULL;
+	int create_ser = 0;
 	int free_key = 0;
 	int total=0;
 	int total_done=0;
@@ -354,6 +355,8 @@ EF_ALIGNMENT=0;
 			subj= *(++argv);
 			/* preserve=1; */
 			}
+		else if (strcmp(*argv,"-create_serial") == 0)
+			create_ser = 1;
 		else if (strcmp(*argv,"-multivalue-rdn") == 0)
 			multirdn=1;
 		else if (strcmp(*argv,"-startdate") == 0)
@@ -650,8 +653,10 @@ bad:
 #endif
 		db_attr.unique_subject = parse_yesno(p,1);
 		}
-#ifdef RL_DEBUG
 	else
+		ERR_clear_error();
+#ifdef RL_DEBUG
+	if (!p)
 		BIO_printf(bio_err, "DEBUG: unique_subject undefined\n", p);
 #endif
 #ifdef RL_DEBUG
@@ -1095,7 +1100,7 @@ bad:
 			goto err;
 			}
 
-		if ((serial=load_serial(serialfile, 0, NULL)) == NULL)
+		if ((serial=load_serial(serialfile, create_ser, NULL)) == NULL)
 			{
 			BIO_printf(bio_err,"error while loading serial number\n");
 			goto err;

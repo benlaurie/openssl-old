@@ -92,6 +92,8 @@ int main(int argc, char * argv[]) { puts("Elliptic curves are disabled."); retur
 #include <openssl/err.h>
 #include <openssl/obj_mac.h>
 #include <openssl/objects.h>
+#include <openssl/rand.h>
+#include <openssl/bn.h>
 
 #define ABORT do { \
 	fflush(stdout); \

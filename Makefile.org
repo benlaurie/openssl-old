@@ -220,7 +220,7 @@ all: Makefile.ssl build_all openssl.pc
 BUILD_CMD=if echo " $(DIRS) " | grep " $$dir " >/dev/null 2>/dev/null; then \
 	if [ -d "$$dir" ]; then \
 		(cd $$dir && echo "making $$target in $$dir..." && \
-		$(MAKE) CC='${CC}' PLATFORM='${PLATFORM}' CFLAG='${CFLAG}' AS='${AS}' ASFLAG='${ASFLAG}' SDIRS='$(SDIRS)' INSTALLTOP='${INSTALLTOP}' PEX_LIBS='${PEX_LIBS}' EX_LIBS='${EX_LIBS}' BN_ASM='${BN_ASM}' DES_ENC='${DES_ENC}' BF_ENC='${BF_ENC}' CAST_ENC='${CAST_ENC}' RC4_ENC='${RC4_ENC}' RC5_ENC='${RC5_ENC}' SHA1_ASM_OBJ='${SHA1_ASM_OBJ}' MD5_ASM_OBJ='${MD5_ASM_OBJ}' RMD160_ASM_OBJ='${RMD160_ASM_OBJ}' AR='${AR}' PROCESSOR='${PROCESSOR}' PERL='${PERL}' RANLIB='${RANLIB}' KRB5_INCLUDES='${KRB5_INCLUDES}' LIBKRB5='${LIBKRB5}' EXE_EXT='${EXE_EXT}' SHARED_LIBS='${SHARED_LIBS}' SHLIB_EXT='${SHLIB_EXT}' SHLIB_TARGET='${SHLIB_TARGET}' $$target ) || exit 1; \
+		$(MAKE) CC='${CC}' PLATFORM='${PLATFORM}' CFLAG='${CFLAG}' AS='${AS}' ASFLAG='${ASFLAG}' SDIRS='$(SDIRS)' INSTALLTOP='${INSTALLTOP}' PEX_LIBS='${PEX_LIBS}' EX_LIBS='${EX_LIBS}' BN_ASM='${BN_ASM}' DES_ENC='${DES_ENC}' BF_ENC='${BF_ENC}' CAST_ENC='${CAST_ENC}' RC4_ENC='${RC4_ENC}' RC5_ENC='${RC5_ENC}' SHA1_ASM_OBJ='${SHA1_ASM_OBJ}' MD5_ASM_OBJ='${MD5_ASM_OBJ}' RMD160_ASM_OBJ='${RMD160_ASM_OBJ}' AR='${AR}' PROCESSOR='${PROCESSOR}' PERL='${PERL}' RANLIB='${RANLIB}' KRB5_INCLUDES='${KRB5_INCLUDES}' LIBKRB5='${LIBKRB5}' EXE_EXT='${EXE_EXT}' SHARED_LIBS='${SHARED_LIBS}' SHLIB_EXT='${SHLIB_EXT}' SHLIB_TARGET='${SHLIB_TARGET}' SHARED_LDFLAGS='${SHARED_LDFLAGS}' LIBRPATH='$(INSTALLTOP)/lib' $$target ) || exit 1; \
 	else \
 		$(MAKE) $$dir; \
 	fi; fi
@@ -409,7 +409,7 @@ depend:
 	do \
 	if [ -d "$$i" ]; then \
 		(cd $$i && echo "making dependencies $$i..." && \
-		$(MAKE) SDIRS='${SDIRS}' CFLAG='${CFLAG}' DEPFLAG='${DEPFLAG}' MAKEDEPPROG='${MAKEDEPPROG}' KRB5_INCLUDES='${KRB5_INCLUDES}' PERL='${PERL}' depend ) || exit 1; \
+		$(MAKE) SDIRS='${SDIRS}' CFLAG='-DOPENSSL_NO_DEPRECATED ${CFLAG}' DEPFLAG='${DEPFLAG}' MAKEDEPPROG='${MAKEDEPPROG}' KRB5_INCLUDES='${KRB5_INCLUDES}' PERL='${PERL}' depend ) || exit 1; \
 	fi; \
 	done;
 
@@ -449,11 +449,14 @@ crypto/objects/obj_dat.h: crypto/objects/obj_dat.pl crypto/objects/obj_mac.h
 crypto/objects/obj_mac.h: crypto/objects/objects.pl crypto/objects/objects.txt crypto/objects/obj_mac.num
 	$(PERL) crypto/objects/objects.pl crypto/objects/objects.txt crypto/objects/obj_mac.num crypto/objects/obj_mac.h
 
+apps/openssl-vms.cnf: apps/openssl.cnf
+	$(PERL) VMS/VMSify-conf.pl < apps/openssl.cnf > apps/openssl-vms.cnf
+
 TABLE: Configure
 	(echo 'Output of `Configure TABLE'"':"; \
 	$(PERL) Configure TABLE) > TABLE
 
-update: depend errors stacks util/libeay.num util/ssleay.num crypto/objects/obj_dat.h TABLE
+update: depend errors stacks util/libeay.num util/ssleay.num crypto/objects/obj_dat.h apps/openssl-vms.cnf TABLE
 
 # Build distribution tar-file. As the list of files returned by "find" is
 # pretty long, on several platforms a "too many arguments" error or similar
@@ -493,13 +496,12 @@ dist_pem_h:
 install: all install_docs
 	@$(PERL) $(TOP)/util/mkdir-p.pl $(INSTALL_PREFIX)$(INSTALLTOP)/bin \
 		$(INSTALL_PREFIX)$(INSTALLTOP)/lib \
+		$(INSTALL_PREFIX)$(INSTALLTOP)/lib/engines \
 		$(INSTALL_PREFIX)$(INSTALLTOP)/lib/pkgconfig \
 		$(INSTALL_PREFIX)$(INSTALLTOP)/include/openssl \
-		$(INSTALL_PREFIX)$(INSTALLTOP)/engines \
 		$(INSTALL_PREFIX)$(OPENSSLDIR)/misc \
 		$(INSTALL_PREFIX)$(OPENSSLDIR)/certs \
-		$(INSTALL_PREFIX)$(OPENSSLDIR)/private \
-		$(INSTALL_PREFIX)$(OPENSSLDIR)/lib
+		$(INSTALL_PREFIX)$(OPENSSLDIR)/private
 	@set -e; for i in $(EXHEADER) ;\
 	do \
 	(cp $$i $(INSTALL_PREFIX)$(INSTALLTOP)/include/openssl/$$i; \

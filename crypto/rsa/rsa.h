@@ -64,9 +64,11 @@
 #ifndef OPENSSL_NO_BIO
 #include <openssl/bio.h>
 #endif
-#include <openssl/bn.h>
 #include <openssl/crypto.h>
 #include <openssl/ossl_typ.h>
+#ifndef OPENSSL_NO_DEPRECATED
+#include <openssl/bn.h>
+#endif
 
 #ifdef OPENSSL_NO_RSA
 #error RSA is disabled.
@@ -76,9 +78,11 @@
 extern "C" {
 #endif
 
-typedef struct rsa_st RSA;
+/* Declared already in ossl_typ.h */
+/* typedef struct rsa_st RSA; */
+/* typedef struct rsa_meth_st RSA_METHOD; */
 
-typedef struct rsa_meth_st
+struct rsa_meth_st
 	{
 	const char *name;
 	int (*rsa_pub_enc)(int flen,const unsigned char *from,
@@ -118,8 +122,8 @@ typedef struct rsa_meth_st
  * is for behavioural compatibility whilst the code gets rewired, but one day
  * it would be nice to assume there are no such things as "builtin software"
  * implementations. */
-	int (*rsa_keygen)(RSA *rsa, int bits, unsigned long e, BN_GENCB *cb);
-	} RSA_METHOD;
+	int (*rsa_keygen)(RSA *rsa, int bits, BIGNUM *e, BN_GENCB *cb);
+	};
 
 struct rsa_st
 	{
@@ -201,7 +205,7 @@ RSA *	RSA_generate_key(int bits, unsigned long e,void
 #endif /* !defined(OPENSSL_NO_DEPRECATED) */
 
 /* New version */
-int	RSA_generate_key_ex(RSA *rsa, int bits, unsigned long e, BN_GENCB *cb);
+int	RSA_generate_key_ex(RSA *rsa, int bits, BIGNUM *e, BN_GENCB *cb);
 
 int	RSA_check_key(const RSA *);
 	/* next 4 return -1 on error */

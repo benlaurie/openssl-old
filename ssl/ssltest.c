@@ -138,6 +138,10 @@
 #endif
 #include <openssl/err.h>
 #include <openssl/rand.h>
+#include <openssl/rsa.h>
+#include <openssl/dsa.h>
+#include <openssl/dh.h>
+#include <openssl/bn.h>
 
 #define _XOPEN_SOURCE_EXTENDED	1 /* Or gethostname won't be declared properly
 				     on Compaq platforms (at least with DEC C).
@@ -1609,17 +1613,19 @@ static RSA *rsa_tmp=NULL;
 
 static RSA MS_CALLBACK *tmp_rsa_cb(SSL *s, int is_export, int keylength)
 	{
+	BIGNUM *bn = NULL;
 	if (rsa_tmp == NULL)
 		{
+		bn = BN_new();
 		rsa_tmp = RSA_new();
-		if(!rsa_tmp)
+		if(!bn || !rsa_tmp || !BN_set_word(bn, RSA_F4))
 			{
 			BIO_printf(bio_err, "Memory error...");
 			goto end;
 			}
 		BIO_printf(bio_err,"Generating temp (%d bit) RSA key...",keylength);
 		(void)BIO_flush(bio_err);
-		if(!RSA_generate_key_ex(rsa_tmp,keylength,RSA_F4,NULL))
+		if(!RSA_generate_key_ex(rsa_tmp,keylength,bn,NULL))
 			{
 			BIO_printf(bio_err, "Error generating key.");
 			RSA_free(rsa_tmp);
@@ -1629,6 +1635,7 @@ end:
 		BIO_printf(bio_err,"\n");
 		(void)BIO_flush(bio_err);
 		}
+	if(bn) BN_free(bn);
 	return(rsa_tmp);
 	}
 

@@ -13,6 +13,7 @@
                          solaris-sparcv9-cc   - test passed
                          solaris-sparcv9-gcc  - test passed
                          hpux-parisc-gcc      - test passed
+                         AIX 4.3 (aix-cc)     - test passed
                          VC++                 - assembler error
                        Proposed release time: Monday, February 28th 2000
     o  OpenSSL 0.9.4:  Released on August   09th, 1999

@@ -69,11 +69,29 @@ extern "C" {
 
 /* Macros to aid ASN1 template writing */
 
+#define ASN1_ITEM_TEMPLATE(tname) \
+	const static ASN1_TEMPLATE tname##_item_tt 
+
+#define ASN1_ITEM_TEMPLATE_END(tname) \
+	;\
+	const ASN1_ITEM tname##_it = { \
+		ASN1_ITYPE_PRIMITIVE,\
+		-1,\
+		&tname##_item_tt,\
+		0,\
+		NULL,\
+		0,\
+		#tname \
+	}
+
+
+/* This is a ASN1 type which just embeds a template */
+ 
 /* This pair helps declare a SEQUENCE. We can do:
  *
  * 	ASN1_SEQUENCE(stname) = {
  * 		... SEQUENCE components ...
- * 	ASN1_SEQUENCE_END(stname);
+ * 	} ASN1_SEQUENCE_END(stname);
  *
  * 	This will produce an ASN1_ITEM called stname_it
  *	for a structure called stname.
@@ -83,7 +101,7 @@ extern "C" {
  *
  * 	ASN1_SEQUENCE(itname) = {
  * 		... SEQUENCE components ...
- * 	ASN1_SEQUENCE_END_name(stname, itname);
+ * 	} ASN1_SEQUENCE_END_name(stname, itname);
  *
  *	This will create an item called itname_it using
  *	a structure called stname.
@@ -147,6 +165,12 @@ extern "C" {
 		sizeof(stname),\
 		#stname \
 	}
+
+/* This helps with the template wrapper form of ASN1_ITEM */
+
+#define ASN1_EX_TEMPLATE_TYPE(flags, tag, name, type) { \
+	(flags), (tag), 0,\
+	#name, &(type##_it) }
 
 /* These help with SEQUENCE or CHOICE components */
 
@@ -454,7 +478,7 @@ typedef struct ASN1_EXTERN_FUNCS_st {
 
 #define IMPLEMENT_COMPAT_ASN1(sname) IMPLEMENT_COMPAT_ASN1_type(sname, V_ASN1_SEQUENCE)
 
-#define IMPLEMENT_COMPAT_ASN1_type(sname, type) \
+#define IMPLEMENT_COMPAT_ASN1_type(sname, tag) \
 	static const ASN1_COMPAT_FUNCS sname##_ff = { \
 		(ASN1_new_func *)sname##_new, \
 		(ASN1_free_func *)sname##_free, \
@@ -463,13 +487,24 @@ typedef struct ASN1_EXTERN_FUNCS_st {
 	}; \
 	ASN1_ITEM const sname##_it = { \
 		ASN1_ITYPE_COMPAT, \
-		type, \
+		tag, \
 		NULL, \
 		0, \
 		&sname##_ff, \
 		0, \
 		#sname \
 	}
+
+#define IMPLEMENT_EXTERN_ASN1(sname, tag, fptrs) \
+	const ASN1_ITEM sname##_it = { \
+		ASN1_ITYPE_EXTERN, \
+		tag, \
+		NULL, \
+		0, \
+		&fptrs, \
+		0, \
+		#sname \
+	};
 
 /* Macro to implement standard functions in terms of ASN1_ITEM structures */
 

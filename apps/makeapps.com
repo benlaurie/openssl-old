@@ -314,6 +314,7 @@ $!
 $! Link The Program.
 $! Check To See If We Are To Link With A Specific TCP/IP Library.
 $!
+$ _save_ver = f$verify(1)
 $ IF (TCPIP_LIB.NES."")
 $ THEN
 $!
@@ -343,6 +344,7 @@ $!
 $! End The TCP/IP Library Check.
 $!
 $ ENDIF
+$ _save_ver := 'f$verify(_save_ver)
 $!
 $! Go Back And Do It Again.
 $!

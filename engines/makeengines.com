@@ -189,6 +189,7 @@ $! For shareable libraries, we need to do things a little differently
 $! depending on if we link with a TCP/IP library or not.
 $!
 $ ENGINE_OPT := SYS$DISK:[]'ARCH'.OPT
+$ _save_ver = f$verify(1)
 $ IF TCPIP_LIB .NES. ""
 $ THEN
 $   LINK/'DEBUGGER'/'TRACEBACK' /SHARE='EXE_DIR''ENGINE_NAME'.EXE -
@@ -201,6 +202,7 @@ $   LINK/'DEBUGGER'/'TRACEBACK' /SHARE='EXE_DIR''ENGINE_NAME'.EXE -
         'CRYPTO_LIB'/LIBRARY, -
 	'ENGINE_OPT'/OPTION,'OPT_FILE'/OPTION
 $ ENDIF
+$ _save_ver := 'f$verify(_save_ver)
 $!
 $! Clean up
 $!

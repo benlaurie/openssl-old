@@ -489,7 +489,7 @@ static int asn1_d2i_ex_primitive(ASN1_VALUE **pval, unsigned char **in, long inl
 	ASN1_STRING *stmp;
 	int *tbool;
 	long len; 
-	if(!*pval) {
+	if(!pval) {
 		ASN1err(ASN1_F_ASN1_D2I_EX_PRIMITIVE, ASN1_R_ILLEGAL_NULL);
 		return 0; /* Should never happen */
 	}

@@ -447,14 +447,22 @@ typedef struct ASN1_EXTERN_FUNCS_st {
 
 /* Macro to implement standard functions in terms of ASN1_ITEM structures */
 
-#define IMPLEMENT_ASN1(type) \
-	(type *) type##_new(void) \
+#define IMPLEMENT_ASN1_FUNCTIONS(type) \
+	type *type##_new(void) \
 	{ \
-		return ASN1_item_new(&type##_it); \
+		return (type *)ASN1_item_new(&type##_it); \
 	} \
 	void type##_free(type *a) \
 	{ \
-		return ASN1_item_free(a, &type##_it); \
+		ASN1_item_free((ASN1_VALUE *)a, &type##_it); \
+	} \
+	type *d2i_##type(type **a, unsigned char **in, long len) \
+	{ \
+		return (type *)ASN1_item_d2i((ASN1_VALUE **)a, in, len, &type##_it);\
+	} \
+	int i2d_##type(type *a, unsigned char **out) \
+	{ \
+		return ASN1_item_i2d((ASN1_VALUE *)a, out, &type##_it);\
 	} 
 
 /* external definitions for primitive types */
@@ -476,35 +484,6 @@ extern const ASN1_ITEM ASN1_VISIBLESTRING_it;
 extern const ASN1_ITEM ASN1_UNIVERSALSTRING_it;
 extern const ASN1_ITEM ASN1_BMPSTRING_it;
 extern const ASN1_ITEM ASN1_ANY_it;
-
-#if 0
-
-int ASN1_item_new(void *arg, const ASN1_ITEM *it);
-int ASN1_template_new(void *arg, const ASN1_TEMPLATE *tt);
-void *ASN1_primitive_new(long utype);
-
-void ASN1_item_free(void *field, const ASN1_ITEM *it);
-void ASN1_template_free(void *arg, const ASN1_TEMPLATE *tt);
-
-int ASN1_item_d2i(void *dptr, unsigned char **in, long len, const ASN1_ITEM *it);
-int ASN1_template_d2i(void *dptr, unsigned char **in, long len, const ASN1_TEMPLATE *tt);
-int ASN1_item_ex_d2i(void *dptr, unsigned char **in, long len, const ASN1_ITEM *it,
-				int tag, int aclass, char opt, ASN1_TLC *ctx);
-
-int ASN1_item_i2d(void *data, unsigned char **out, const ASN1_ITEM *it);
-int ASN1_item_ex_i2d(void *data, unsigned char **out, const ASN1_ITEM *it, int tag, int aclass);
-int ASN1_template_i2d(void *data, unsigned char **out, const ASN1_TEMPLATE *tt);
-void ASN1_primitive_free(void *type, long utype);
-
-int asn1_get_choice_selector(void *data, const ASN1_ITEM *it);
-int asn1_set_choice_selector(void **data, int value, const ASN1_ITEM *it);
-void *asn1_get_field(void *data, const ASN1_TEMPLATE *tt);
-void *asn1_get_field_ptr(void **data, const ASN1_TEMPLATE *tt);
-const ASN1_TEMPLATE *asn1_do_adb(void *data, const ASN1_TEMPLATE *tt);
-int asn1_template_is_bool(const ASN1_TEMPLATE *tt);
-int asn1_item_is_bool(const ASN1_ITEM *it);
-
-#endif
 
 #ifdef  __cplusplus
 }

@@ -268,6 +268,13 @@ typedef struct ASN1_TLC_st ASN1_TLC;
 /* This is just an opaque pointer */
 typedef struct ASN1_VALUE_st ASN1_VALUE;
 
+/* Declare ASN1 functions: the implement macro in in asn1t.h */
+#define DECLARE_ASN1_FUNCTIONS(type) \
+	type *type##_new(void); \
+	void type##_free(type *a); \
+	type *d2i_##type(type **a, unsigned char **in, long len); \
+	int i2d_##type(type *a, unsigned char **out)
+
 /* Parameters used by ASN1_STRING_print_ex() */
 
 /* These determine which characters to escape:

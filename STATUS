@@ -33,7 +33,7 @@
 				DSO method always DSO_METHOD_null [FIXED]
 			CygWin32			- test failed
 			MingW32				- failed
-				thelp32.h
+				thelp32.h [FIXED]
 			aix-gcc (AIX 4.3.2)		- passed
 			VMS/Alpha			- failed
 				Some things were missing [FIXED]

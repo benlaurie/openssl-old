@@ -386,6 +386,7 @@ static char *vms_merger(DSO *dso, const char *filespec1, const char *filespec2)
 	{
 	int status;
 	int filespec1len, filespec2len;
+	char_32p filespec1copy, filespec2copy;
 	struct FAB fab;
 #ifdef NAML$C_MAXRSS
 	struct NAML nam;
@@ -394,12 +395,17 @@ static char *vms_merger(DSO *dso, const char *filespec1, const char *filespec2)
 	struct NAM nam;
 	char esa[NAM$C_MAXRSS];
 #endif
-	char *merged;
+	char *merged = 0;
 
 	if (!filespec1) filespec1 = "";
 	if (!filespec2) filespec2 = "";
 	filespec1len = strlen(filespec1);
 	filespec2len = strlen(filespec2);
+	filespec1copy = malloc32(filespec2len+1);
+	filespec2copy = malloc32(filespec2len+1);
+	if (!filespec1copy || !filespec2copy) goto malloc_err;
+	memcpy(filespec1copy, filespec1, filespec1len+1);
+	memcpy(filespec2copy, filespec2, filespec2len+1);
 
 	fab = cc$rms_fab;
 #ifdef NAML$C_MAXRSS
@@ -408,23 +414,23 @@ static char *vms_merger(DSO *dso, const char *filespec1, const char *filespec2)
 	nam = cc$rms_nam;
 #endif
 
-	fab.fab$l_fna = (char *)filespec1;
+	fab.fab$l_fna = filespec1copy;
 	fab.fab$b_fns = filespec1len;
-	fab.fab$l_dna = (char *)filespec2;
+	fab.fab$l_dna = filespec2copy;
 	fab.fab$b_dns = filespec2len;
 #ifdef NAML$C_MAXRSS
 	if (filespec1len > NAM$C_MAXRSS)
 		{
 		fab.fab$l_fna = 0;
 		fab.fab$b_fns = 0;
-		nam.naml$l_long_filename = (char *)filespec1;
+		nam.naml$l_long_filename = filespec1copy;
 		nam.naml$l_long_filename_size = filespec1len;
 		}
 	if (filespec2len > NAM$C_MAXRSS)
 		{
 		fab.fab$l_dna = 0;
 		fab.fab$b_dns = 0;
-		nam.naml$l_long_defname = (char *)filespec2;
+		nam.naml$l_long_defname = filespec2copy;
 		nam.naml$l_long_defname_size = filespec2len;
 		}
 	nam.naml$l_esa = esa;
@@ -468,7 +474,7 @@ static char *vms_merger(DSO *dso, const char *filespec1, const char *filespec2)
 					   "defaults \"", filespec2, "\": ",
 					   errstring);
 			}
-		return(NULL);
+		goto end;
 		}
 #ifdef NAML$C_MAXRSS
 	if (nam.naml$l_long_expand_size)
@@ -497,10 +503,14 @@ static char *vms_merger(DSO *dso, const char *filespec1, const char *filespec2)
 		nam.nam$b_esl);
 	merged[nam.nam$b_esl] = '\0';
 #endif
-	return(merged);
+	goto end;
  malloc_err:
 	DSOerr(DSO_F_VMS_MERGER,
 		ERR_R_MALLOC_FAILURE);
+ end:
+	free(filespec2copy);
+	free(filespec1copy);
+	return(merged);
 	}
 
 static char *vms_name_converter(DSO *dso, const char *filename)

@@ -51,6 +51,9 @@
 
   NEEDS PATCH
 
+    o  All 'openssl' subprograms taking '-des' and '-des3' options should
+       include AES support (0.9.7-dev)
+
     o  'openssl speed' should include AES support (0.9.7-dev)
 
     o  apps/ca.c: "Sign the certificate?" - "n" creates empty certificate file

@@ -864,6 +864,7 @@ int		X509_NAME_set(X509_NAME **xn, X509_NAME *name);
 DECLARE_ASN1_FUNCTIONS(X509_CINF)
 
 DECLARE_ASN1_FUNCTIONS(X509)
+DECLARE_ASN1_FUNCTIONS(X509_CERT_AUX)
 
 int X509_get_ex_new_index(long argl, void *argp, CRYPTO_EX_new *new_func,
 	     CRYPTO_EX_dup *dup_func, CRYPTO_EX_free *free_func);
@@ -872,11 +873,6 @@ void *X509_get_ex_data(X509 *r, int idx);
 int		i2d_X509_AUX(X509 *a,unsigned char **pp);
 X509 *		d2i_X509_AUX(X509 **a,unsigned char **pp,long length);
 
-X509_CERT_AUX *	X509_CERT_AUX_new(void);
-void		X509_CERT_AUX_free(X509_CERT_AUX *a);
-int		i2d_X509_CERT_AUX(X509_CERT_AUX *a,unsigned char **pp);
-X509_CERT_AUX *	d2i_X509_CERT_AUX(X509_CERT_AUX **a,unsigned char **pp,
-								long length);
 int X509_alias_set1(X509 *x, unsigned char *name, int len);
 int X509_keyid_set1(X509 *x, unsigned char *id, int len);
 unsigned char * X509_alias_get0(X509 *x, int *len);

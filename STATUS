@@ -17,6 +17,7 @@
        VMS (>=6.0 on any platform, DEC C)		- ERROR
 							  (errors fixed
 							  PR: 407, 413)
+       Windows with MIT Kerberos			- PASSED
        Windows 2000 (Cygwin)				- ERROR
 							  (PR: 404)
        SCO OpenServer, Unixware?			- ERROR

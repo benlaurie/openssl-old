@@ -94,7 +94,7 @@ int ASN1_item_ex_i2d(ASN1_VALUE **pval, unsigned char **out, const ASN1_ITEM *it
 	const ASN1_EXTERN_FUNCS *ef;
 	const ASN1_AUX *aux = it->funcs;
 	ASN1_aux_cb *asn1_cb;
-	if(!*pval) return 0;
+	if((it->itype != ASN1_ITYPE_PRIMITIVE) && !*pval) return 0;
 	if(aux && aux->asn1_cb) asn1_cb = aux->asn1_cb;
 	else asn1_cb = 0;
 
@@ -189,7 +189,6 @@ int ASN1_item_ex_i2d(ASN1_VALUE **pval, unsigned char **out, const ASN1_ITEM *it
 int ASN1_template_i2d(ASN1_VALUE **pval, unsigned char **out, const ASN1_TEMPLATE *tt)
 {
 	int i, ret, flags, aclass;
-	if(!*pval) return 0;
 	flags = tt->flags;
 	aclass = flags & ASN1_TFLG_TAG_CLASS;
 	if(flags & ASN1_TFLG_SK_MASK) {
@@ -198,6 +197,7 @@ int ASN1_template_i2d(ASN1_VALUE **pval, unsigned char **out, const ASN1_TEMPLAT
 		int isset, sktag, skaclass;
 		int skcontlen, sklen;
 		ASN1_VALUE *skitem;
+		if(!*pval) return 0;
 		isset = flags & ASN1_TFLG_SET_OF;
 		/* First work out inner tag value */
 		if(flags & ASN1_TFLG_IMPTAG) {
@@ -238,6 +238,7 @@ int ASN1_template_i2d(ASN1_VALUE **pval, unsigned char **out, const ASN1_TEMPLAT
 		/* EXPLICIT tagging */
 		/* Find length of tagged item */
 		i = ASN1_item_ex_i2d(pval, NULL, tt->item, -1, 0);
+		if(!i) return 0;
 		/* Find length of EXPLICIT tag */
 		ret = ASN1_object_size(1, i, tt->tag);
 		if(out) {
@@ -326,7 +327,7 @@ static int asn1_i2d_ex_primitive(ASN1_VALUE **pval, unsigned char **out, int uty
 	ASN1_STRING *stmp;
 	ASN1_VALUE *vtmp;
 	int btmp;
-	if(!*pval) return 0;
+	if((utype != V_ASN1_BOOLEAN) && !*pval) return 0;
 	if(utype == V_ASN1_ANY) {
 		ASN1_TYPE *atype;
 		atype = (ASN1_TYPE *)*pval;

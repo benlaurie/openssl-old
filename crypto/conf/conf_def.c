@@ -580,10 +580,11 @@ static int str_copy(CONF *conf, char *section, char **pto, char *from)
 			else if (*s == '(')
 				q=')';
 #ifdef OPENSSL_SYS_VMS
-                        else{
+			else
+				{
                                 buf->data[to++]= *(from++);
                                 continue;
-                        }
+				}
 #else
                         else q=0;
 #endif

@@ -78,7 +78,7 @@ static HMAC_CTX hmac_ctx;
 
 int do_fp(BIO *out, unsigned char *buf, BIO *bp, int sep, int binout,
 	  EVP_PKEY *key, unsigned char *sigin, int siglen, const char *title,
-	  const char *file,BIO *bmd,const char *hmac_key);
+	  const char *file,BIO *bmd,const char *hmac_key, int non_fips_allow);
 
 int MAIN(int, char **);
 
@@ -108,6 +108,7 @@ int MAIN(int argc, char **argv)
 	char *engine=NULL;
 #endif
 	char *hmac_key=NULL;
+	int non_fips_allow = 0;
 
 	apps_startup();
 
@@ -192,6 +193,8 @@ int MAIN(int argc, char **argv)
 			out_bin = 1;
 		else if (strcmp(*argv,"-d") == 0)
 			debug=1;
+		else if (strcmp(*argv,"-non-fips-allow") == 0)
+			non_fips_allow=1;
 		else if (!strcmp(*argv,"-hmac"))
 			{
 			if (--argc < 1)
@@ -342,6 +345,13 @@ int MAIN(int argc, char **argv)
 		}
 	}
 
+	if (non_fips_allow)
+		{
+		EVP_MD_CTX *md_ctx;
+		BIO_get_md_ctx(bmd,&md_ctx);
+		EVP_MD_CTX_set_flags(md_ctx, EVP_MD_CTX_FLAG_NON_FIPS_ALLOW);
+		}
+
 	/* we use md as a filter, reading from 'in' */
 	if (!BIO_set_md(bmd,md))
 		{
@@ -356,7 +366,7 @@ int MAIN(int argc, char **argv)
 		{
 		BIO_set_fp(in,stdin,BIO_NOCLOSE);
 		err=do_fp(out, buf,inp,separator, out_bin, sigkey, sigbuf,
-			  siglen,"","(stdin)",bmd,hmac_key);
+			  siglen,"","(stdin)",bmd,hmac_key, non_fips_allow);
 		}
 	else
 		{
@@ -382,7 +392,7 @@ int MAIN(int argc, char **argv)
 			else
 				tmp="";
 			r=do_fp(out,buf,inp,separator,out_bin,sigkey,sigbuf,
-				siglen,tmp,argv[i],bmd,hmac_key);
+				siglen,tmp,argv[i],bmd,hmac_key,non_fips_allow);
 			if(r)
 			    err=r;
 			if(tofree)
@@ -409,7 +419,7 @@ end:
 
 int do_fp(BIO *out, unsigned char *buf, BIO *bp, int sep, int binout,
 	  EVP_PKEY *key, unsigned char *sigin, int siglen, const char *title,
-	  const char *file,BIO *bmd,const char *hmac_key)
+	  const char *file,BIO *bmd,const char *hmac_key, int non_fips_allow)
 	{
 	unsigned int len;
 	int i;
@@ -420,7 +430,11 @@ int do_fp(BIO *out, unsigned char *buf, BIO *bp, int sep, int binout,
 		EVP_MD *md;
 
 		BIO_get_md(bmd,&md);
-		HMAC_Init(&hmac_ctx,hmac_key,strlen(hmac_key),md);
+		HMAC_CTX_init(&hmac_ctx);
+		if (non_fips_allow)
+			HMAC_CTX_set_flags(&hmac_ctx,
+					EVP_MD_CTX_FLAG_NON_FIPS_ALLOW);
+		HMAC_Init_ex(&hmac_ctx,hmac_key,strlen(hmac_key),md, NULL);
 		BIO_get_md_ctx(bmd,&md_ctx);
 		BIO_set_md_ctx(bmd,&hmac_ctx.md_ctx);
 		}

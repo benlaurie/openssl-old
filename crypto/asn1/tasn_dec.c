@@ -70,6 +70,7 @@ static int collect_data(BUF_MEM *buf, unsigned char **p, long plen);
 static int asn1_check_tlen(long *olen, int *otag, unsigned char *oclass, char *inf, char *cst,
 			unsigned char **in, long len, int exptag, int expclass, char opt, ASN1_TLC *ctx);
 static int asn1_template_ex_d2i(ASN1_VALUE **pval, unsigned char **in, long len, const ASN1_TEMPLATE *tt, char opt, ASN1_TLC *ctx);
+static int asn1_template_noexp_d2i(ASN1_VALUE **val, unsigned char **in, long len, const ASN1_TEMPLATE *tt, char opt, ASN1_TLC *ctx);
 static int asn1_d2i_ex_primitive(ASN1_VALUE **pval, unsigned char **in, long len,
 					int utype, int tag, int aclass, char opt, ASN1_TLC *ctx);
 
@@ -359,10 +360,15 @@ int ASN1_item_ex_d2i(ASN1_VALUE **pval, unsigned char **in, long len, const ASN1
 	return 0;
 }
 
-int asn1_template_ex_d2i(ASN1_VALUE **val, unsigned char **in, long len, const ASN1_TEMPLATE *tt, char opt, ASN1_TLC *ctx)
+/* Templates are handled with two separate functions. One handles any EXPLICIT tag and the other handles the
+ * rest.
+ */
+
+int asn1_template_ex_d2i(ASN1_VALUE **val, unsigned char **in, long inlen, const ASN1_TEMPLATE *tt, char opt, ASN1_TLC *ctx)
 {
 	int flags, aclass;
 	int ret;
+	long len;
 	unsigned char *p, *q;
 	char exp_eoc;
 	if(!val) return 0;
@@ -372,29 +378,65 @@ int asn1_template_ex_d2i(ASN1_VALUE **val, unsigned char **in, long len, const A
 	p = *in;
 	q = p;
 
-	/* If explicit tag expected then swallow it */
+	/* Check if EXPLICIT tag expected */
 	if(flags & ASN1_TFLG_EXPTAG) {
 		char cst;
-		/* This updates 'len' to the amount of data inside the EXPLICIT tag:
-		 * this is what is available to the rest of the structure. If INDEF then this
-		 * just subtracts the header length, leaving us enough room for the
-		 * data and the expected EOC.
+		/* Need to work out amount of data available to the inner content and where it
+		 * starts: so read in EXPLICIT header to get the info.
 		 */
-		/* FIXME: this doesn't get things right if it and the enclosed stuff is NDEF.
-		 * also we need to avoid trailing garbage before the end of the tag
-		 */
-		ret = asn1_check_tlen(&len, NULL, NULL, &exp_eoc, &cst, &p, len, tt->tag, aclass, opt, ctx);
+		ret = asn1_check_tlen(&len, NULL, NULL, &exp_eoc, &cst, &p, inlen, tt->tag, aclass, opt, ctx);
 		if(!ret) {
 			ASN1err(ASN1_F_ASN1_TEMPLATE_EX_D2I, ERR_R_NESTED_ASN1_ERROR);
 			return 0;
 		} else if(ret == -1) return -1;
 		if(!cst) {
-			ASN1err(ASN1_F_ASN1_TEMPLATE_D2I, ASN1_R_EXPLICIT_TAG_NOT_CONSTRUCTED);
+			ASN1err(ASN1_F_ASN1_TEMPLATE_EX_D2I, ASN1_R_EXPLICIT_TAG_NOT_CONSTRUCTED);
 			return 0;
 		}
 		/* We've found the field so it can't be OPTIONAL now */
-		opt = 0;
-	} else exp_eoc = 0;
+		ret = asn1_template_noexp_d2i(val, &p, len, tt, 0, ctx);
+		if(!ret) {
+			ASN1err(ASN1_F_ASN1_TEMPLATE_EX_D2I, ERR_R_NESTED_ASN1_ERROR);
+			return 0;
+		}
+		/* We read the field in OK so update length */
+		len -= p - q;
+		if(exp_eoc) {
+			/* If NDEF we must have an EOC here */
+			if(!asn1_check_eoc(&p, len)) {
+				ASN1err(ASN1_F_ASN1_TEMPLATE_D2I, ASN1_R_MISSING_EOC);
+				goto err;
+			}
+		} else {
+			/* Otherwise we must hit the EXPLICIT tag end or its an error */
+			if(len) {
+				ASN1err(ASN1_F_ASN1_TEMPLATE_D2I, ASN1_R_EXPLICIT_LENGTH_MISMATCH);
+				goto err;
+			}
+		}
+	} else 
+		return asn1_template_noexp_d2i(val, in, inlen, tt, opt, ctx);
+
+	*in = p;
+	return 1;
+
+	err:
+	ASN1_template_free(*val, tt);
+	*val = NULL;
+	return 0;
+}
+
+static int asn1_template_noexp_d2i(ASN1_VALUE **val, unsigned char **in, long len, const ASN1_TEMPLATE *tt, char opt, ASN1_TLC *ctx)
+{
+	int flags, aclass;
+	int ret;
+	unsigned char *p, *q;
+	if(!val) return 0;
+	flags = tt->flags;
+	aclass = flags & ASN1_TFLG_TAG_CLASS;
+
+	p = *in;
+	q = p;
 
 	if(flags & ASN1_TFLG_SK_MASK) {
 		/* SET OF, SEQUENCE OF */
@@ -422,8 +464,8 @@ int asn1_template_ex_d2i(ASN1_VALUE **val, unsigned char **in, long len, const A
 		/* Read as many items as we can */
 		while(len > 0) {
 			ASN1_VALUE *skfield;
-			/* See if EOC found */
 			q = p;
+			/* See if EOC found */
 			if(asn1_check_eoc(&p, len)) {
 				if(!sk_eoc) {
 					ASN1err(ASN1_F_ASN1_TEMPLATE_D2I, ASN1_R_UNEXPECTED_EOC);
@@ -462,11 +504,6 @@ int asn1_template_ex_d2i(ASN1_VALUE **val, unsigned char **in, long len, const A
 			ASN1err(ASN1_F_ASN1_TEMPLATE_D2I, ERR_R_NESTED_ASN1_ERROR);
 			goto err;
 		} else if(ret == -1) return -1;
-	}
-
-	if(exp_eoc && !asn1_check_eoc(&p, len)) {
-		ASN1err(ASN1_F_ASN1_TEMPLATE_D2I, ASN1_R_MISSING_EOC);
-		goto err;
 	}
 
 	*in = p;

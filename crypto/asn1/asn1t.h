@@ -426,6 +426,13 @@ typedef struct ASN1_EXTERN_FUNCS_st {
 	ASN1_ex_i2d *asn1_ex_i2d;
 } ASN1_EXTERN_FUNCS;
 
+/* Macro to implement a primitive type */
+#define IMPLEMENT_ASN1_TYPE(type) const ASN1_ITEM type##_it = \
+				{ ASN1_ITYPE_PRIMITIVE, V_##type, NULL, 0, NULL, sizeof(type)}
+/* Macro to implement a multi string type */
+#define IMPLEMENT_ASN1_MSTRING(type, mask) const ASN1_ITEM type##_it = \
+				{ ASN1_ITYPE_MSTRING, mask, NULL, 0, NULL, sizeof(ASN1_STRING)}
+
 /* Macro to implement an ASN1_ITEM in terms of old style funcs */
 
 #define IMPLEMENT_COMPAT_ASN1(sname) IMPLEMENT_COMPAT_ASN1_type(sname, V_ASN1_SEQUENCE)

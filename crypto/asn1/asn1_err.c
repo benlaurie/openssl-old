@@ -300,6 +300,7 @@ static ERR_STRING_DATA ASN1_str_reasons[]=
 {ASN1_R_EXPECTING_A_NULL                 ,"expecting a null"},
 {ASN1_R_EXPECTING_A_TIME                 ,"expecting a time"},
 {ASN1_R_EXPECTING_A_UTCTIME              ,"expecting a utctime"},
+{ASN1_R_EXPLICIT_LENGTH_MISMATCH         ,"explicit length mismatch"},
 {ASN1_R_EXPLICIT_TAG_NOT_CONSTRUCTED     ,"explicit tag not constructed"},
 {ASN1_R_FIELD_MISSING                    ,"field missing"},
 {ASN1_R_FIRST_NUM_TOO_LARGE              ,"first num too large"},

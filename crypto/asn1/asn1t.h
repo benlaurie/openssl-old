@@ -125,12 +125,18 @@ extern "C" {
 	}
 
 #define ASN1_SEQUENCE_cb(tname, cb) \
-	const static ASN1_AUX tname##_aux = {NULL, 0, 0, 0, cb}; \
+	const static ASN1_AUX tname##_aux = {NULL, 0, 0, 0, cb, 0}; \
 	ASN1_SEQUENCE(tname)
 
 #define ASN1_SEQUENCE_ref(tname, cb, lck) \
-	const static ASN1_AUX tname##_aux = {NULL, ASN1_AFLG_REFCOUNT, offsetof(tname, references), lck, cb}; \
+	const static ASN1_AUX tname##_aux = {NULL, ASN1_AFLG_REFCOUNT, offsetof(tname, references), lck, cb, 0}; \
 	ASN1_SEQUENCE(tname)
+
+#define ASN1_SEQUENCE_enc(tname, enc, cb) \
+	const static ASN1_AUX tname##_aux = {NULL, ASN1_AFLG_ENCODING, 0, 0, cb, offsetof(tname, enc)}; \
+	ASN1_SEQUENCE(tname)
+
+#define ASN1_SEQUENCE_END_enc(stname, tname) ASN1_SEQUENCE_END_ref(stname, tname)
 
 #define ASN1_SEQUENCE_END_cb(stname, tname) ASN1_SEQUENCE_END_ref(stname, tname)
 
@@ -542,12 +548,15 @@ typedef struct ASN1_AUX_st {
 	int ref_offset;		/* Offset of reference value */
 	int ref_lock;		/* Lock type to use */
 	ASN1_aux_cb *asn1_cb;
+	int enc_offset;		/* Offset of ASN1_ENCODING structure */
 } ASN1_AUX;
 
 /* Flags in ASN1_AUX */
 
 /* Use a reference count */
 #define ASN1_AFLG_REFCOUNT	1
+/* Save the encoding of structure (useful for signatures) */
+#define ASN1_AFLG_ENCODING	2
 
 /* operation values for asn1_cb */
 
@@ -653,6 +662,11 @@ const ASN1_TEMPLATE *asn1_do_adb(ASN1_VALUE **pval, const ASN1_TEMPLATE *tt, int
 int asn1_template_is_bool(const ASN1_TEMPLATE *tt);
 int asn1_item_is_bool(const ASN1_ITEM *it);
 int asn1_do_lock(ASN1_VALUE **pval, int op, const ASN1_ITEM *it);
+
+void asn1_enc_init(ASN1_VALUE **pval, const ASN1_ITEM *it);
+void asn1_enc_free(ASN1_VALUE **pval, const ASN1_ITEM *it);
+int asn1_enc_restore(int *len, unsigned char **out, ASN1_VALUE **pval, const ASN1_ITEM *it);
+int asn1_enc_save(ASN1_VALUE **pval, unsigned char *in, int inlen, const ASN1_ITEM *it);
 
 #ifdef  __cplusplus
 }

@@ -353,13 +353,23 @@ int ASN1_item_ex_d2i(ASN1_VALUE **pval, unsigned char **in, long len, const ASN1
 			const ASN1_TEMPLATE *seqtt;
 			seqtt = asn1_do_adb(pval, tt, 1);
 			if(!seqtt) goto err;
-			if(!(seqtt->flags & ASN1_TFLG_OPTIONAL)) {
+			if(seqtt->flags & ASN1_TFLG_OPTIONAL) {
+				ASN1_VALUE **pseqval;
+				pseqval = asn1_get_field_ptr(pval, seqtt);
+				if(asn1_template_is_bool(seqtt))
+					*(ASN1_BOOLEAN *)pseqval = -1;
+				else if(*pseqval) {
+					ASN1_template_free(pseqval, seqtt);
+					*pseqval = NULL;
+				}
+			} else {
 				errtt = seqtt;
 				ASN1err(ASN1_F_ASN1_ITEM_EX_D2I, ASN1_R_FIELD_MISSING);
 				goto err;
 			}
 		}
-
+		/* Save encoding */
+		if(!asn1_enc_save(pval, *in, p - *in, it)) goto auxerr;
 		*in = p;
 		if(asn1_cb && !asn1_cb(ASN1_OP_D2I_POST, pval, it))
 				goto auxerr;
@@ -476,6 +486,16 @@ static int asn1_template_noexp_d2i(ASN1_VALUE **val, unsigned char **in, long le
 			return 0;
 		} else if(ret == -1) return -1;
 		if(!*val) *val = (ASN1_VALUE *)sk_new_null();
+		else {
+			/* We've got a valid STACK: free up any items present */
+			STACK *sktmp = (STACK *)*val;
+			ASN1_VALUE *vtmp;
+			while(sk_num(sktmp) > 0) {
+				vtmp = (ASN1_VALUE *)sk_pop(sktmp);
+				ASN1_item_free(vtmp, tt->item);
+			}
+		}
+				
 		if(!*val) {
 			ASN1err(ASN1_F_ASN1_TEMPLATE_EX_D2I, ERR_R_MALLOC_FAILURE);
 			goto err;
@@ -539,7 +559,7 @@ static int asn1_d2i_ex_primitive(ASN1_VALUE **pval, unsigned char **in, long inl
 {
 	int ret = 0;
 	long plen;
-	char cst, inf;
+	char cst, inf, free_cont = 0;
 	unsigned char *p;
 	BUF_MEM buf;
 	unsigned char *cont = NULL;
@@ -630,6 +650,7 @@ static int asn1_d2i_ex_primitive(ASN1_VALUE **pval, unsigned char **in, long inl
 		asn1_collect(&buf, &p, plen, inf, -1, V_ASN1_UNIVERSAL);
 		cont = (unsigned char *)buf.data;
 		len = buf.length;
+		free_cont = 1;
 	} else {
 		cont = p;
 		len = plen;
@@ -683,6 +704,10 @@ static int asn1_d2i_ex_primitive(ASN1_VALUE **pval, unsigned char **in, long inl
 		case V_ASN1_UNIVERSALSTRING:
 		case V_ASN1_BMPSTRING:
 		case V_ASN1_UTF8STRING:
+		case V_ASN1_OTHER:
+		case V_ASN1_SET:
+		case V_ASN1_SEQUENCE:
+		default:
 		/* All based on ASN1_STRING and handled the same */
 		if(!*pval) {
 			stmp = ASN1_STRING_type_new(utype);
@@ -696,11 +721,11 @@ static int asn1_d2i_ex_primitive(ASN1_VALUE **pval, unsigned char **in, long inl
 			stmp->type = utype;
 		}
 		/* If we've already allocated a buffer use it */
-		if(cst) {
+		if(free_cont) {
 			if(stmp->data) OPENSSL_free(stmp->data);
 			stmp->data = cont;
 			stmp->length = len;
-			buf.data = NULL;
+			free_cont = 0;
 		} else {
 			if(!ASN1_STRING_set(stmp, cont, len)) {
 				ASN1err(ASN1_F_ASN1_D2I_EX_PRIMITIVE, ERR_R_MALLOC_FAILURE);
@@ -710,37 +735,12 @@ static int asn1_d2i_ex_primitive(ASN1_VALUE **pval, unsigned char **in, long inl
 			}
 		}
 		break;
-
-		/* If SEQUENCE, or SET or we don't understand the type
-		 * then just collect its encoded form 
-		 */
-
-		default:
-		case V_ASN1_OTHER:
-		case V_ASN1_SET:
-		case V_ASN1_SEQUENCE:
-		if(!*pval) {
-			stmp = ASN1_STRING_new();
-			if(!stmp) {
-				ASN1err(ASN1_F_ASN1_D2I_EX_PRIMITIVE, ERR_R_MALLOC_FAILURE);
-				goto err;
-			}
-			*pval = (ASN1_VALUE *)stmp;
-		} else stmp = (ASN1_STRING *)*pval;
-		if(!ASN1_STRING_set(stmp, *in, inlen)) {
-			ASN1err(ASN1_F_ASN1_D2I_EX_PRIMITIVE, ERR_R_MALLOC_FAILURE);
-			ASN1_STRING_free(stmp);	
-			*pval = NULL;
-			goto err;
-		}
-		break;
-
 	}
 
 	*in = p;
 	ret = 1;
 	err:
-	if(cst && buf.data) OPENSSL_free(buf.data);
+	if(free_cont && buf.data) OPENSSL_free(buf.data);
 	return ret;
 }
 

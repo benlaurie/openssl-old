@@ -120,6 +120,7 @@ static void asn1_item_combine_free(ASN1_VALUE **pval, const ASN1_ITEM *it, int c
 		case ASN1_ITYPE_SEQUENCE:
 		if(asn1_do_lock(pval, -1, it) > 0) return;
 		if(asn1_cb) asn1_cb(ASN1_OP_FREE_PRE, pval, it);
+		asn1_enc_free(pval, it);
 		/* If we free up as normal we will invalidate any
 		 * ANY DEFINED BY field and we wont be able to 
 		 * determine the type of the field it defines. So

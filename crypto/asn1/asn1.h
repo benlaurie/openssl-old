@@ -196,6 +196,18 @@ typedef struct asn1_string_st
 	long flags;
 	} ASN1_STRING;
 
+/* ASN1_ENCODING structure: this is used to save the received
+ * encoding of an ASN1 type. This is useful to get round
+ * problems with invalid encodings which can break signatures.
+ */
+
+typedef struct ASN1_ENCODING_st
+	{
+	unsigned char *enc;	/* DER encoding */
+	long len;		/* Length of encoding */
+	int modified;		 /* set to 1 if 'enc' is invalid */
+	} ASN1_ENCODING;
+
 #define STABLE_FLAGS_MALLOC	0x01
 #define STABLE_NO_MASK		0x02
 #define DIRSTRING_TYPE	\

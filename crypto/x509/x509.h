@@ -204,16 +204,15 @@ typedef struct x509_attributes_st
 DECLARE_STACK_OF(X509_ATTRIBUTE)
 DECLARE_ASN1_SET_OF(X509_ATTRIBUTE)
 
+
 typedef struct X509_req_info_st
 	{
-	unsigned char *asn1;
-	int length;
+	ASN1_ENCODING enc;
 	ASN1_INTEGER *version;
 	X509_NAME *subject;
 	X509_PUBKEY *pubkey;
 	/*  d=2 hl=2 l=  0 cons: cont: 00 */
 	STACK_OF(X509_ATTRIBUTE) *attributes; /* [ 0 ] */
-	int req_kludge;
 	} X509_REQ_INFO;
 
 typedef struct X509_req_st
@@ -848,17 +847,8 @@ DSA *		d2i_DSA_PUBKEY(DSA **a,unsigned char **pp,
 #endif
 
 DECLARE_ASN1_FUNCTIONS(X509_SIG)
-
-X509_REQ_INFO *X509_REQ_INFO_new(void);
-void		X509_REQ_INFO_free(X509_REQ_INFO *a);
-int		i2d_X509_REQ_INFO(X509_REQ_INFO *a,unsigned char **pp);
-X509_REQ_INFO *d2i_X509_REQ_INFO(X509_REQ_INFO **a,unsigned char **pp,
-			long length);
-
-X509_REQ *	X509_REQ_new(void);
-void		X509_REQ_free(X509_REQ *a);
-int		i2d_X509_REQ(X509_REQ *a,unsigned char **pp);
-X509_REQ *	d2i_X509_REQ(X509_REQ **a,unsigned char **pp,long length);
+DECLARE_ASN1_FUNCTIONS(X509_REQ_INFO)
+DECLARE_ASN1_FUNCTIONS(X509_REQ)
 
 DECLARE_ASN1_FUNCTIONS(X509_ATTRIBUTE)
 X509_ATTRIBUTE *X509_ATTRIBUTE_create(int nid, int atrtype, void *value);

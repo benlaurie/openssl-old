@@ -120,6 +120,67 @@ int asn1_do_lock(ASN1_VALUE **pval, int op, const ASN1_ITEM *it)
 	return ret;
 }
 
+static ASN1_ENCODING *asn1_get_enc_ptr(ASN1_VALUE **pval, const ASN1_ITEM *it)
+{
+	const ASN1_AUX *aux;
+	if(!pval || !*pval) return NULL;
+	aux = it->funcs;
+	if(!aux || !(aux->flags & ASN1_AFLG_ENCODING)) return NULL;
+	return offset2ptr(*pval, aux->enc_offset);
+}
+
+void asn1_enc_init(ASN1_VALUE **pval, const ASN1_ITEM *it)
+{
+	ASN1_ENCODING *enc;
+	enc = asn1_get_enc_ptr(pval, it);
+	if(enc) {
+		enc->enc = NULL;
+		enc->len = 0;
+		enc->modified = 1;
+	}
+}
+
+void asn1_enc_free(ASN1_VALUE **pval, const ASN1_ITEM *it)
+{
+	ASN1_ENCODING *enc;
+	enc = asn1_get_enc_ptr(pval, it);
+	if(enc) {
+		if(enc->enc) OPENSSL_free(enc->enc);
+		enc->enc = NULL;
+		enc->len = 0;
+		enc->modified = 1;
+	}
+}
+
+int asn1_enc_save(ASN1_VALUE **pval, unsigned char *in, int inlen, const ASN1_ITEM *it)
+{
+	ASN1_ENCODING *enc;
+	enc = asn1_get_enc_ptr(pval, it);
+	if(!enc) return 1;
+
+	if(enc->enc) OPENSSL_free(enc->enc);
+	enc->enc = OPENSSL_malloc(inlen);
+	if(!enc->enc) return 0;
+	memcpy(enc->enc, in, inlen);
+	enc->len = inlen;
+	enc->modified = 0;
+
+	return 1;
+}
+		
+int asn1_enc_restore(int *len, unsigned char **out, ASN1_VALUE **pval, const ASN1_ITEM *it)
+{
+	ASN1_ENCODING *enc;
+	enc = asn1_get_enc_ptr(pval, it);
+	if(!enc || enc->modified) return 0;
+	if(out) {
+		memcpy(*out, enc->enc, enc->len);
+		*out += enc->len;
+	}
+	if(len) *len = enc->len;
+	return 1;
+}
+
 /* Given an ASN1_TEMPLATE get a pointer to a field */
 ASN1_VALUE ** asn1_get_field_ptr(ASN1_VALUE **pval, const ASN1_TEMPLATE *tt)
 {

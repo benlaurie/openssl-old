@@ -145,13 +145,10 @@ int X509_REQ_print(BIO *bp, X509_REQ *x)
 	if (BIO_puts(bp,str) <= 0) goto err;
 
 	sk=x->req_info->attributes;
-	if ((sk == NULL) || (sk_X509_ATTRIBUTE_num(sk) == 0))
+	if (sk_X509_ATTRIBUTE_num(sk) == 0)
 		{
-		if (!x->req_info->req_kludge)
-			{
-			sprintf(str,"%12sa0:00\n","");
-			if (BIO_puts(bp,str) <= 0) goto err;
-			}
+		sprintf(str,"%12sa0:00\n","");
+		if (BIO_puts(bp,str) <= 0) goto err;
 		}
 	else
 		{

@@ -133,6 +133,12 @@ called 'single' which is 0 for a SET OF and 1 for single. The old field has
 been deleted to deliberately break source compatibility. Since this structure
 is normally accessed via higher level functions this shouldn't break too much.
 
+The X509_REQ_INFO certificate request info structure no longer has a field
+called 'req_kludge'. This used to be set to 1 if the attributes field was
+(incorrectly) omitted. You can check to see if the field is omitted now by
+checking if the attributes field is NULL. Similarly if you need to omit
+the field then free attributes and set it to NULL.
+
 The top level 'detached' field in the PKCS7 structure is no longer set when
 a PKCS#7 structure is read in. PKCS7_is_detached() should be called instead.
 The behaviour of PKCS7_get_detached() is unaffected.

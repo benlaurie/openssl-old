@@ -335,7 +335,8 @@ int ec_GF2m_simple_point_copy(EC_POINT *dest, const EC_POINT *src)
 int ec_GF2m_simple_point_set_to_infinity(const EC_GROUP *group, EC_POINT *point)
 	{
 	point->Z_is_one = 0;
-	return (BN_zero(&point->Z));
+	BN_zero(&point->Z);
+	return 1;
 	}
 
 
@@ -574,7 +575,7 @@ int ec_GF2m_simple_oct2point(const EC_GROUP *group, EC_POINT *point,
 		}
 	form = buf[0];
 	y_bit = form & 1;
-	form = form & ~1;
+	form = form & ~1U;
 	if ((form != 0)	&& (form != POINT_CONVERSION_COMPRESSED)
 		&& (form != POINT_CONVERSION_UNCOMPRESSED)
 		&& (form != POINT_CONVERSION_HYBRID))

@@ -123,7 +123,8 @@ void BN_CTX_free(BN_CTX *ctx)
 
 	for (i=0; i < BN_CTX_NUM; i++) {
 		bn_check_top(&(ctx->bn[i]));
-		BN_clear_free(&(ctx->bn[i]));
+		if (ctx->bn[i].d)
+			BN_clear_free(&(ctx->bn[i]));
 	}
 	if (ctx->flags & BN_FLG_MALLOCED)
 		OPENSSL_free(ctx);
@@ -139,6 +140,7 @@ void BN_CTX_start(BN_CTX *ctx)
 
 BIGNUM *BN_CTX_get(BN_CTX *ctx)
 	{
+	BIGNUM *ret;
 	/* Note: If BN_CTX_get is ever changed to allocate BIGNUMs dynamically,
 	 * make sure that if BN_CTX_get fails once it will return NULL again
 	 * until BN_CTX_end is called.  (This is so that callers have to check
@@ -154,8 +156,10 @@ BIGNUM *BN_CTX_get(BN_CTX *ctx)
 			}
 		return NULL;
 		}
-	bn_check_top(&(ctx->bn[ctx->tos]));
-	return (&(ctx->bn[ctx->tos++]));
+	ret = ctx->bn + (ctx->tos++);
+	/* always return a 'zeroed' bignum */
+	BN_zero(ret);
+	return ret;
 	}
 
 void BN_CTX_end(BN_CTX *ctx)
@@ -170,19 +174,11 @@ void BN_CTX_end(BN_CTX *ctx)
 
 	ctx->too_many = 0;
 	ctx->depth--;
-	/* It appears some "scrapbook" uses of BN_CTX result in BIGNUMs being
-	 * left in an inconsistent state when they are released (eg. BN_div).
-	 * These can trip us up when they get reused, so the safest fix is to
-	 * make sure the BIGNUMs are made sane when the context usage is
-	 * releasing them. */
 	if (ctx->depth < BN_CTX_NUM_POS)
-#if 0
+#ifndef BN_DEBUG
 		ctx->tos = ctx->pos[ctx->depth];
 #else
-		{
 		while(ctx->tos > ctx->pos[ctx->depth])
-			/* This ensures the BIGNUM is sane(r) for reuse. */
-			ctx->bn[--(ctx->tos)].top = 0;
-		}
+			bn_check_top(&ctx->bn[--(ctx->tos)]);
 #endif
 	}

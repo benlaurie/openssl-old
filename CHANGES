@@ -4,6 +4,34 @@
 
  Changes between 0.9.7c and 0.9.8  [xx XXX xxxx]
 
+  *) Preliminary support for certificate policy evaluation and checking. This
+     is initially intended to pass the tests outlined in "Conformance Testing
+     of Relying Party Client Certificate Path Processing Logic" v1.07.
+     [Steve Henson]
+
+  *) bn_dup_expand() has been deprecated, it was introduced in 0.9.7 and
+     remained unused and not that useful. A variety of other little bignum
+     tweaks and fixes have also been made continuing on from the audit (see
+     below).
+     [Geoff Thorpe]
+
+  *) Constify all or almost all d2i, c2i, s2i and r2i functions, along with
+     associated ASN1, EVP and SSL functions and old ASN1 macros.
+     [Richard Levitte]
+
+  *) BN_zero() only needs to set 'top' and 'neg' to zero for correct results,
+     and this should never fail. So the return value from the use of
+     BN_set_word() (which can fail due to needless expansion) is now deprecated;
+     if OPENSSL_NO_DEPRECATED is defined, BN_zero() is a void macro.
+     [Geoff Thorpe]
+
+  *) BN_CTX_get() should return zero-valued bignums, providing the same
+     initialised value as BN_new().
+     [Geoff Thorpe, suggested by Ulf Möller]
+
+  *) Support for inhibitAnyPolicy certificate extension.
+     [Steve Henson]
+
   *) An audit of the BIGNUM code is underway, for which debugging code is
      enabled when BN_DEBUG is defined. This makes stricter enforcements on what
      is considered valid when processing BIGNUMs, and causes execution to
@@ -18,7 +46,7 @@
      some point, these tighter rules will become openssl's default to improve
      maintainability, though the assert()s and other overheads will remain only
      in debugging configurations. See bn.h for more details.
-     [Geoff Thorpe]
+     [Geoff Thorpe, Nils Larsch, Ulf Möller]
 
   *) BN_CTX_init() has been deprecated, as BN_CTX is an opaque structure
      that can only be obtained through BN_CTX_new() (which implicitly
@@ -616,6 +644,21 @@
      [Richard Levitte]
 
  Changes between 0.9.7c and 0.9.7d  [xx XXX XXXX]
+
+  *) X509 verify fixes. Disable broken certificate workarounds when 
+     X509_V_FLAGS_X509_STRICT is set. Check CRL issuer has cRLSign set if
+     keyUsage extension present. Don't accept CRLs with unhandled critical
+     extensions: since verify currently doesn't process CRL extensions this
+     rejects a CRL with *any* critical extensions. Add new verify error codes
+     for these cases.
+     [Steve Henson]
+
+  *) When creating an OCSP nonce use an OCTET STRING inside the extnValue.
+     A clarification of RFC2560 will require the use of OCTET STRINGs and 
+     some implementations cannot handle the current raw format. Since OpenSSL
+     copies and compares OCSP nonces as opaque blobs without any attempt at
+     parsing them this should not create any compatibility issues.
+     [Steve Henson]
 
   *) New md flag EVP_MD_CTX_FLAG_REUSE this allows md_data to be reused when
      calling EVP_MD_CTX_copy_ex() to avoid calling OPENSSL_malloc(). Without

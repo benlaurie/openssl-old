@@ -74,14 +74,14 @@ struct v3_ext_ctx;
 
 typedef void * (*X509V3_EXT_NEW)(void);
 typedef void (*X509V3_EXT_FREE)(void *);
-typedef void * (*X509V3_EXT_D2I)(void *, unsigned char ** , long);
+typedef void * (*X509V3_EXT_D2I)(void *, const unsigned char ** , long);
 typedef int (*X509V3_EXT_I2D)(void *, unsigned char **);
 typedef STACK_OF(CONF_VALUE) * (*X509V3_EXT_I2V)(struct v3_ext_method *method, void *ext, STACK_OF(CONF_VALUE) *extlist);
 typedef void * (*X509V3_EXT_V2I)(struct v3_ext_method *method, struct v3_ext_ctx *ctx, STACK_OF(CONF_VALUE) *values);
 typedef char * (*X509V3_EXT_I2S)(struct v3_ext_method *method, void *ext);
-typedef void * (*X509V3_EXT_S2I)(struct v3_ext_method *method, struct v3_ext_ctx *ctx, char *str);
+typedef void * (*X509V3_EXT_S2I)(struct v3_ext_method *method, struct v3_ext_ctx *ctx, const char *str);
 typedef int (*X509V3_EXT_I2R)(struct v3_ext_method *method, void *ext, BIO *out, int indent);
-typedef void * (*X509V3_EXT_R2I)(struct v3_ext_method *method, struct v3_ext_ctx *ctx, char *str);
+typedef void * (*X509V3_EXT_R2I)(struct v3_ext_method *method, struct v3_ext_ctx *ctx, const char *str);
 
 /* V3 extension structure */
 
@@ -351,6 +351,8 @@ typedef struct POLICY_CONSTRAINTS_st {
 #define EXFLAG_INVALID		0x80
 #define EXFLAG_SET		0x100
 #define EXFLAG_CRITICAL		0x200
+
+#define EXFLAG_INVALID_POLICY	0x400
 
 #define KU_DIGITAL_SIGNATURE	0x0080
 #define KU_NON_REPUDIATION	0x0040

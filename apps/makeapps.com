@@ -719,7 +719,8 @@ $     CC = "CC"
 $     IF ARCH.EQS."VAX" .AND. F$TRNLNM("DECC$CC_DEFAULT").NES."/DECC" -
 	 THEN CC = "CC/DECC"
 $     CC = CC + "/''CC_OPTIMIZE'/''DEBUGGER'/STANDARD=ANSI89" + -
-           "/PREFIX=ALL/INCLUDE=(SYS$DISK:[-])" + CCEXTRAFLAGS
+           "/PREFIX=ALL" + -
+	   "/INCLUDE=(SYS$DISK:[-],SYS$DISK:[-.CRYPTO])" + CCEXTRAFLAGS
 $!
 $!    Define The Linker Options File Name.
 $!
@@ -750,8 +751,8 @@ $	WRITE SYS$OUTPUT "There is no VAX C on Alpha!"
 $	EXIT
 $     ENDIF
 $     IF F$TRNLNM("DECC$CC_DEFAULT").EQS."/DECC" THEN CC = "CC/VAXC"
-$     CC = CC + "/''CC_OPTIMIZE'/''DEBUGGER'/INCLUDE=(SYS$DISK:[-])" + -
-	   CCEXTRAFLAGS
+$     CC = CC + "/''CC_OPTIMIZE'/''DEBUGGER'" + -
+	   "/INCLUDE=(SYS$DISK:[-],SYS$DISK:[-.CRYPTO])" + CCEXTRAFLAGS
 $     CCDEFS = CCDEFS + ",""VAXC"""
 $!
 $!    Define <sys> As SYS$COMMON:[SYSLIB]
@@ -783,7 +784,7 @@ $!    Use GNU C...
 $!
 $     IF F$TYPE(GCC) .EQS. "" THEN GCC := GCC
 $     CC = GCC+"/NOCASE_HACK/''GCC_OPTIMIZE'/''DEBUGGER'" + -
-	   "/INCLUDE=(SYS$DISK:[-])" + CCEXTRAFLAGS
+	   "/INCLUDE=(SYS$DISK:[-],SYS$DISK:[-.CRYPTO])" + CCEXTRAFLAGS
 $!
 $!    Define The Linker Options File Name.
 $!

@@ -77,11 +77,6 @@ const ECDSA_METHOD *ECDSA_get_default_method(void)
 
 int ECDSA_set_method(EC_KEY *eckey, const ECDSA_METHOD *meth)
 {
-	return ECDSA_new_method(NULL);
-}
-
-int ECDSA_set_method(ECDSA *ecdsa, const ECDSA_METHOD *meth)
-{
         const ECDSA_METHOD *mtmp;
 	ECDSA_DATA *ecdsa;
 

@@ -123,8 +123,8 @@ static void err_load_strings(int lib, ERR_STRING_DATA *str);
 
 static void ERR_STATE_free(ERR_STATE *s);
 
-#ifdef _VMS
-void ExtractProgName (char *,char **);
+#ifdef OPENSSL_SYS_VMS
+static void extract_progname (char *,char **);
 #endif
 
 #ifndef OPENSSL_NO_ERR
@@ -647,8 +647,8 @@ void ERR_put_error(int lib, int func, int reason, const char *file,
 	if (es->top == es->bottom)
 		es->bottom=(es->bottom+1)%ERR_NUM_ERRORS;
 	es->err_buffer[es->top]=ERR_PACK(lib,func,reason);
-#ifdef _VMS
-	ExtractProgName ((char *)file, (char **)&es->err_file[es->top]);
+#ifdef OPENSSL_SYS_VMS
+	extract_progname ((char *)file, (char **)&es->err_file[es->top]);
 #else
 	es->err_file[es->top]=file;
 #endif
@@ -667,6 +667,9 @@ void ERR_clear_error(void)
 		{
 		es->err_buffer[i]=0;
 		err_clear_data(es,i);
+#ifdef OPENSSL_SYS_VMS
+		free((char *)es->err_file[i]);
+#endif
 		es->err_file[i]=NULL;
 		es->err_line[i]= -1;
 		}
@@ -1039,3 +1042,58 @@ void ERR_add_error_data(int num, ...)
 err:
 	va_end(args);
 	}
+
+#ifdef OPENSSL_SYS_VMS
+#pragma nostandard
+#include <stdlib.h>
+#include <rms.h>
+
+static void extract_progname(char *image_name, char **prog_name)
+	{
+#if __INITIAL_POINTER_SIZE == 64
+#pragma __required_pointer_size __save
+#pragma __required_pointer_size 32
+#endif
+	typedef char char_32;
+	char *tmp_image_name;
+#if __INITIAL_POINTER_SIZE == 64
+#pragma __required_pointer_size __restore
+#endif
+	char esa[NAM$C_MAXRSS],
+		rsa[NAM$C_MAXRSS];
+	struct FAB fab;
+	struct NAM nam;
+	int status;
+
+	fab = cc$rms_fab;
+	nam = cc$rms_nam;
+
+#if __INITIAL_POINTER_SIZE == 64
+	tmp_image_name = (char_32 *)_malloc32 (strlen (image_name) + 1);
+#else
+	tmp_image_name = (char *)malloc (strlen (image_name) + 1);
+#endif
+	strncpy (tmp_image_name, image_name, strlen (image_name));
+	fab.fab$l_fna = tmp_image_name;
+	fab.fab$b_fns = strlen (image_name);
+	fab.fab$l_nam = &nam;
+
+	nam.nam$l_esa = esa;
+	nam.nam$b_ess = sizeof (esa);
+	nam.nam$l_rsa = rsa;
+	nam.nam$b_rss = sizeof (rsa);
+	nam.nam$v_synchk = 1;
+
+	status = SYS$PARSE (&fab);
+	if (! (status & 1))
+		exit (status);
+
+	*prog_name = (char *)malloc (nam.nam$b_name + 1);
+	strncpy (*prog_name, nam.nam$l_name, nam.nam$b_name);
+	*(*prog_name + nam.nam$b_name) = '\0';
+
+	free (tmp_image_name);
+#pragma standard
+}
+
+#endif

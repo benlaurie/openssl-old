@@ -22,7 +22,7 @@ all: test TAGS
 # For adapting this Makefile to a different system, only the following
 # definitions should need customizing:
 
-OPENSSLDIR=$(HOME)/openssl/openssl
+OPENSSLDIR=../..
 CC=gcc
 
 SYSCFLAGS=whatever

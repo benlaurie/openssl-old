@@ -211,6 +211,32 @@
 #define EC_POINT_get_affine_coordinates_GFp     EC_POINT_get_affine_coords_GFp
 #undef EC_POINT_set_compressed_coordinates_GFp
 #define EC_POINT_set_compressed_coordinates_GFp EC_POINT_set_compr_coords_GFp
+#undef EC_POINT_set_affine_coordinates_GF2m
+#define EC_POINT_set_affine_coordinates_GF2m    EC_POINT_set_affine_coords_GF2m
+#undef EC_POINT_get_affine_coordinates_GF2m
+#define EC_POINT_get_affine_coordinates_GF2m    EC_POINT_get_affine_coords_GF2m
+#undef EC_POINT_set_compressed_coordinates_GF2m
+#define EC_POINT_set_compressed_coordinates_GF2m \
+                                                EC_POINT_set_compr_coords_GF2m
+#undef ec_GF2m_simple_group_clear_finish
+#define ec_GF2m_simple_group_clear_finish        ec_GF2m_simple_grp_clr_finish
+#undef ec_GF2m_simple_group_check_discriminant
+#define ec_GF2m_simple_group_check_discriminant	ec_GF2m_simple_grp_chk_discrim
+#undef ec_GF2m_simple_point_clear_finish
+#define ec_GF2m_simple_point_clear_finish        ec_GF2m_simple_pt_clr_finish
+#undef ec_GF2m_simple_point_set_to_infinity
+#define ec_GF2m_simple_point_set_to_infinity     ec_GF2m_simple_pt_set_to_inf
+#undef ec_GF2m_simple_points_make_affine
+#define ec_GF2m_simple_points_make_affine        ec_GF2m_simple_pts_make_affine
+#undef ec_GF2m_simple_point_set_affine_coordinates
+#define ec_GF2m_simple_point_set_affine_coordinates \
+                                                ec_GF2m_smp_pt_set_af_coords
+#undef ec_GF2m_simple_point_get_affine_coordinates
+#define ec_GF2m_simple_point_get_affine_coordinates \
+                                                ec_GF2m_smp_pt_get_af_coords
+#undef ec_GF2m_simple_set_compressed_coordinates
+#define ec_GF2m_simple_set_compressed_coordinates \
+                                                ec_GF2m_smp_set_compr_coords
 #undef ec_GFp_simple_group_set_curve_GFp
 #define ec_GFp_simple_group_set_curve_GFp       ec_GFp_simple_grp_set_curve_GFp
 #undef ec_GFp_simple_group_get_curve_GFp
@@ -246,6 +272,15 @@
 #undef ec_GFp_simple_set_compressed_coordinates_GFp
 #define ec_GFp_simple_set_compressed_coordinates_GFp \
                                                 ec_GFp_smp_set_compr_coords_GFp
+#undef ec_GFp_simple_point_set_affine_coordinates
+#define ec_GFp_simple_point_set_affine_coordinates \
+                                                ec_GFp_smp_pt_set_af_coords
+#undef ec_GFp_simple_point_get_affine_coordinates
+#define ec_GFp_simple_point_get_affine_coordinates \
+                                                ec_GFp_smp_pt_get_af_coords
+#undef ec_GFp_simple_set_compressed_coordinates
+#define ec_GFp_simple_set_compressed_coordinates \
+                                                ec_GFp_smp_set_compr_coords
 #undef ec_GFp_simple_group_check_discriminant
 #define ec_GFp_simple_group_check_discriminant	ec_GFp_simple_grp_chk_discrim
 
@@ -258,6 +293,15 @@
 #define ERR_load_CRYPTO_strings			ERR_load_CRYPTOlib_strings
 #undef OCSP_crlID_new
 #define OCSP_crlID_new                          OCSP_crlID2_new
+
+#undef d2i_ECPARAMETERS
+#define d2i_ECPARAMETERS                        d2i_UC_ECPARAMETERS
+#undef i2d_ECPARAMETERS
+#define i2d_ECPARAMETERS                        i2d_UC_ECPARAMETERS
+#undef d2i_ECPKPARAMETERS
+#define d2i_ECPKPARAMETERS                      d2i_UC_ECPKPARAMETERS
+#undef i2d_ECPKPARAMETERS
+#define i2d_ECPKPARAMETERS                      i2d_UC_ECPKPARAMETERS
 
 /* These functions do not seem to exist!  However, I'm paranoid...
    Original command in x509v3.h:

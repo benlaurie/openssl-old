@@ -861,8 +861,8 @@ bad:
 				if (Upkey == NULL)
 					{
 					Upkey=load_key(bio_err,
-						keyfile,keyformat, passin, e,
-						"Private key");
+						keyfile, keyformat, 0,
+						passin, e, "Private key");
 					if (Upkey == NULL) goto end;
 					}
 #ifndef OPENSSL_NO_DSA
@@ -870,7 +870,7 @@ bad:
 		                        digest=EVP_dss1();
 #endif
 #ifndef OPENSSL_NO_ECDSA
-				if (Upkey->type == EVP_PKEY_ECDSA)
+				if (Upkey->type == EVP_PKEY_EC)
 					digest=EVP_ecdsa();
 #endif
 
@@ -884,8 +884,9 @@ bad:
 				if (CAkeyfile != NULL)
 					{
 					CApkey=load_key(bio_err,
-						CAkeyfile,CAkeyformat, passin,
-						e, "CA Private Key");
+						CAkeyfile, CAkeyformat,
+						0, passin, e,
+						"CA Private Key");
 					if (CApkey == NULL) goto end;
 					}
 #ifndef OPENSSL_NO_DSA
@@ -893,7 +894,7 @@ bad:
 		                        digest=EVP_dss1();
 #endif
 #ifndef OPENSSL_NO_ECDSA
-				if (CApkey->type == EVP_PKEY_ECDSA)
+				if (CApkey->type == EVP_PKEY_EC)
 					digest = EVP_ecdsa();
 #endif
 				
@@ -916,17 +917,21 @@ bad:
 				else
 					{
 					pk=load_key(bio_err,
-						keyfile,FORMAT_PEM, passin, e,
-						"request key");
+						keyfile, FORMAT_PEM, 0,
+						passin, e, "request key");
 					if (pk == NULL) goto end;
 					}
 
 				BIO_printf(bio_err,"Generating certificate request\n");
 
+#ifndef OPENSSL_NO_DSA
 		                if (pk->type == EVP_PKEY_DSA)
 		                        digest=EVP_dss1();
-				else if (pk->type == EVP_PKEY_ECDSA)
+#endif
+#ifndef OPENSSL_NO_ECDSA
+				if (pk->type == EVP_PKEY_EC)
 					digest=EVP_ecdsa();
+#endif
 
 				rq=X509_to_X509_REQ(x,pk,digest);
 				EVP_PKEY_free(pk);

@@ -47,13 +47,13 @@ lib:	$(LIBOBJ)
 	@touch lib
 
 files:
-	perl $(TOP)/util/files.pl Makefile.ssl >> $(TOP)/MINFO
+	$(PERL) $(TOP)/util/files.pl Makefile.ssl >> $(TOP)/MINFO
 
 links:
-	$(TOP)/util/point.sh Makefile.ssl Makefile ;
-	$(PERL) $(TOP)/util/mklink.pl ../../include/openssl $(EXHEADER)
-	$(PERL) $(TOP)/util/mklink.pl ../../test $(TEST)
-	$(PERL) $(TOP)/util/mklink.pl ../../apps $(APPS)
+	@$(TOP)/util/point.sh Makefile.ssl Makefile ;
+	@$(PERL) $(TOP)/util/mklink.pl ../../include/openssl $(EXHEADER)
+	@$(PERL) $(TOP)/util/mklink.pl ../../test $(TEST)
+	@$(PERL) $(TOP)/util/mklink.pl ../../apps $(APPS)
 
 install:
 	@for i in $(EXHEADER) ; \
@@ -90,12 +90,13 @@ ocsp_asn.o: ../../include/openssl/conf.h ../../include/openssl/crypto.h
 ocsp_asn.o: ../../include/openssl/des.h ../../include/openssl/des_old.h
 ocsp_asn.o: ../../include/openssl/dh.h ../../include/openssl/dsa.h
 ocsp_asn.o: ../../include/openssl/e_os2.h ../../include/openssl/ec.h
-ocsp_asn.o: ../../include/openssl/ecdsa.h ../../include/openssl/evp.h
-ocsp_asn.o: ../../include/openssl/idea.h ../../include/openssl/lhash.h
-ocsp_asn.o: ../../include/openssl/md2.h ../../include/openssl/md4.h
-ocsp_asn.o: ../../include/openssl/md5.h ../../include/openssl/mdc2.h
-ocsp_asn.o: ../../include/openssl/obj_mac.h ../../include/openssl/objects.h
-ocsp_asn.o: ../../include/openssl/ocsp.h ../../include/openssl/opensslconf.h
+ocsp_asn.o: ../../include/openssl/ecdh.h ../../include/openssl/ecdsa.h
+ocsp_asn.o: ../../include/openssl/evp.h ../../include/openssl/idea.h
+ocsp_asn.o: ../../include/openssl/lhash.h ../../include/openssl/md2.h
+ocsp_asn.o: ../../include/openssl/md4.h ../../include/openssl/md5.h
+ocsp_asn.o: ../../include/openssl/mdc2.h ../../include/openssl/obj_mac.h
+ocsp_asn.o: ../../include/openssl/objects.h ../../include/openssl/ocsp.h
+ocsp_asn.o: ../../include/openssl/opensslconf.h
 ocsp_asn.o: ../../include/openssl/opensslv.h ../../include/openssl/ossl_typ.h
 ocsp_asn.o: ../../include/openssl/pkcs7.h ../../include/openssl/rc2.h
 ocsp_asn.o: ../../include/openssl/rc4.h ../../include/openssl/rc5.h
@@ -106,14 +107,14 @@ ocsp_asn.o: ../../include/openssl/ui.h ../../include/openssl/ui_compat.h
 ocsp_asn.o: ../../include/openssl/x509.h ../../include/openssl/x509_vfy.h
 ocsp_asn.o: ../../include/openssl/x509v3.h ocsp_asn.c
 ocsp_cl.o: ../../e_os.h ../../include/openssl/aes.h
-ocsp_cl.o: ../../include/openssl/asn1.h ../../include/openssl/asn1t.h
-ocsp_cl.o: ../../include/openssl/bio.h ../../include/openssl/blowfish.h
-ocsp_cl.o: ../../include/openssl/bn.h ../../include/openssl/buffer.h
-ocsp_cl.o: ../../include/openssl/cast.h ../../include/openssl/conf.h
-ocsp_cl.o: ../../include/openssl/crypto.h ../../include/openssl/des.h
-ocsp_cl.o: ../../include/openssl/des_old.h ../../include/openssl/dh.h
-ocsp_cl.o: ../../include/openssl/dsa.h ../../include/openssl/e_os2.h
-ocsp_cl.o: ../../include/openssl/ec.h ../../include/openssl/ecdsa.h
+ocsp_cl.o: ../../include/openssl/asn1.h ../../include/openssl/bio.h
+ocsp_cl.o: ../../include/openssl/blowfish.h ../../include/openssl/bn.h
+ocsp_cl.o: ../../include/openssl/buffer.h ../../include/openssl/cast.h
+ocsp_cl.o: ../../include/openssl/conf.h ../../include/openssl/crypto.h
+ocsp_cl.o: ../../include/openssl/des.h ../../include/openssl/des_old.h
+ocsp_cl.o: ../../include/openssl/dh.h ../../include/openssl/dsa.h
+ocsp_cl.o: ../../include/openssl/e_os2.h ../../include/openssl/ec.h
+ocsp_cl.o: ../../include/openssl/ecdh.h ../../include/openssl/ecdsa.h
 ocsp_cl.o: ../../include/openssl/err.h ../../include/openssl/evp.h
 ocsp_cl.o: ../../include/openssl/idea.h ../../include/openssl/lhash.h
 ocsp_cl.o: ../../include/openssl/md2.h ../../include/openssl/md4.h
@@ -132,13 +133,13 @@ ocsp_cl.o: ../../include/openssl/ui_compat.h ../../include/openssl/x509.h
 ocsp_cl.o: ../../include/openssl/x509_vfy.h ../../include/openssl/x509v3.h
 ocsp_cl.o: ../cryptlib.h ocsp_cl.c
 ocsp_err.o: ../../include/openssl/aes.h ../../include/openssl/asn1.h
-ocsp_err.o: ../../include/openssl/asn1t.h ../../include/openssl/bio.h
-ocsp_err.o: ../../include/openssl/blowfish.h ../../include/openssl/bn.h
-ocsp_err.o: ../../include/openssl/buffer.h ../../include/openssl/cast.h
-ocsp_err.o: ../../include/openssl/conf.h ../../include/openssl/crypto.h
-ocsp_err.o: ../../include/openssl/des.h ../../include/openssl/des_old.h
-ocsp_err.o: ../../include/openssl/dh.h ../../include/openssl/dsa.h
-ocsp_err.o: ../../include/openssl/e_os2.h ../../include/openssl/ec.h
+ocsp_err.o: ../../include/openssl/bio.h ../../include/openssl/blowfish.h
+ocsp_err.o: ../../include/openssl/bn.h ../../include/openssl/buffer.h
+ocsp_err.o: ../../include/openssl/cast.h ../../include/openssl/conf.h
+ocsp_err.o: ../../include/openssl/crypto.h ../../include/openssl/des.h
+ocsp_err.o: ../../include/openssl/des_old.h ../../include/openssl/dh.h
+ocsp_err.o: ../../include/openssl/dsa.h ../../include/openssl/e_os2.h
+ocsp_err.o: ../../include/openssl/ec.h ../../include/openssl/ecdh.h
 ocsp_err.o: ../../include/openssl/ecdsa.h ../../include/openssl/err.h
 ocsp_err.o: ../../include/openssl/evp.h ../../include/openssl/idea.h
 ocsp_err.o: ../../include/openssl/lhash.h ../../include/openssl/md2.h
@@ -156,14 +157,14 @@ ocsp_err.o: ../../include/openssl/ui.h ../../include/openssl/ui_compat.h
 ocsp_err.o: ../../include/openssl/x509.h ../../include/openssl/x509_vfy.h
 ocsp_err.o: ../../include/openssl/x509v3.h ocsp_err.c
 ocsp_ext.o: ../../e_os.h ../../include/openssl/aes.h
-ocsp_ext.o: ../../include/openssl/asn1.h ../../include/openssl/asn1t.h
-ocsp_ext.o: ../../include/openssl/bio.h ../../include/openssl/blowfish.h
-ocsp_ext.o: ../../include/openssl/bn.h ../../include/openssl/buffer.h
-ocsp_ext.o: ../../include/openssl/cast.h ../../include/openssl/conf.h
-ocsp_ext.o: ../../include/openssl/crypto.h ../../include/openssl/des.h
-ocsp_ext.o: ../../include/openssl/des_old.h ../../include/openssl/dh.h
-ocsp_ext.o: ../../include/openssl/dsa.h ../../include/openssl/e_os2.h
-ocsp_ext.o: ../../include/openssl/ec.h ../../include/openssl/ecdsa.h
+ocsp_ext.o: ../../include/openssl/asn1.h ../../include/openssl/bio.h
+ocsp_ext.o: ../../include/openssl/blowfish.h ../../include/openssl/bn.h
+ocsp_ext.o: ../../include/openssl/buffer.h ../../include/openssl/cast.h
+ocsp_ext.o: ../../include/openssl/conf.h ../../include/openssl/crypto.h
+ocsp_ext.o: ../../include/openssl/des.h ../../include/openssl/des_old.h
+ocsp_ext.o: ../../include/openssl/dh.h ../../include/openssl/dsa.h
+ocsp_ext.o: ../../include/openssl/e_os2.h ../../include/openssl/ec.h
+ocsp_ext.o: ../../include/openssl/ecdh.h ../../include/openssl/ecdsa.h
 ocsp_ext.o: ../../include/openssl/err.h ../../include/openssl/evp.h
 ocsp_ext.o: ../../include/openssl/idea.h ../../include/openssl/lhash.h
 ocsp_ext.o: ../../include/openssl/md2.h ../../include/openssl/md4.h
@@ -181,13 +182,13 @@ ocsp_ext.o: ../../include/openssl/ui_compat.h ../../include/openssl/x509.h
 ocsp_ext.o: ../../include/openssl/x509_vfy.h ../../include/openssl/x509v3.h
 ocsp_ext.o: ../cryptlib.h ocsp_ext.c
 ocsp_ht.o: ../../include/openssl/aes.h ../../include/openssl/asn1.h
-ocsp_ht.o: ../../include/openssl/asn1t.h ../../include/openssl/bio.h
-ocsp_ht.o: ../../include/openssl/blowfish.h ../../include/openssl/bn.h
-ocsp_ht.o: ../../include/openssl/buffer.h ../../include/openssl/cast.h
-ocsp_ht.o: ../../include/openssl/conf.h ../../include/openssl/crypto.h
-ocsp_ht.o: ../../include/openssl/des.h ../../include/openssl/des_old.h
-ocsp_ht.o: ../../include/openssl/dh.h ../../include/openssl/dsa.h
-ocsp_ht.o: ../../include/openssl/e_os2.h ../../include/openssl/ec.h
+ocsp_ht.o: ../../include/openssl/bio.h ../../include/openssl/blowfish.h
+ocsp_ht.o: ../../include/openssl/bn.h ../../include/openssl/buffer.h
+ocsp_ht.o: ../../include/openssl/cast.h ../../include/openssl/conf.h
+ocsp_ht.o: ../../include/openssl/crypto.h ../../include/openssl/des.h
+ocsp_ht.o: ../../include/openssl/des_old.h ../../include/openssl/dh.h
+ocsp_ht.o: ../../include/openssl/dsa.h ../../include/openssl/e_os2.h
+ocsp_ht.o: ../../include/openssl/ec.h ../../include/openssl/ecdh.h
 ocsp_ht.o: ../../include/openssl/ecdsa.h ../../include/openssl/err.h
 ocsp_ht.o: ../../include/openssl/evp.h ../../include/openssl/idea.h
 ocsp_ht.o: ../../include/openssl/lhash.h ../../include/openssl/md2.h
@@ -205,14 +206,14 @@ ocsp_ht.o: ../../include/openssl/ui_compat.h ../../include/openssl/x509.h
 ocsp_ht.o: ../../include/openssl/x509_vfy.h ../../include/openssl/x509v3.h
 ocsp_ht.o: ocsp_ht.c
 ocsp_lib.o: ../../e_os.h ../../include/openssl/aes.h
-ocsp_lib.o: ../../include/openssl/asn1.h ../../include/openssl/asn1t.h
-ocsp_lib.o: ../../include/openssl/bio.h ../../include/openssl/blowfish.h
-ocsp_lib.o: ../../include/openssl/bn.h ../../include/openssl/buffer.h
-ocsp_lib.o: ../../include/openssl/cast.h ../../include/openssl/conf.h
-ocsp_lib.o: ../../include/openssl/crypto.h ../../include/openssl/des.h
-ocsp_lib.o: ../../include/openssl/des_old.h ../../include/openssl/dh.h
-ocsp_lib.o: ../../include/openssl/dsa.h ../../include/openssl/e_os2.h
-ocsp_lib.o: ../../include/openssl/ec.h ../../include/openssl/ecdsa.h
+ocsp_lib.o: ../../include/openssl/asn1.h ../../include/openssl/bio.h
+ocsp_lib.o: ../../include/openssl/blowfish.h ../../include/openssl/bn.h
+ocsp_lib.o: ../../include/openssl/buffer.h ../../include/openssl/cast.h
+ocsp_lib.o: ../../include/openssl/conf.h ../../include/openssl/crypto.h
+ocsp_lib.o: ../../include/openssl/des.h ../../include/openssl/des_old.h
+ocsp_lib.o: ../../include/openssl/dh.h ../../include/openssl/dsa.h
+ocsp_lib.o: ../../include/openssl/e_os2.h ../../include/openssl/ec.h
+ocsp_lib.o: ../../include/openssl/ecdh.h ../../include/openssl/ecdsa.h
 ocsp_lib.o: ../../include/openssl/err.h ../../include/openssl/evp.h
 ocsp_lib.o: ../../include/openssl/idea.h ../../include/openssl/lhash.h
 ocsp_lib.o: ../../include/openssl/md2.h ../../include/openssl/md4.h
@@ -231,13 +232,13 @@ ocsp_lib.o: ../../include/openssl/ui_compat.h ../../include/openssl/x509.h
 ocsp_lib.o: ../../include/openssl/x509_vfy.h ../../include/openssl/x509v3.h
 ocsp_lib.o: ../cryptlib.h ocsp_lib.c
 ocsp_prn.o: ../../include/openssl/aes.h ../../include/openssl/asn1.h
-ocsp_prn.o: ../../include/openssl/asn1t.h ../../include/openssl/bio.h
-ocsp_prn.o: ../../include/openssl/blowfish.h ../../include/openssl/bn.h
-ocsp_prn.o: ../../include/openssl/buffer.h ../../include/openssl/cast.h
-ocsp_prn.o: ../../include/openssl/conf.h ../../include/openssl/crypto.h
-ocsp_prn.o: ../../include/openssl/des.h ../../include/openssl/des_old.h
-ocsp_prn.o: ../../include/openssl/dh.h ../../include/openssl/dsa.h
-ocsp_prn.o: ../../include/openssl/e_os2.h ../../include/openssl/ec.h
+ocsp_prn.o: ../../include/openssl/bio.h ../../include/openssl/blowfish.h
+ocsp_prn.o: ../../include/openssl/bn.h ../../include/openssl/buffer.h
+ocsp_prn.o: ../../include/openssl/cast.h ../../include/openssl/conf.h
+ocsp_prn.o: ../../include/openssl/crypto.h ../../include/openssl/des.h
+ocsp_prn.o: ../../include/openssl/des_old.h ../../include/openssl/dh.h
+ocsp_prn.o: ../../include/openssl/dsa.h ../../include/openssl/e_os2.h
+ocsp_prn.o: ../../include/openssl/ec.h ../../include/openssl/ecdh.h
 ocsp_prn.o: ../../include/openssl/ecdsa.h ../../include/openssl/err.h
 ocsp_prn.o: ../../include/openssl/evp.h ../../include/openssl/idea.h
 ocsp_prn.o: ../../include/openssl/lhash.h ../../include/openssl/md2.h
@@ -256,14 +257,14 @@ ocsp_prn.o: ../../include/openssl/ui.h ../../include/openssl/ui_compat.h
 ocsp_prn.o: ../../include/openssl/x509.h ../../include/openssl/x509_vfy.h
 ocsp_prn.o: ../../include/openssl/x509v3.h ocsp_prn.c
 ocsp_srv.o: ../../e_os.h ../../include/openssl/aes.h
-ocsp_srv.o: ../../include/openssl/asn1.h ../../include/openssl/asn1t.h
-ocsp_srv.o: ../../include/openssl/bio.h ../../include/openssl/blowfish.h
-ocsp_srv.o: ../../include/openssl/bn.h ../../include/openssl/buffer.h
-ocsp_srv.o: ../../include/openssl/cast.h ../../include/openssl/conf.h
-ocsp_srv.o: ../../include/openssl/crypto.h ../../include/openssl/des.h
-ocsp_srv.o: ../../include/openssl/des_old.h ../../include/openssl/dh.h
-ocsp_srv.o: ../../include/openssl/dsa.h ../../include/openssl/e_os2.h
-ocsp_srv.o: ../../include/openssl/ec.h ../../include/openssl/ecdsa.h
+ocsp_srv.o: ../../include/openssl/asn1.h ../../include/openssl/bio.h
+ocsp_srv.o: ../../include/openssl/blowfish.h ../../include/openssl/bn.h
+ocsp_srv.o: ../../include/openssl/buffer.h ../../include/openssl/cast.h
+ocsp_srv.o: ../../include/openssl/conf.h ../../include/openssl/crypto.h
+ocsp_srv.o: ../../include/openssl/des.h ../../include/openssl/des_old.h
+ocsp_srv.o: ../../include/openssl/dh.h ../../include/openssl/dsa.h
+ocsp_srv.o: ../../include/openssl/e_os2.h ../../include/openssl/ec.h
+ocsp_srv.o: ../../include/openssl/ecdh.h ../../include/openssl/ecdsa.h
 ocsp_srv.o: ../../include/openssl/err.h ../../include/openssl/evp.h
 ocsp_srv.o: ../../include/openssl/idea.h ../../include/openssl/lhash.h
 ocsp_srv.o: ../../include/openssl/md2.h ../../include/openssl/md4.h
@@ -282,13 +283,13 @@ ocsp_srv.o: ../../include/openssl/ui_compat.h ../../include/openssl/x509.h
 ocsp_srv.o: ../../include/openssl/x509_vfy.h ../../include/openssl/x509v3.h
 ocsp_srv.o: ../cryptlib.h ocsp_srv.c
 ocsp_vfy.o: ../../include/openssl/aes.h ../../include/openssl/asn1.h
-ocsp_vfy.o: ../../include/openssl/asn1t.h ../../include/openssl/bio.h
-ocsp_vfy.o: ../../include/openssl/blowfish.h ../../include/openssl/bn.h
-ocsp_vfy.o: ../../include/openssl/buffer.h ../../include/openssl/cast.h
-ocsp_vfy.o: ../../include/openssl/conf.h ../../include/openssl/crypto.h
-ocsp_vfy.o: ../../include/openssl/des.h ../../include/openssl/des_old.h
-ocsp_vfy.o: ../../include/openssl/dh.h ../../include/openssl/dsa.h
-ocsp_vfy.o: ../../include/openssl/e_os2.h ../../include/openssl/ec.h
+ocsp_vfy.o: ../../include/openssl/bio.h ../../include/openssl/blowfish.h
+ocsp_vfy.o: ../../include/openssl/bn.h ../../include/openssl/buffer.h
+ocsp_vfy.o: ../../include/openssl/cast.h ../../include/openssl/conf.h
+ocsp_vfy.o: ../../include/openssl/crypto.h ../../include/openssl/des.h
+ocsp_vfy.o: ../../include/openssl/des_old.h ../../include/openssl/dh.h
+ocsp_vfy.o: ../../include/openssl/dsa.h ../../include/openssl/e_os2.h
+ocsp_vfy.o: ../../include/openssl/ec.h ../../include/openssl/ecdh.h
 ocsp_vfy.o: ../../include/openssl/ecdsa.h ../../include/openssl/err.h
 ocsp_vfy.o: ../../include/openssl/evp.h ../../include/openssl/idea.h
 ocsp_vfy.o: ../../include/openssl/lhash.h ../../include/openssl/md2.h

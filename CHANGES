@@ -4,6 +4,149 @@
 
  Changes between 0.9.7 and 0.9.8  [xx XXX 2002]
 
+  *) Add support for ECC-based ciphersuites from draft-ietf-tls-ecc-01.txt.
+     As these are not official, they are not included in "ALL";
+     the "ECCdraft" ciphersuite group alias can be used to select them.
+     [Vipul Gupta and Sumit Gupta (Sun Microsystems Laboratories)]
+
+TODO: COMPLEMENTOFALL and COMPLEMENTOFDEFAULT do not handle ECCdraft
+cipher suites correctly.
+
+  *) Add ECDH engine support.
+     [Nils Gura and Douglas Stebila (Sun Microsystems Laboratories)]
+
+  *) Add ECDH in new directory crypto/ecdh/.
+     [Douglas Stebila (Sun Microsystems Laboratories)]
+
+  *) Let BN_rand_range() abort with an error after 100 iterations
+     without success (which indicates a broken PRNG).
+     [Bodo Moeller]
+
+  *) Change BN_mod_sqrt() so that it verifies that the input value
+     is really the square of the return value.  (Previously,
+     BN_mod_sqrt would show GIGO behaviour.)
+     [Bodo Moeller]
+
+  *) Add named elliptic curves over binary fields from X9.62, SECG,
+     and WAP/WTLS; add OIDs that were still missing.
+
+     [Sheueling Chang Shantz and Douglas Stebila
+     (Sun Microsystems Laboratories)]
+
+  *) Extend the EC library for elliptic curves over binary fields
+     (new files ec2_smpl.c, ec2_smpt.c, ec2_mult.c in crypto/ec/).
+     New EC_METHOD:
+
+          EC_GF2m_simple_method
+
+     New API functions:
+
+          EC_GROUP_new_curve_GF2m
+          EC_GROUP_set_curve_GF2m
+          EC_GROUP_get_curve_GF2m
+          EC_POINT_set_affine_coordinates_GF2m
+          EC_POINT_get_affine_coordinates_GF2m
+          EC_POINT_set_compressed_coordinates_GF2m
+
+     Point compression for binary fields is disabled by default for
+     patent reasons (compile with OPENSSL_EC_BIN_PT_COMP defined to
+     enable it).
+
+     As binary polynomials are represented as BIGNUMs, various members
+     of the EC_GROUP and EC_POINT data structures can be shared
+     between the implementations for prime fields and binary fields;
+     the above ..._GF2m functions (except for EX_GROUP_new_curve_GF2m)
+     are essentially identical to their ..._GFp counterparts.
+     (For simplicity, the '..._GFp' prefix has been dropped from
+     various internal method names.)
+
+     An internal 'field_div' method (similar to 'field_mul' and
+     'field_sqr') has been added; this is used only for binary fields.
+
+     [Sheueling Chang Shantz and Douglas Stebila
+     (Sun Microsystems Laboratories)]
+
+  *) Optionally dispatch EC_POINT_mul(), EC_POINT_precompute_mult()
+     through methods ('mul', 'precompute_mult').
+
+     The generic implementations (now internally called 'ec_wNAF_mul'
+     and 'ec_wNAF_precomputed_mult') remain the default if these
+     methods are undefined.
+
+     [Sheueling Chang Shantz and Douglas Stebila
+     (Sun Microsystems Laboratories)]
+
+  *) New function EC_GROUP_get_degree, which is defined through
+     EC_METHOD.  For curves over prime fields, this returns the bit
+     length of the modulus.
+
+     [Sheueling Chang Shantz and Douglas Stebila
+     (Sun Microsystems Laboratories)]
+
+  *) New functions EC_GROUP_dup, EC_POINT_dup.
+     (These simply call ..._new  and ..._copy).
+
+     [Sheueling Chang Shantz and Douglas Stebila
+     (Sun Microsystems Laboratories)]
+
+  *) Add binary polynomial arithmetic software in crypto/bn/bn_gf2m.c.
+     Polynomials are represented as BIGNUMs (where the sign bit is not
+     used) in the following functions [macros]:  
+
+          BN_GF2m_add
+          BN_GF2m_sub             [= BN_GF2m_add]
+          BN_GF2m_mod             [wrapper for BN_GF2m_mod_arr]
+          BN_GF2m_mod_mul         [wrapper for BN_GF2m_mod_mul_arr]
+          BN_GF2m_mod_sqr         [wrapper for BN_GF2m_mod_sqr_arr]
+          BN_GF2m_mod_inv
+          BN_GF2m_mod_exp         [wrapper for BN_GF2m_mod_exp_arr]
+          BN_GF2m_mod_sqrt        [wrapper for BN_GF2m_mod_sqrt_arr]
+          BN_GF2m_mod_solve_quad  [wrapper for BN_GF2m_mod_solve_quad_arr]
+          BN_GF2m_cmp             [= BN_ucmp]
+
+     (Note that only the 'mod' functions are actually for fields GF(2^m).
+     BN_GF2m_add() is misnomer, but this is for the sake of consistency.)
+
+     For some functions, an the irreducible polynomial defining a
+     field can be given as an 'unsigned int[]' with strictly
+     decreasing elements giving the indices of those bits that are set;
+     i.e., p[] represents the polynomial
+          f(t) = t^p[0] + t^p[1] + ... + t^p[k]
+     where
+          p[0] > p[1] > ... > p[k] = 0.
+     This applies to the following functions:
+
+          BN_GF2m_mod_arr
+          BN_GF2m_mod_mul_arr
+          BN_GF2m_mod_sqr_arr
+          BN_GF2m_mod_inv_arr        [wrapper for BN_GF2m_mod_inv]
+          BN_GF2m_mod_div_arr        [wrapper for BN_GF2m_mod_div]
+          BN_GF2m_mod_exp_arr
+          BN_GF2m_mod_sqrt_arr
+          BN_GF2m_mod_solve_quad_arr
+          BN_GF2m_poly2arr
+          BN_GF2m_arr2poly
+
+     Conversion can be performed by the following functions:
+
+          BN_GF2m_poly2arr
+          BN_GF2m_arr2poly
+
+     bntest.c has additional tests for binary polynomial arithmetic.
+
+     Two implementations for BN_GF2m_mod_div() are available.
+     The default algorithm simply uses BN_GF2m_mod_inv() and
+     BN_GF2m_mod_mul().  The alternative algorithm is compiled in only
+     if OPENSSL_SUN_GF2M_DIV is defined (patent pending; read the
+     copyright notice in crypto/bn/bn_gf2m.c before enabling it).
+
+     [Sheueling Chang Shantz and Douglas Stebila
+     (Sun Microsystems Laboratories)]
+
+  *) Add new error code 'ERR_R_DISABLED' that can be used when some
+     functionality is disabled at compile-time.
+     [Douglas Stebila <douglas.stebila@sun.com>]
+
   *) Change default behaviour of 'openssl asn1parse' so that more
      information is visible when viewing, e.g., a certificate:
 
@@ -85,7 +228,8 @@
      - X509_PUBKEY_get (crypto/asn1/x_pubkey.c) and
        d2i_PublicKey (crypto/asn1/d2i_pu.c) have been modified to make
        them suitable for ECDSA where domain parameters must be
-       extracted before the specific public key.
+       extracted before the specific public key;
+     - ECDSA engine support has been added.
      [Nils Larsch <nla@trustcenter.de>]
 
   *) Include some named elliptic curves, and add OIDs from X9.62,
@@ -99,7 +243,7 @@
          EC_GROUP_get_nid()
      [Nils Larsch <nla@trustcenter.de, Bodo Moeller]
  
- Changes between 0.9.6e and 0.9.7  [XX xxx 2002]
+ Changes between 0.9.6g and 0.9.7  [XX xxx 2002]
 
   *) Make sure tests can be performed even if the corresponding algorithms
      have been removed entirely.  This was also the last step to make
@@ -1764,7 +1908,32 @@ des-cbc           3624.96k     5258.21k     5530.91k     5624.30k     5628.26k
   *) Clean old EAY MD5 hack from e_os.h.
      [Richard Levitte]
 
- Changes between 0.9.6d and 0.9.6e  [XX xxx XXXX]
+ Changes between 0.9.6f and 0.9.6g  [9 Aug 2002]
+
+  *) [In 0.9.6g-engine release:]
+     Fix crypto/engine/vendor_defns/cswift.h for WIN32 (use '_stdcall').
+     [Lynn Gazis <lgazis@rainbow.com>]
+
+ Changes between 0.9.6e and 0.9.6f  [8 Aug 2002]
+
+  *) Fix ASN1 checks. Check for overflow by comparing with LONG_MAX
+     and get fix the header length calculation.
+     [Florian Weimer <Weimer@CERT.Uni-Stuttgart.DE>,
+	Alon Kantor <alonk@checkpoint.com> (and others),
+	Steve Henson]
+
+  *) Use proper error handling instead of 'assertions' in buffer
+     overflow checks added in 0.9.6e.  This prevents DoS (the
+     assertions could call abort()).
+     [Arne Ansper <arne@ats.cyber.ee>, Bodo Moeller]
+  
+ Changes between 0.9.6d and 0.9.6e  [30 Jul 2002]
+
+  *) Add various sanity checks to asn1_get_length() to reject
+     the ASN1 length bytes if they exceed sizeof(long), will appear
+     negative or the content length exceeds the length of the
+     supplied buffer.
+     [Steve Henson, Adi Stav <stav@mercury.co.il>, James Yonan <jim@ntlp.com>]
 
   *) Fix cipher selection routines: ciphers without encryption had no flags
      for the cipher strength set and where therefore not handled correctly
@@ -1786,6 +1955,40 @@ des-cbc           3624.96k     5258.21k     5530.91k     5624.30k     5628.26k
      's_server'), so the new option is automatically set in many
      applications.
      [Bodo Moeller]
+
+  *) Changes in security patch:
+
+     Changes marked "(CHATS)" were sponsored by the Defense Advanced
+     Research Projects Agency (DARPA) and Air Force Research Laboratory,
+     Air Force Materiel Command, USAF, under agreement number
+     F30602-01-2-0537.
+
+  *) Add various sanity checks to asn1_get_length() to reject
+     the ASN1 length bytes if they exceed sizeof(long), will appear
+     negative or the content length exceeds the length of the
+     supplied buffer. (CAN-2002-0659)
+     [Steve Henson, Adi Stav <stav@mercury.co.il>, James Yonan <jim@ntlp.com>]
+
+  *) Assertions for various potential buffer overflows, not known to
+     happen in practice.
+     [Ben Laurie (CHATS)]
+
+  *) Various temporary buffers to hold ASCII versions of integers were
+     too small for 64 bit platforms. (CAN-2002-0655)
+     [Matthew Byng-Maddick <mbm@aldigital.co.uk> and Ben Laurie (CHATS)>
+
+  *) Remote buffer overflow in SSL3 protocol - an attacker could
+     supply an oversized master key in Kerberos-enabled versions.
+     (CAN-2002-0657)
+     [Ben Laurie (CHATS)]
+
+  *) Remote buffer overflow in SSL3 protocol - an attacker could
+     supply an oversized session ID to a client. (CAN-2002-0656)
+     [Ben Laurie (CHATS)]
+
+  *) Remote buffer overflow in SSL2 protocol - an attacker could
+     supply an oversized client master key. (CAN-2002-0656)
+     [Ben Laurie (CHATS)]
 
  Changes between 0.9.6c and 0.9.6d  [9 May 2002]
 

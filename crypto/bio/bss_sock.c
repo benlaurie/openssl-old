@@ -162,12 +162,12 @@ static int sock_read(BIO *b, char *out, int outl)
 #pragma __required_pointer_size __save
 #pragma __required_pointer_size 32
 
-	char_p out32 = NULL;
+	char_32p out32 = NULL;
 
 	if (out != NULL)
 		{
-		out32 = (char_p)_malloc32(outl*sizeof(char_p));  	/* changed for 64-bit */
-		_memset32(out32, 0, outl*sizeof(char_p));		/* changed for 64-bit */
+		out32 = (char_32p)_malloc32(outl*sizeof(char_32p));  	/* changed for 64-bit */
+		_memset32(out32, 0, outl*sizeof(char_32p));		/* changed for 64-bit */
 		memcpy(out32,out,outl);					/* changed for 64-bit */
 		}
 
@@ -208,9 +208,9 @@ static int sock_write(BIO *b, const char *in, int inl)
 
         char_32p in32;
 
-        in32 = (char_p)_malloc32(inl*sizeof(char_p));     /* changed for 64-bit */
-        _memset32(in32, 0, inl*sizeof(char_p));             /* changed for 64-bit */
-        memcpy(in32,in,inl);                                 /* changed for 64-bit */
+        in32 = (char_32p)_malloc32(inl*sizeof(char_32p));   /* changed for 64-bit */
+        _memset32(in32, 0, inl*sizeof(char_32p));           /* changed for 64-bit */
+        memcpy(in32,in,inl);                                /* changed for 64-bit */
 
 #pragma __required_pointer_size __restore
 #endif

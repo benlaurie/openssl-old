@@ -259,7 +259,14 @@ struct IOSB {
 #ifdef SIGACTION
 static struct sigaction savsig[NX509_SIG];
 #else
+#if defined(OPENSSL_SYS_VMS) && __INITIAL_POINTER_SIZE == 64
+#pragma __required_pointer_size __save
+#pragma __required_pointer_size 32
+#endif
 static void (*savsig[NX509_SIG])(int );
+#if defined(OPENSSL_SYS_VMS) && __INITIAL_POINTER_SIZE == 64
+#pragma __required_pointer_size __restore
+#endif
 #endif
 
 #ifdef OPENSSL_SYS_VMS

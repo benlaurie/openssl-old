@@ -68,31 +68,28 @@
 #include <openssl/bn.h>
 #include <openssl/rsa.h>
 
-static int rsa_builtin_keygen(RSA *rsa, int bits, unsigned long e_value, BN_GENCB *cb);
+static int rsa_builtin_keygen(RSA *rsa, int bits, BIGNUM *e_value, BN_GENCB *cb);
 
 /* NB: this wrapper would normally be placed in rsa_lib.c and the static
  * implementation would probably be in rsa_eay.c. Nonetheless, is kept here so
  * that we don't introduce a new linker dependency. Eg. any application that
  * wasn't previously linking object code related to key-generation won't have to
  * now just because key-generation is part of RSA_METHOD. */
-int RSA_generate_key_ex(RSA *rsa, int bits, unsigned long e_value, BN_GENCB *cb)
+int RSA_generate_key_ex(RSA *rsa, int bits, BIGNUM *e_value, BN_GENCB *cb)
 	{
 	if(rsa->meth->rsa_keygen)
 		return rsa->meth->rsa_keygen(rsa, bits, e_value, cb);
 	return rsa_builtin_keygen(rsa, bits, e_value, cb);
 	}
 
-static int rsa_builtin_keygen(RSA *rsa, int bits, unsigned long e_value, BN_GENCB *cb)
+static int rsa_builtin_keygen(RSA *rsa, int bits, BIGNUM *e_value, BN_GENCB *cb)
 	{
 	BIGNUM *r0=NULL,*r1=NULL,*r2=NULL,*r3=NULL,*tmp;
 	int bitsp,bitsq,ok= -1,n=0;
-	unsigned int i;
-	BN_CTX *ctx=NULL,*ctx2=NULL;
+	BN_CTX *ctx=NULL;
 
 	ctx=BN_CTX_new();
 	if (ctx == NULL) goto err;
-	ctx2=BN_CTX_new();
-	if (ctx2 == NULL) goto err;
 	BN_CTX_start(ctx);
 	r0 = BN_CTX_get(ctx);
 	r1 = BN_CTX_get(ctx);
@@ -113,17 +110,7 @@ static int rsa_builtin_keygen(RSA *rsa, int bits, unsigned long e_value, BN_GENC
 	if(!rsa->dmq1 && ((rsa->dmq1=BN_new()) == NULL)) goto err;
 	if(!rsa->iqmp && ((rsa->iqmp=BN_new()) == NULL)) goto err;
 
-#if 1
-	/* The problem is when building with 8, 16, or 32 BN_ULONG,
-	 * unsigned long can be larger */
-	for (i=0; i<sizeof(unsigned long)*8; i++)
-		{
-		if (e_value & (1UL<<i))
-			BN_set_bit(rsa->e,i);
-		}
-#else
-	if (!BN_set_word(rsa->e,e_value)) goto err;
-#endif
+	BN_copy(rsa->e, e_value);
 
 	/* generate p and q */
 	for (;;)
@@ -140,11 +127,24 @@ static int rsa_builtin_keygen(RSA *rsa, int bits, unsigned long e_value, BN_GENC
 		goto err;
 	for (;;)
 		{
-		if(!BN_generate_prime_ex(rsa->q, bitsq, 0, NULL, NULL, cb))
+		/* When generating ridiculously small keys, we can get stuck
+		 * continually regenerating the same prime values. Check for
+		 * this and bail if it happens 3 times. */
+		unsigned int degenerate = 0;
+		do
+			{
+			if(!BN_generate_prime_ex(rsa->q, bitsq, 0, NULL, NULL, cb))
+				goto err;
+			} while((BN_cmp(rsa->p, rsa->q) == 0) && (++degenerate < 3));
+		if(degenerate == 3)
+			{
+			ok = 0; /* we set our own err */
+			RSAerr(RSA_F_RSA_GENERATE_KEY,RSA_R_KEY_SIZE_TOO_SMALL);
 			goto err;
+			}
 		if (!BN_sub(r2,rsa->q,BN_value_one())) goto err;
 		if (!BN_gcd(r1,r2,rsa->e,ctx)) goto err;
-		if (BN_is_one(r1) && (BN_cmp(rsa->p,rsa->q) != 0))
+		if (BN_is_one(r1))
 			break;
 		if(!BN_GENCB_call(cb, 2, n++))
 			goto err;
@@ -181,7 +181,7 @@ static int rsa_builtin_keygen(RSA *rsa, int bits, unsigned long e_value, BN_GENC
 		goto err;
 		}
 */
-	if (!BN_mod_inverse(rsa->d,rsa->e,r0,ctx2)) goto err;	/* d */
+	if (!BN_mod_inverse(rsa->d,rsa->e,r0,ctx)) goto err;	/* d */
 
 	/* calculate d mod (p-1) */
 	if (!BN_mod(rsa->dmp1,rsa->d,r1,ctx)) goto err;
@@ -190,7 +190,7 @@ static int rsa_builtin_keygen(RSA *rsa, int bits, unsigned long e_value, BN_GENC
 	if (!BN_mod(rsa->dmq1,rsa->d,r2,ctx)) goto err;
 
 	/* calculate inverse of q mod p */
-	if (!BN_mod_inverse(rsa->iqmp,rsa->q,rsa->p,ctx2)) goto err;
+	if (!BN_mod_inverse(rsa->iqmp,rsa->q,rsa->p,ctx)) goto err;
 
 	ok=1;
 err:
@@ -201,7 +201,6 @@ err:
 		}
 	BN_CTX_end(ctx);
 	BN_CTX_free(ctx);
-	BN_CTX_free(ctx2);
 
 	return ok;
 	}

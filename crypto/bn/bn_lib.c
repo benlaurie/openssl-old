@@ -69,6 +69,8 @@
 
 const char *BN_version="Big Number" OPENSSL_VERSION_PTEXT;
 
+/* This stuff appears to be completely unused, so is deprecated */
+#ifndef OPENSSL_NO_DEPRECATED
 /* For a 32 bit machine
  * 2 -   4 ==  128
  * 3 -   8 ==  256
@@ -127,6 +129,7 @@ int BN_get_params(int which)
 	else if (which == 3) return(bn_limit_bits_mont);
 	else return(0);
 	}
+#endif
 
 const BIGNUM *BN_value_one(void)
 	{
@@ -523,10 +526,6 @@ BIGNUM *BN_copy(BIGNUM *a, const BIGNUM *b)
 #endif
 
 	a->top=b->top;
-#ifndef BN_STRICT
-	if ((a->top == 0) && (a->d != NULL))
-		a->d[0]=0;
-#endif
 	a->neg=b->neg;
 	bn_check_top(a);
 	return(a);
@@ -616,56 +615,14 @@ void BN_clear(BIGNUM *a)
 
 BN_ULONG BN_get_word(const BIGNUM *a)
 	{
-	int i;
-	size_t n;
-	BN_ULONG ret=0;
-
-	n=BN_num_bytes(a);
-	if (n > (int)sizeof(BN_ULONG))
-		return(BN_MASK2);
-	for (i=a->top-1; i>=0; i--)
-		{
-#ifndef SIXTY_FOUR_BIT /* the data item > unsigned long */
-		ret<<=BN_BITS4; /* stops the compiler complaining */
-		ret<<=BN_BITS4;
-#else
-		ret=0;
-#endif
-		ret|=a->d[i];
-		}
-	return(ret);
+	if (a->top > 1)
+		return BN_MASK2;
+	else if (a->top == 1)
+		return a->d[0];
+	/* a->top == 0 */
+	return 0;
 	}
 
-#if 0 /* a->d[0] is a BN_ULONG, w is a BN_ULONG, what's the big deal? */
-int BN_set_word(BIGNUM *a, BN_ULONG w)
-	{
-	size_t i,n;
-	bn_check_top(a);
-	if (bn_expand(a,sizeof(BN_ULONG)*8) == NULL) return(0);
-
-	n=sizeof(BN_ULONG)/BN_BYTES;
-	a->neg=0;
-	a->top=0;
-	a->d[0]=(BN_ULONG)w&BN_MASK2;
-	if (a->d[0] != 0) a->top=1;
-	for (i=1; i<n; i++)
-		{
-		/* the following is done instead of
-		 * w>>=BN_BITS2 so compilers don't complain
-		 * on builds where sizeof(long) == BN_TYPES */
-#ifndef SIXTY_FOUR_BIT /* the data item > unsigned long */
-		w>>=BN_BITS4;
-		w>>=BN_BITS4;
-#else
-		w=0;
-#endif
-		a->d[i]=(BN_ULONG)w&BN_MASK2;
-		if (a->d[i] != 0) a->top=i+1;
-		}
-	bn_check_top(a);
-	return(1);
-	}
-#else
 int BN_set_word(BIGNUM *a, BN_ULONG w)
 	{
 	bn_check_top(a);
@@ -676,15 +633,16 @@ int BN_set_word(BIGNUM *a, BN_ULONG w)
 	bn_check_top(a);
 	return(1);
 	}
-#endif
 
 BIGNUM *BN_bin2bn(const unsigned char *s, size_t len, BIGNUM *ret)
 	{
 	unsigned int i,m;
 	unsigned int n;
 	BN_ULONG l;
+	BIGNUM  *bn = NULL;
 
-	if (ret == NULL) ret=BN_new();
+	if (ret == NULL)
+		ret = bn = BN_new();
 	if (ret == NULL) return(NULL);
 	bn_check_top(ret);
 	l=0;
@@ -694,13 +652,16 @@ BIGNUM *BN_bin2bn(const unsigned char *s, size_t len, BIGNUM *ret)
 		ret->top=0;
 		return(ret);
 		}
-	if (bn_expand(ret,(n+2)*8) == NULL)
-		return(NULL);
 	i=((n-1)/BN_BYTES)+1;
 	m=((n-1)%(BN_BYTES));
+	if (bn_wexpand(ret, (int)i) == NULL)
+		{
+		if (bn) BN_free(bn);
+		return NULL;
+		}
 	ret->top=i;
 	ret->neg=0;
-	while (n-- > 0)
+	while (n--)
 		{
 		l=(l<<8L)| *(s++);
 		if (m-- == 0)
@@ -724,7 +685,7 @@ size_t BN_bn2bin(const BIGNUM *a, unsigned char *to)
 
 	bn_check_top(a);
 	n=i=BN_num_bytes(a);
-	while (i-- > 0)
+	while (i--)
 		{
 		l=a->d[i/BN_BYTES];
 		*(to++)=(unsigned char)(l>>(8*(i%BN_BYTES)))&0xff;

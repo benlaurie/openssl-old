@@ -82,7 +82,7 @@
 #define EVP_CAST5_KEY_SIZE		16
 #define EVP_RC5_32_12_16_KEY_SIZE	16
 */
-#define EVP_MAX_MD_SIZE			(16+20) /* The SSLv3 md5+sha1 type */
+#define EVP_MAX_MD_SIZE			64	/* longest known is SHA512 */
 #define EVP_MAX_KEY_LENGTH		32
 #define EVP_MAX_IV_LENGTH		16
 #define EVP_MAX_BLOCK_LENGTH		32
@@ -489,7 +489,8 @@ int     EVP_MD_CTX_copy_ex(EVP_MD_CTX *out,const EVP_MD_CTX *in);
 #define EVP_MD_CTX_clear_flags(ctx,flgs) ((ctx)->flags&=~(flgs))
 #define EVP_MD_CTX_test_flags(ctx,flgs) ((ctx)->flags&(flgs))
 int	EVP_DigestInit_ex(EVP_MD_CTX *ctx, const EVP_MD *type, ENGINE *impl);
-int	EVP_DigestUpdate(EVP_MD_CTX *ctx,const void *d, size_t cnt);
+int	EVP_DigestUpdate(EVP_MD_CTX *ctx,const void *d,
+			 size_t cnt);
 int	EVP_DigestFinal_ex(EVP_MD_CTX *ctx,unsigned char *md,unsigned int *s);
 int	EVP_Digest(const void *data, size_t count,
 		unsigned char *md, size_t *size, const EVP_MD *type, ENGINE *impl);
@@ -596,6 +597,14 @@ const EVP_MD *EVP_sha1(void);
 const EVP_MD *EVP_dss(void);
 const EVP_MD *EVP_dss1(void);
 const EVP_MD *EVP_ecdsa(void);
+#endif
+#ifndef OPENSSL_NO_SHA256
+const EVP_MD *EVP_sha224(void);
+const EVP_MD *EVP_sha256(void);
+#endif
+#ifndef OPENSSL_NO_SHA512
+const EVP_MD *EVP_sha384(void);
+const EVP_MD *EVP_sha512(void);
 #endif
 #ifndef OPENSSL_NO_MDC2
 const EVP_MD *EVP_mdc2(void);

@@ -178,9 +178,16 @@
 #ifndef OPENSSL_NO_BIO
 #include <openssl/bio.h>
 #endif
+#ifndef OPENSSL_NO_DEPRECATED
 #ifndef OPENSSL_NO_X509
 #include <openssl/x509.h>
 #endif
+#include <openssl/crypto.h>
+#include <openssl/lhash.h>
+#include <openssl/buffer.h>
+#endif
+#include <openssl/pem.h>
+
 #include <openssl/kssl.h>
 #include <openssl/safestack.h>
 #include <openssl/symhacks.h>
@@ -317,11 +324,6 @@ extern "C" {
 #ifdef __cplusplus
 }
 #endif
-
-#include <openssl/crypto.h>
-#include <openssl/lhash.h>
-#include <openssl/buffer.h>
-#include <openssl/pem.h>
 
 #ifdef  __cplusplus
 extern "C" {
@@ -1198,11 +1200,6 @@ int	SSL_CIPHER_get_bits(SSL_CIPHER *c,int *alg_bits);
 char *	SSL_CIPHER_get_version(SSL_CIPHER *c);
 const char *	SSL_CIPHER_get_name(SSL_CIPHER *c);
 
-const COMP_METHOD *SSL_get_current_compression(SSL *s);
-const COMP_METHOD *SSL_get_current_expansion(SSL *s);
-const char *SSL_COMP_get_name(const COMP_METHOD *comp);
-STACK_OF(SSL_COMP) *SSL_COMP_get_compression_methods(void);
-
 int	SSL_get_fd(SSL *s);
 int	SSL_get_rfd(SSL *s);
 int	SSL_get_wfd(SSL *s);
@@ -1490,11 +1487,17 @@ void SSL_set_tmp_ecdh_callback(SSL *ssl,
 #endif
 
 #ifndef OPENSSL_NO_COMP
+const COMP_METHOD *SSL_get_current_compression(SSL *s);
+const COMP_METHOD *SSL_get_current_expansion(SSL *s);
+const char *SSL_COMP_get_name(const COMP_METHOD *comp);
 STACK_OF(SSL_COMP) *SSL_COMP_get_compression_methods(void);
 int SSL_COMP_add_compression_method(int id,COMP_METHOD *cm);
 #else
+const void *SSL_get_current_compression(SSL *s);
+const void *SSL_get_current_expansion(SSL *s);
+const char *SSL_COMP_get_name(const void *comp);
 void *SSL_COMP_get_compression_methods(void);
-int SSL_COMP_add_compression_method(int id,char *cm);
+int SSL_COMP_add_compression_method(int id,void *cm);
 #endif
 
 /* BEGIN ERROR CODES */

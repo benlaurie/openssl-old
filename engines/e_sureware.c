@@ -56,6 +56,11 @@
 #include <openssl/pem.h>
 #include <openssl/dso.h>
 #include <openssl/engine.h>
+#include <openssl/rand.h>
+#include <openssl/rsa.h>
+#include <openssl/dsa.h>
+#include <openssl/dh.h>
+#include <openssl/bn.h>
 
 #ifndef OPENSSL_NO_HW
 #ifndef OPENSSL_NO_HW_SUREWARE

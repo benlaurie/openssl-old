@@ -126,10 +126,9 @@
 #include <openssl/buffer.h>
 #include <openssl/comp.h>
 #include <openssl/bio.h>
-#include <openssl/crypto.h>
-#include <openssl/evp.h>
 #include <openssl/stack.h>
-#include <openssl/x509.h>
+#include <openssl/rsa.h>
+#include <openssl/dsa.h>
 #include <openssl/err.h>
 #include <openssl/ssl.h>
 #include <openssl/symhacks.h>

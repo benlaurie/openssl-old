@@ -29,6 +29,7 @@
 #include <openssl/objects.h>
 #include <openssl/engine.h>
 #include <openssl/evp.h>
+#include <openssl/bn.h>
 
 #if (defined(__unix__) || defined(unix)) && !defined(USG) && \
 	(defined(OpenBSD) || defined(__FreeBSD_version))
@@ -259,7 +260,7 @@ get_cryptodev_ciphers(const int **cnids)
 	int fd, i, count = 0;
 
 	if ((fd = get_dev_crypto()) < 0) {
-		*nids = NULL;
+		*cnids = NULL;
 		return (0);
 	}
 	memset(&sess, 0, sizeof(sess));
@@ -298,7 +299,7 @@ get_cryptodev_digests(const int **cnids)
 	int fd, i, count = 0;
 
 	if ((fd = get_dev_crypto()) < 0) {
-		*nids = NULL;
+		*cnids = NULL;
 		return (0);
 	}
 	memset(&sess, 0, sizeof(sess));

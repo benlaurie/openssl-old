@@ -77,6 +77,7 @@
 #ifndef OPENSSL_NO_FP_API
 #include <stdio.h> /* FILE */
 #endif
+#include <openssl/ossl_typ.h>
 
 #ifdef  __cplusplus
 extern "C" {
@@ -267,10 +268,6 @@ extern "C" {
 
 #define BN_DEFAULT_BITS	1280
 
-#ifdef BIGNUM
-#undef BIGNUM
-#endif
-
 #define BN_FLG_MALLOCED		0x01
 #define BN_FLG_STATIC_DATA	0x02
 #ifndef OPENSSL_NO_DEPRECATED
@@ -279,7 +276,18 @@ extern "C" {
 #define BN_set_flags(b,n)	((b)->flags|=(n))
 #define BN_get_flags(b,n)	((b)->flags&(n))
 
-typedef struct bignum_st
+/* Already declared in ossl_typ.h */
+#if 0
+typedef struct bignum_st BIGNUM;
+/* Used for temp variables (declaration hidden in bn_lcl.h) */
+typedef struct bignum_ctx BN_CTX;
+typedef struct bn_blinding_st BN_BLINDING;
+typedef struct bn_mont_ctx_st BN_MONT_CTX;
+typedef struct bn_recp_ctx_st BN_RECP_CTX;
+typedef struct bn_gencb_st BN_GENCB;
+#endif
+
+struct bignum_st
 	{
 	BN_ULONG *d;	/* Pointer to an array of 'BN_BITS2' bit chunks. */
 	size_t top;	/* Index of last used d +1. */
@@ -287,12 +295,9 @@ typedef struct bignum_st
 	size_t dmax;	/* Size of the d array. */
 	int neg;	/* one if the number is negative */
 	int flags;
-	} BIGNUM;
+	};
 
-/* Used for temp variables (declaration hidden in bn_lcl.h) */
-typedef struct bignum_ctx BN_CTX;
-
-typedef struct bn_blinding_st
+struct bn_blinding_st
 	{
 	int init;
 	BIGNUM *A;
@@ -300,10 +305,10 @@ typedef struct bn_blinding_st
 	BIGNUM *mod; /* just a reference */
 	unsigned long thread_id; /* added in OpenSSL 0.9.6j and 0.9.7b;
 				  * used only by crypto/rsa/rsa_eay.c, rsa_lib.c */
-	} BN_BLINDING;
+	};
 
 /* Used for montgomery multiplication */
-typedef struct bn_mont_ctx_st
+struct bn_mont_ctx_st
 	{
 	size_t ri;     /* number of bits in R */
 	BIGNUM RR;     /* used to convert to montgomery form */
@@ -312,22 +317,21 @@ typedef struct bn_mont_ctx_st
 	                * (Ni is only stored for bignum algorithm) */
 	BN_ULONG n0;   /* least significant word of Ni */
 	int flags;
-	} BN_MONT_CTX;
+	};
 
 /* Used for reciprocal division/mod functions
  * It cannot be shared between threads
  */
-typedef struct bn_recp_ctx_st
+struct bn_recp_ctx_st
 	{
 	BIGNUM N;	/* the divisor */
 	BIGNUM Nr;	/* the reciprocal */
 	size_t num_bits;
 	int shift;
 	int flags;
-	} BN_RECP_CTX;
+	};
 
 /* Used for slow "generation" functions. */
-typedef struct bn_gencb_st BN_GENCB;
 struct bn_gencb_st
 	{
 	unsigned int ver;	/* To handle binary (in)compatibility */
@@ -554,8 +558,10 @@ int BN_BLINDING_update(BN_BLINDING *b,BN_CTX *ctx);
 int BN_BLINDING_convert(BIGNUM *n, BN_BLINDING *r, BN_CTX *ctx);
 int BN_BLINDING_invert(BIGNUM *n, BN_BLINDING *b, BN_CTX *ctx);
 
+#ifndef OPENSSL_NO_DEPRECATED
 void BN_set_params(size_t mul,size_t high,size_t low,size_t mont);
 int BN_get_params(int which); /* 0, mul, 1 high, 2 low, 3 mont */
+#endif
 
 void	BN_RECP_CTX_init(BN_RECP_CTX *recp);
 BN_RECP_CTX *BN_RECP_CTX_new(void);
@@ -738,16 +744,6 @@ void     bn_sqr_words(BN_ULONG *rp, const BN_ULONG *ap, size_t num);
 BN_ULONG bn_div_words(BN_ULONG h, BN_ULONG l, BN_ULONG d);
 BN_ULONG bn_add_words(BN_ULONG *rp, const BN_ULONG *ap, const BN_ULONG *bp,size_t num);
 BN_ULONG bn_sub_words(BN_ULONG *rp, const BN_ULONG *ap, const BN_ULONG *bp,size_t num);
-
-#ifdef BN_DEBUG
-void bn_dump1(FILE *o, const char *a, const BN_ULONG *b,int n);
-# define bn_print(a) {fprintf(stderr, #a "="); BN_print_fp(stderr,a); \
-   fprintf(stderr,"\n");}
-# define bn_dump(a,n) bn_dump1(stderr,#a,a,n);
-#else
-# define bn_print(a)
-# define bn_dump(a,b)
-#endif
 
 int BN_bntest_rand(BIGNUM *rnd, size_t bits, int top,int bottom);
 

@@ -1027,13 +1027,13 @@ $arflags      =
 
 *** aix-cc
 $cc           = cc
-$cflags       = -O -DB_ENDIAN -qmaxmem=16384
+$cflags       = -q32 -O -DB_ENDIAN -qmaxmem=16384
 $unistd       = 
 $thread_cflag = (unknown)
 $sys_id       = AIX
 $lflags       = 
 $bn_ops       = BN_LLONG RC4_CHAR
-$bn_obj       = 
+$bn_obj       = asm/aix_ppc32.o
 $des_obj      = 
 $bf_obj       = 
 $md5_obj      = 
@@ -1042,23 +1042,23 @@ $cast_obj     =
 $rc4_obj      = 
 $rmd160_obj   = 
 $rc5_obj      = 
-$dso_scheme   = 
-$shared_target= 
+$dso_scheme   = dlfcn
+$shared_target= aix-shared
 $shared_cflag = 
-$shared_ldflag = 
-$shared_extension = 
+$shared_ldflag = -q32
+$shared_extension = .so.$(SHLIB_MAJOR).$(SHLIB_MINOR)
 $ranlib       = 
-$arflags      = 
+$arflags      = -X 32
 
 *** aix-gcc
 $cc           = gcc
-$cflags       = -O3 -DB_ENDIAN
+$cflags       = -O -DB_ENDIAN
 $unistd       = 
 $thread_cflag = (unknown)
 $sys_id       = AIX
 $lflags       = 
 $bn_ops       = BN_LLONG RC4_CHAR
-$bn_obj       = 
+$bn_obj       = asm/aix_ppc32.o
 $des_obj      = 
 $bf_obj       = 
 $md5_obj      = 
@@ -1067,7 +1067,7 @@ $cast_obj     =
 $rc4_obj      = 
 $rmd160_obj   = 
 $rc5_obj      = 
-$dso_scheme   = 
+$dso_scheme   = dlfcn
 $shared_target= 
 $shared_cflag = 
 $shared_ldflag = 
@@ -1077,13 +1077,13 @@ $arflags      =
 
 *** aix43-cc
 $cc           = cc
-$cflags       = -O -DAIX -DB_ENDIAN -qmaxmem=16384
+$cflags       = -O -DB_ENDIAN -qmaxmem=16384
 $unistd       = 
 $thread_cflag = (unknown)
 $sys_id       = 
 $lflags       = 
 $bn_ops       = BN_LLONG RC4_CHAR
-$bn_obj       = 
+$bn_obj       = asm/aix_ppc32.o
 $des_obj      = 
 $bf_obj       = 
 $md5_obj      = 
@@ -1100,40 +1100,15 @@ $shared_extension = .so.$(SHLIB_MAJOR).$(SHLIB_MINOR)
 $ranlib       = 
 $arflags      = 
 
-*** aix43-gcc
-$cc           = gcc
-$cflags       = -O1 -DAIX -DB_ENDIAN
-$unistd       = 
-$thread_cflag = (unknown)
-$sys_id       = 
-$lflags       = 
-$bn_ops       = BN_LLONG RC4_CHAR
-$bn_obj       = 
-$des_obj      = 
-$bf_obj       = 
-$md5_obj      = 
-$sha1_obj     = 
-$cast_obj     = 
-$rc4_obj      = 
-$rmd160_obj   = 
-$rc5_obj      = 
-$dso_scheme   = dlfcn
-$shared_target= 
-$shared_cflag = 
-$shared_ldflag = 
-$shared_extension = 
-$ranlib       = 
-$arflags      = 
-
 *** aix64-cc
 $cc           = cc
-$cflags       = -O -DAIX -DB_ENDIAN -qmaxmem=16384 -q64
+$cflags       = -q64 -O -DB_ENDIAN -qmaxmem=16384
 $unistd       = 
 $thread_cflag = (unknown)
-$sys_id       = 
+$sys_id       = AIX
 $lflags       = 
 $bn_ops       = SIXTY_FOUR_BIT_LONG RC4_CHAR
-$bn_obj       = 
+$bn_obj       = asm/aix_ppc64.o
 $des_obj      = 
 $bf_obj       = 
 $md5_obj      = 
@@ -1452,13 +1427,13 @@ $arflags      =
 
 *** darwin-ppc-cc
 $cc           = cc
-$cflags       = -O3 -fomit-frame-pointer -fno-common -DB_ENDIAN
+$cflags       = -O3 -fno-common -DB_ENDIAN
 $unistd       = 
 $thread_cflag = -D_REENTRANT
 $sys_id       = MACOSX
 $lflags       = 
 $bn_ops       = BN_LLONG RC4_CHAR RC4_CHUNK DES_UNROLL BF_PTR
-$bn_obj       = 
+$bn_obj       = asm/osx_ppc32.o
 $des_obj      = 
 $bf_obj       = 
 $md5_obj      = 
@@ -1677,7 +1652,7 @@ $arflags      =
 
 *** debug-geoff
 $cc           = gcc
-$cflags       = -DBN_DEBUG -DBN_DEBUG_RAND -DBN_STRICT -DBN_CTX_DEBUG -DPURIFY -DOPENSSL_NO_DEPRECATED -DOPENSSL_NO_ASM -DOPENSSL_NO_INLINE_ASM -DL_ENDIAN -DTERMIO -DPEDANTIC -g -ggdb3 -Wall -Werror -Wundef -pedantic -Wshadow -Wpointer-arith -Wbad-function-cast -Wcast-align -Wsign-compare -Wmissing-prototypes -Wmissing-declarations -Wno-long-long
+$cflags       = -DBN_DEBUG -DBN_DEBUG_RAND -DBN_STRICT -DPURIFY -DOPENSSL_NO_DEPRECATED -DOPENSSL_NO_ASM -DOPENSSL_NO_INLINE_ASM -DL_ENDIAN -DTERMIO -DPEDANTIC -O1 -ggdb2 -Wall -Werror -Wundef -pedantic -Wshadow -Wpointer-arith -Wbad-function-cast -Wcast-align -Wsign-compare -Wmissing-prototypes -Wmissing-declarations -Wno-long-long
 $unistd       = 
 $thread_cflag = -D_REENTRANT
 $sys_id       = 
@@ -1702,7 +1677,7 @@ $arflags      =
 
 *** debug-levitte-linux-elf
 $cc           = gcc
-$cflags       = -DLEVITTE_DEBUG -DREF_CHECK -DCONF_DEBUG -DBN_CTX_DEBUG -DBN_DEBUG -DBN_DEBUG_RAND -DCRYPTO_MDEBUG -DENGINE_CONF_DEBUG -DL_ENDIAN -DTERMIO -D_POSIX_SOURCE -DPEDANTIC -ggdb -g3 -mcpu=i486 -pedantic -ansi -Wall -Wshadow -Wcast-align -Wstrict-prototypes -Wmissing-prototypes -Wno-long-long -Wundef -Wconversion -pipe
+$cflags       = -DLEVITTE_DEBUG -DREF_CHECK -DCONF_DEBUG -DBN_DEBUG -DBN_DEBUG_RAND -DCRYPTO_MDEBUG -DENGINE_CONF_DEBUG -DL_ENDIAN -DTERMIO -D_POSIX_SOURCE -DPEDANTIC -ggdb -g3 -mcpu=i486 -pedantic -ansi -Wall -Wshadow -Wcast-align -Wstrict-prototypes -Wmissing-prototypes -Wno-long-long -Wundef -Wconversion -pipe
 $unistd       = 
 $thread_cflag = -D_REENTRANT
 $sys_id       = 
@@ -1727,7 +1702,7 @@ $arflags      =
 
 *** debug-levitte-linux-elf-extreme
 $cc           = gcc
-$cflags       = -DLEVITTE_DEBUG -DREF_CHECK -DCONF_DEBUG -DBN_CTX_DEBUG -DBN_DEBUG -DBN_DEBUG_RAND -DCRYPTO_MDEBUG -DENGINE_CONF_DEBUG -DL_ENDIAN -DTERMIO -D_POSIX_SOURCE -DPEDANTIC -ggdb -g3 -mcpu=i486 -pedantic -ansi -Wall -W -Wundef -Wshadow -Wcast-align -Wstrict-prototypes -Wmissing-prototypes -Wno-long-long -Wundef -Wconversion -pipe
+$cflags       = -DLEVITTE_DEBUG -DREF_CHECK -DCONF_DEBUG -DBN_DEBUG -DBN_DEBUG_RAND -DCRYPTO_MDEBUG -DENGINE_CONF_DEBUG -DL_ENDIAN -DTERMIO -D_POSIX_SOURCE -DPEDANTIC -ggdb -g3 -mcpu=i486 -pedantic -ansi -Wall -W -Wundef -Wshadow -Wcast-align -Wstrict-prototypes -Wmissing-prototypes -Wno-long-long -Wundef -Wconversion -pipe
 $unistd       = 
 $thread_cflag = -D_REENTRANT
 $sys_id       = 
@@ -1752,7 +1727,7 @@ $arflags      =
 
 *** debug-levitte-linux-noasm
 $cc           = gcc
-$cflags       = -DLEVITTE_DEBUG -DREF_CHECK -DCONF_DEBUG -DBN_CTX_DEBUG -DBN_DEBUG -DBN_DEBUG_RAND -DCRYPTO_MDEBUG -DENGINE_CONF_DEBUG -DOPENSSL_NO_ASM -DL_ENDIAN -DTERMIO -D_POSIX_SOURCE -DPEDANTIC -ggdb -g3 -mcpu=i486 -pedantic -ansi -Wall -Wshadow -Wcast-align -Wstrict-prototypes -Wmissing-prototypes -Wno-long-long -Wundef -Wconversion -pipe
+$cflags       = -DLEVITTE_DEBUG -DREF_CHECK -DCONF_DEBUG -DBN_DEBUG -DBN_DEBUG_RAND -DCRYPTO_MDEBUG -DENGINE_CONF_DEBUG -DOPENSSL_NO_ASM -DL_ENDIAN -DTERMIO -D_POSIX_SOURCE -DPEDANTIC -ggdb -g3 -mcpu=i486 -pedantic -ansi -Wall -Wshadow -Wcast-align -Wstrict-prototypes -Wmissing-prototypes -Wno-long-long -Wundef -Wconversion -pipe
 $unistd       = 
 $thread_cflag = -D_REENTRANT
 $sys_id       = 
@@ -1777,7 +1752,7 @@ $arflags      =
 
 *** debug-levitte-linux-noasm-extreme
 $cc           = gcc
-$cflags       = -DLEVITTE_DEBUG -DREF_CHECK -DCONF_DEBUG -DBN_CTX_DEBUG -DBN_DEBUG -DBN_DEBUG_RAND -DCRYPTO_MDEBUG -DENGINE_CONF_DEBUG -DOPENSSL_NO_ASM -DL_ENDIAN -DTERMIO -D_POSIX_SOURCE -DPEDANTIC -ggdb -g3 -mcpu=i486 -pedantic -ansi -Wall -W -Wundef -Wshadow -Wcast-align -Wstrict-prototypes -Wmissing-prototypes -Wno-long-long -Wundef -Wconversion -pipe
+$cflags       = -DLEVITTE_DEBUG -DREF_CHECK -DCONF_DEBUG -DBN_DEBUG -DBN_DEBUG_RAND -DCRYPTO_MDEBUG -DENGINE_CONF_DEBUG -DOPENSSL_NO_ASM -DL_ENDIAN -DTERMIO -D_POSIX_SOURCE -DPEDANTIC -ggdb -g3 -mcpu=i486 -pedantic -ansi -Wall -W -Wundef -Wshadow -Wcast-align -Wstrict-prototypes -Wmissing-prototypes -Wno-long-long -Wundef -Wconversion -pipe
 $unistd       = 
 $thread_cflag = -D_REENTRANT
 $sys_id       = 
@@ -2295,7 +2270,7 @@ $rc5_obj      =
 $dso_scheme   = dl
 $shared_target= hpux-shared
 $shared_cflag = +Z
-$shared_ldflag = 
+$shared_ldflag = -b
 $shared_extension = .sl.$(SHLIB_MAJOR).$(SHLIB_MINOR)
 $ranlib       = 
 $arflags      = 
@@ -2320,7 +2295,7 @@ $rc5_obj      =
 $dso_scheme   = dl
 $shared_target= hpux-shared
 $shared_cflag = -fPIC
-$shared_ldflag = 
+$shared_ldflag = -shared
 $shared_extension = .sl.$(SHLIB_MAJOR).$(SHLIB_MINOR)
 $ranlib       = 
 $arflags      = 
@@ -2345,7 +2320,7 @@ $rc5_obj      =
 $dso_scheme   = dlfcn
 $shared_target= hpux-shared
 $shared_cflag = +Z
-$shared_ldflag = 
+$shared_ldflag = +DD32 -b
 $shared_extension = .sl.$(SHLIB_MAJOR).$(SHLIB_MINOR)
 $ranlib       = 
 $arflags      = 
@@ -2370,7 +2345,7 @@ $rc5_obj      =
 $dso_scheme   = dlfcn
 $shared_target= hpux-shared
 $shared_cflag = -fpic
-$shared_ldflag = 
+$shared_ldflag = -shared
 $shared_extension = .so.$(SHLIB_MAJOR).$(SHLIB_MINOR)
 $ranlib       = 
 $arflags      = 
@@ -2420,7 +2395,7 @@ $rc5_obj      =
 $dso_scheme   = dl
 $shared_target= hpux-shared
 $shared_cflag = +Z
-$shared_ldflag = 
+$shared_ldflag = -b
 $shared_extension = .sl.$(SHLIB_MAJOR).$(SHLIB_MINOR)
 $ranlib       = 
 $arflags      = 
@@ -2445,7 +2420,7 @@ $rc5_obj      =
 $dso_scheme   = dl
 $shared_target= hpux-shared
 $shared_cflag = +Z
-$shared_ldflag = 
+$shared_ldflag = -b
 $shared_extension = .sl.$(SHLIB_MAJOR).$(SHLIB_MINOR)
 $ranlib       = 
 $arflags      = 
@@ -2470,7 +2445,7 @@ $rc5_obj      =
 $dso_scheme   = dl
 $shared_target= hpux-shared
 $shared_cflag = -fPIC
-$shared_ldflag = 
+$shared_ldflag = -shared
 $shared_extension = .sl.$(SHLIB_MAJOR).$(SHLIB_MINOR)
 $ranlib       = 
 $arflags      = 
@@ -2495,7 +2470,7 @@ $rc5_obj      =
 $dso_scheme   = dl
 $shared_target= hpux-shared
 $shared_cflag = +Z
-$shared_ldflag = 
+$shared_ldflag = -b
 $shared_extension = .sl.$(SHLIB_MAJOR).$(SHLIB_MINOR)
 $ranlib       = 
 $arflags      = 
@@ -2520,7 +2495,7 @@ $rc5_obj      =
 $dso_scheme   = dl
 $shared_target= hpux-shared
 $shared_cflag = +Z
-$shared_ldflag = 
+$shared_ldflag = -b
 $shared_extension = .sl.$(SHLIB_MAJOR).$(SHLIB_MINOR)
 $ranlib       = 
 $arflags      = 
@@ -2545,7 +2520,7 @@ $rc5_obj      =
 $dso_scheme   = dl
 $shared_target= hpux-shared
 $shared_cflag = -fPIC
-$shared_ldflag = 
+$shared_ldflag = -shared
 $shared_extension = .sl.$(SHLIB_MAJOR).$(SHLIB_MINOR)
 $ranlib       = 
 $arflags      = 
@@ -2668,9 +2643,9 @@ $rc4_obj      =
 $rmd160_obj   = 
 $rc5_obj      = 
 $dso_scheme   = dlfcn
-$shared_target= hpux64-shared
+$shared_target= hpux-shared
 $shared_cflag = +Z
-$shared_ldflag = 
+$shared_ldflag = +DD64 -b
 $shared_extension = .sl.$(SHLIB_MAJOR).$(SHLIB_MINOR)
 $ranlib       = 
 $arflags      = 
@@ -2695,7 +2670,7 @@ $rc5_obj      =
 $dso_scheme   = dlfcn
 $shared_target= hpux-shared
 $shared_cflag = -fpic
-$shared_ldflag = 
+$shared_ldflag = -mlp64 -shared
 $shared_extension = .so.$(SHLIB_MAJOR).$(SHLIB_MINOR)
 $ranlib       = 
 $arflags      = 
@@ -2718,9 +2693,9 @@ $rc4_obj      =
 $rmd160_obj   = 
 $rc5_obj      = 
 $dso_scheme   = dlfcn
-$shared_target= hpux64-shared
+$shared_target= hpux-shared
 $shared_cflag = -fpic
-$shared_ldflag = 
+$shared_ldflag = -shared
 $shared_extension = .sl.$(SHLIB_MAJOR).$(SHLIB_MINOR)
 $ranlib       = 
 $arflags      = 
@@ -2743,9 +2718,9 @@ $rc4_obj      =
 $rmd160_obj   = 
 $rc5_obj      = 
 $dso_scheme   = dlfcn
-$shared_target= hpux64-shared
+$shared_target= hpux-shared
 $shared_cflag = +Z
-$shared_ldflag = 
+$shared_ldflag = +DD64 -b
 $shared_extension = .sl.$(SHLIB_MAJOR).$(SHLIB_MINOR)
 $ranlib       = 
 $arflags      = 
@@ -2768,9 +2743,9 @@ $rc4_obj      =
 $rmd160_obj   = 
 $rc5_obj      = 
 $dso_scheme   = dlfcn
-$shared_target= hpux64-shared
+$shared_target= hpux-shared
 $shared_cflag = -fpic
-$shared_ldflag = 
+$shared_ldflag = -shared
 $shared_extension = .sl.$(SHLIB_MAJOR).$(SHLIB_MINOR)
 $ranlib       = 
 $arflags      = 
@@ -3127,7 +3102,7 @@ $arflags      =
 
 *** linux-ia32-icc
 $cc           = icc
-$cflags       = -DL_ENDIAN -DTERMIO -O2
+$cflags       = -DL_ENDIAN -DTERMIO -O2 -no_cpprt
 $unistd       = 
 $thread_cflag = -D_REENTRANT
 $sys_id       = 
@@ -3352,13 +3327,13 @@ $arflags      =
 
 *** linux-ppc
 $cc           = gcc
-$cflags       = -DB_ENDIAN -DTERMIO -O3 -fomit-frame-pointer -Wall
+$cflags       = -DB_ENDIAN -DTERMIO -O3 -Wall
 $unistd       = 
 $thread_cflag = -D_REENTRANT
 $sys_id       = 
 $lflags       = -ldl
 $bn_ops       = BN_LLONG RC4_CHAR RC4_CHUNK DES_RISC1 DES_UNROLL
-$bn_obj       = 
+$bn_obj       = asm/linux_ppc32.o
 $des_obj      = 
 $bf_obj       = 
 $md5_obj      = 
@@ -3371,6 +3346,31 @@ $dso_scheme   = dlfcn
 $shared_target= linux-shared
 $shared_cflag = -fPIC
 $shared_ldflag = 
+$shared_extension = .so.$(SHLIB_MAJOR).$(SHLIB_MINOR)
+$ranlib       = 
+$arflags      = 
+
+*** linux-ppc64
+$cc           = gcc
+$cflags       = -m64 -DB_ENDIAN -DTERMIO -O3 -Wall
+$unistd       = 
+$thread_cflag = -D_REENTRANT
+$sys_id       = 
+$lflags       = -ldl
+$bn_ops       = SIXTY_FOUR_BIT_LONG RC4_CHAR RC4_CHUNK DES_RISC1 DES_UNROLL
+$bn_obj       = asm/linux_ppc64.o
+$des_obj      = 
+$bf_obj       = 
+$md5_obj      = 
+$sha1_obj     = 
+$cast_obj     = 
+$rc4_obj      = 
+$rmd160_obj   = 
+$rc5_obj      = 
+$dso_scheme   = dlfcn
+$shared_target= linux-shared
+$shared_cflag = -fPIC
+$shared_ldflag = -m64
 $shared_extension = .so.$(SHLIB_MAJOR).$(SHLIB_MINOR)
 $ranlib       = 
 $arflags      = 

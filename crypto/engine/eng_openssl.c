@@ -69,6 +69,10 @@
 #include <openssl/dso.h>
 #include <openssl/pem.h>
 #include <openssl/evp.h>
+#include <openssl/rand.h>
+#include <openssl/rsa.h>
+#include <openssl/dsa.h>
+#include <openssl/dh.h>
 
 /* This testing gunk is implemented (and explained) lower down. It also assumes
  * the application explicitly calls "ENGINE_load_openssl()" because this is no
@@ -301,7 +305,7 @@ static int test_sha1_init(EVP_MD_CTX *ctx)
 #endif
 	return SHA1_Init(ctx->md_data);
 	}
-static int test_sha1_update(EVP_MD_CTX *ctx,const void *data,unsigned long count)
+static int test_sha1_update(EVP_MD_CTX *ctx,const void *data,size_t count)
 	{
 #ifdef TEST_ENG_OPENSSL_SHA_P_UPDATE
 	fprintf(stderr, "(TEST_ENG_OPENSSL_SHA) test_sha1_update() called\n");

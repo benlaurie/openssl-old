@@ -748,12 +748,16 @@ bad:
 		if (pkey_type == TYPE_RSA)
 			{
 			RSA *rsa = RSA_new();
-			if(!rsa || !RSA_generate_key_ex(rsa, newkey, 0x10001, &cb) ||
+			BIGNUM *bn = BN_new();
+			if(!bn || !rsa || !BN_set_word(bn, 0x10001) ||
+					!RSA_generate_key_ex(rsa, newkey, bn, &cb) ||
 					!EVP_PKEY_assign_RSA(pkey, rsa))
 				{
+				if(bn) BN_free(bn);
 				if(rsa) RSA_free(rsa);
 				goto end;
 				}
+			BN_free(bn);
 			}
 		else
 #endif
@@ -919,7 +923,9 @@ loop:
 				}
 			else
 				{
-				if (!ASN1_INTEGER_set(X509_get_serialNumber(x509ss),0L)) goto end;
+				if (!rand_serial(NULL,
+					X509_get_serialNumber(x509ss)))
+						goto end;
 				}
 
 			if (!X509_set_issuer_name(x509ss, X509_REQ_get_subject_name(req))) goto end;

@@ -68,9 +68,10 @@
 #ifndef OPENSSL_NO_BIO
 #include <openssl/bio.h>
 #endif
-#include <openssl/bn.h>
-#include <openssl/crypto.h>
 #include <openssl/ossl_typ.h>
+#ifndef OPENSSL_NO_DEPRECATED
+#include <openssl/bn.h>
+#endif
 	
 #define DH_FLAG_CACHE_MONT_P	0x01
 
@@ -78,9 +79,12 @@
 extern "C" {
 #endif
 
-typedef struct dh_st DH;
+/* Already defined in ossl_typ.h */
+/* typedef struct dh_st DH; */
+/* typedef struct dh_method DH_METHOD; */
 
-typedef struct dh_method {
+struct dh_method
+	{
 	const char *name;
 	/* Methods here */
 	int (*generate_key)(DH *dh);
@@ -95,7 +99,7 @@ typedef struct dh_method {
 	char *app_data;
 	/* If this is non-NULL, it will be used to generate parameters */
 	int (*generate_params)(DH *dh, int prime_len, int generator, BN_GENCB *cb);
-} DH_METHOD;
+	};
 
 struct dh_st
 	{

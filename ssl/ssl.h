@@ -68,6 +68,9 @@
 #ifndef NO_X509
 #include <openssl/x509.h>
 #endif
+#ifndef NO_KRB5
+#include <openssl/kssl.h>
+#endif
 #include <openssl/safestack.h>
 
 #ifdef  __cplusplus
@@ -92,6 +95,15 @@ extern "C" {
 #define SSL_TXT_DES_192_EDE3_CBC_WITH_MD5 SSL2_TXT_DES_192_EDE3_CBC_WITH_MD5	
 #define SSL_TXT_DES_192_EDE3_CBC_WITH_SHA SSL2_TXT_DES_192_EDE3_CBC_WITH_SHA	
 
+/*    VRS Additional Kerberos5 entries
+ */
+#define SSL_TXT_KRB5_DES_40_CBC_SHA   SSL3_TXT_KRB5_DES_40_CBC_SHA
+#define SSL_TXT_KRB5_DES_40_CBC_MD5   SSL3_TXT_KRB5_DES_40_CBC_MD5
+#define SSL_TXT_KRB5_DES_64_CBC_SHA   SSL3_TXT_KRB5_DES_64_CBC_SHA
+#define SSL_TXT_KRB5_DES_64_CBC_MD5   SSL3_TXT_KRB5_DES_64_CBC_MD5
+#define SSL_TXT_KRB5_DES_192_CBC3_SHA SSL3_TXT_KRB5_DES_192_CBC3_SHA
+#define SSL_TXT_KRB5_DES_192_CBC3_MD5 SSL3_TXT_KRB5_DES_192_CBC3_MD5
+
 #define SSL_MAX_SSL_SESSION_ID_LENGTH		32
 #define SSL_MAX_SID_CTX_LENGTH			32
 
@@ -111,6 +123,10 @@ extern "C" {
 #define	SSL_TXT_aNULL		"aNULL"
 #define	SSL_TXT_eNULL		"eNULL"
 #define	SSL_TXT_NULL		"NULL"
+
+#define SSL_TXT_kKRB5     	"kKRB5"
+#define SSL_TXT_aKRB5     	"aKRB5"
+#define SSL_TXT_KRB5      	"KRB5"
 
 #define SSL_TXT_kRSA		"kRSA"
 #define SSL_TXT_kDHr		"kDHr"
@@ -654,6 +670,10 @@ struct ssl_st
 
 	int error;		/* error bytes to be written */
 	int error_code;		/* actual code */
+
+#ifndef NO_KRB5
+	KSSL_CTX *kssl_ctx;     /* Kerberos 5 context */
+#endif	/* NO_KRB5 */
 
 	SSL_CTX *ctx;
 	/* set this flag to 1 and a sleep(1) is put into all SSL_read()
@@ -1239,6 +1259,7 @@ int SSL_COMP_add_compression_method(int id,char *cm);
 #define SSL_F_SSL2_ACCEPT				 122
 #define SSL_F_SSL2_CONNECT				 123
 #define SSL_F_SSL2_ENC_INIT				 124
+#define SSL_F_SSL2_PEEK					 234
 #define SSL_F_SSL2_READ					 125
 #define SSL_F_SSL2_SET_CERTIFICATE			 126
 #define SSL_F_SSL2_WRITE				 127
@@ -1264,6 +1285,7 @@ int SSL_COMP_add_compression_method(int id,char *cm);
 #define SSL_F_SSL3_GET_SERVER_DONE			 145
 #define SSL_F_SSL3_GET_SERVER_HELLO			 146
 #define SSL_F_SSL3_OUTPUT_CERT_CHAIN			 147
+#define SSL_F_SSL3_PEEK					 235
 #define SSL_F_SSL3_READ_BYTES				 148
 #define SSL_F_SSL3_READ_N				 149
 #define SSL_F_SSL3_SEND_CERTIFICATE_REQUEST		 150
@@ -1406,6 +1428,7 @@ int SSL_COMP_add_compression_method(int id,char *cm);
 #define SSL_R_ERROR_IN_RECEIVED_CIPHER_LIST		 151
 #define SSL_R_EXCESSIVE_MESSAGE_SIZE			 152
 #define SSL_R_EXTRA_DATA_IN_MESSAGE			 153
+#define SSL_R_FIXME					 1101
 #define SSL_R_GOT_A_FIN_BEFORE_A_CCS			 154
 #define SSL_R_HTTPS_PROXY_REQUEST			 155
 #define SSL_R_HTTP_REQUEST				 156
@@ -1414,6 +1437,13 @@ int SSL_COMP_add_compression_method(int id,char *cm);
 #define SSL_R_INVALID_COMMAND				 280
 #define SSL_R_INVALID_PURPOSE				 278
 #define SSL_R_INVALID_TRUST				 279
+#define SSL_R_KRB5_C_CC_PRINC				 1094
+#define SSL_R_KRB5_C_GET_CRED				 1095
+#define SSL_R_KRB5_C_INIT				 1096
+#define SSL_R_KRB5_C_MK_REQ				 1097
+#define SSL_R_KRB5_S_BAD_TICKET				 1098
+#define SSL_R_KRB5_S_INIT				 1099
+#define SSL_R_KRB5_S_RD_REQ				 1100
 #define SSL_R_LENGTH_MISMATCH				 159
 #define SSL_R_LENGTH_TOO_SHORT				 160
 #define SSL_R_LIBRARY_BUG				 274

@@ -34,8 +34,10 @@
     o Richard is currently working on:
 	UTIL (a new set of library functions to support some higher level
 	      functionality that is currently missing).
-	Dynamic thread-lock support.
 	Shared library support for VMS.
+	OCSP
+	Kerberos 5 authentication
+	Constification
 
   NEEDS PATCH
 

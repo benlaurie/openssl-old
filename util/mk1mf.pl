@@ -68,7 +68,6 @@ and [options] can be one of
 	debug					- Debug build
         profile                                 - Profiling build
 	gcc					- Use Gcc (unix)
-	rsaref					- Build to require RSAref
 
 Values that can be set
 TMP=tmpdir OUT=outdir SRC=srcdir BIN=binpath INC=header-outdir CC=C-compiler
@@ -218,7 +217,7 @@ $cflags.=" -DNO_SOCK" if $no_sock;
 $cflags.=" -DNO_SSL2" if $no_ssl2;
 $cflags.=" -DNO_SSL3" if $no_ssl3;
 $cflags.=" -DNO_ERR"  if $no_err;
-$cflags.=" -DRSAref"  if $rsaref ne "";
+#$cflags.=" -DRSAref"  if $rsaref ne "";
 
 ## if ($unix)
 ##	{ $cflags="$c_flags" if ($c_flags ne ""); }
@@ -873,6 +872,7 @@ sub read_options
 	elsif (/^no-dsa$/)	{ $no_dsa=1; }
 	elsif (/^no-dh$/)	{ $no_dh=1; }
 	elsif (/^no-hmac$/)	{ $no_hmac=1; }
+	elsif (/^no-rijndael$/)	{ $no_rijndael=1; }
 	elsif (/^no-asm$/)	{ $no_asm=1; }
 	elsif (/^nasm$/)	{ $nasm=1; }
 	elsif (/^gaswin$/)	{ $gaswin=1; }
@@ -885,7 +885,7 @@ sub read_options
 				  $no_md2=$no_sha=$no_mdc2=$no_dsa=$no_dh=1;
 				  $no_ssl2=$no_err=$no_rmd160=$no_rc5=1; }
 
-	elsif (/^rsaref$/)	{ $rsaref=1; }
+	elsif (/^rsaref$/)	{ }
 	elsif (/^gcc$/)		{ $gcc=1; }
 	elsif (/^debug$/)	{ $debug=1; }
 	elsif (/^profile$/)	{ $profile=1; }

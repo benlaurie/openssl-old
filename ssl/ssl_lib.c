@@ -191,6 +191,10 @@ SSL *SSL_new(SSL_CTX *ctx)
 	if (s == NULL) goto err;
 	memset(s,0,sizeof(SSL));
 
+#ifndef	NO_KRB5
+	s->kssl_ctx = kssl_ctx_new();
+#endif	/* NO_KRB5 */
+
 	if (ctx->cert != NULL)
 		{
 		/* Earlier library versions used to copy the pointer to
@@ -576,6 +580,13 @@ int SSL_get_read_ahead(SSL *s)
 
 int SSL_pending(SSL *s)
 	{
+	/* SSL_pending cannot work properly if read-ahead is enabled
+	 * (SSL_[CTX_]ctrl(..., SSL_CTRL_SET_READ_AHEAD, 1, NULL)),
+	 * and it is impossible to fix since SSL_pending cannot report
+	 * errors that may be observed while scanning the new data.
+	 * (Note that SSL_pending() is often used as a boolean value,
+	 * so we'd better not return -1.)
+	 */
 	return(s->method->ssl_pending(s));
 	}
 
@@ -1090,6 +1101,9 @@ int SSL_SESSION_cmp(SSL_SESSION *a,SSL_SESSION *b)
 	return(memcmp(a->session_id,b->session_id,a->session_id_length));
 	}
 
+static IMPLEMENT_LHASH_HASH_FN(SSL_SESSION_hash, SSL_SESSION *)
+static IMPLEMENT_LHASH_COMP_FN(SSL_SESSION_cmp, SSL_SESSION *)
+
 SSL_CTX *SSL_CTX_new(SSL_METHOD *meth)
 	{
 	SSL_CTX *ret=NULL;
@@ -1153,7 +1167,8 @@ SSL_CTX *SSL_CTX_new(SSL_METHOD *meth)
 	ret->default_passwd_callback_userdata=NULL;
 	ret->client_cert_cb=NULL;
 
-	ret->sessions=lh_new(SSL_SESSION_hash,SSL_SESSION_cmp);
+	ret->sessions=lh_new(LHASH_HASH_FN(SSL_SESSION_hash),
+			LHASH_COMP_FN(SSL_SESSION_cmp));
 	if (ret->sessions == NULL) goto err;
 	ret->cert_store=X509_STORE_new();
 	if (ret->cert_store == NULL) goto err;
@@ -1200,8 +1215,10 @@ err2:
 	return(NULL);
 	}
 
+#if 0
 static void SSL_COMP_free(SSL_COMP *comp)
     { OPENSSL_free(comp); }
+#endif
 
 void SSL_CTX_free(SSL_CTX *a)
 	{
@@ -1240,8 +1257,12 @@ void SSL_CTX_free(SSL_CTX *a)
 		sk_X509_NAME_pop_free(a->client_CA,X509_NAME_free);
 	if (a->extra_certs != NULL)
 		sk_X509_pop_free(a->extra_certs,X509_free);
+#if 0 /* This should never be done, since it removes a global database */
 	if (a->comp_methods != NULL)
 		sk_SSL_COMP_pop_free(a->comp_methods,SSL_COMP_free);
+#else
+	a->comp_methods = NULL;
+#endif
 	OPENSSL_free(a);
 	}
 
@@ -1372,6 +1393,11 @@ void ssl_set_cert_masks(CERT *c, SSL_CIPHER *cipher)
 	mask|=SSL_aNULL;
 	emask|=SSL_aNULL;
 
+#ifndef NO_KRB5
+	mask|=SSL_kKRB5|SSL_aKRB5;
+	emask|=SSL_kKRB5|SSL_aKRB5;
+#endif
+
 	c->mask=mask;
 	c->export_mask=emask;
 	c->valid=1;
@@ -1403,6 +1429,11 @@ X509 *ssl_get_server_send_cert(SSL *s)
 			i=SSL_PKEY_RSA_SIGN;
 		else
 			i=SSL_PKEY_RSA_ENC;
+		}
+	else if (kalg & SSL_aKRB5)
+		{
+		/* VRS something else here? */
+		return(NULL);
 		}
 	else /* if (kalg & SSL_aNULL) */
 		{

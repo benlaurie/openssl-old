@@ -89,6 +89,9 @@ extern "C" {
  * the error ENGINE_R_CTRL_COMMAND_NOT_IMPLEMENTED. */
 #define ENGINE_CTRL_SET_LOGSTREAM		1
 #define ENGINE_CTRL_SET_PASSWORD_CALLBACK	2
+#define ENGINE_CTRL_HUP				3 /* Close and reinitialise any
+						     handles/connections etc. */
+
 /* Flags specific to the nCipher "chil" engine */
 #define ENGINE_CTRL_CHIL_SET_FORKCHECK		100
 	/* Depending on the value of the (long)i argument, this sets or
@@ -102,23 +105,22 @@ extern "C" {
 /* As we're missing a BIGNUM_METHOD, we need a couple of locally
  * defined function types that engines can implement. */
 
-#ifndef HEADER_ENGINE_INT_H
 /* mod_exp operation, calculates; r = a ^ p mod m
  * NB: ctx can be NULL, but if supplied, the implementation may use
  * it if it wishes. */
-typedef int (*BN_MOD_EXP)(BIGNUM *r, BIGNUM *a, const BIGNUM *p,
+typedef int (*BN_MOD_EXP)(BIGNUM *r, const BIGNUM *a, const BIGNUM *p,
 		const BIGNUM *m, BN_CTX *ctx);
 
 /* private key operation for RSA, provided seperately in case other
  * RSA implementations wish to use it. */
-typedef int (*BN_MOD_EXP_CRT)(BIGNUM *r, BIGNUM *a, const BIGNUM *p,
+typedef int (*BN_MOD_EXP_CRT)(BIGNUM *r, const BIGNUM *a, const BIGNUM *p,
 		const BIGNUM *q, const BIGNUM *dmp1, const BIGNUM *dmq1,
 		const BIGNUM *iqmp, BN_CTX *ctx);
 
 /* Generic function pointer */
-typedef void (*ENGINE_GEN_FUNC_PTR)();
+typedef int (*ENGINE_GEN_FUNC_PTR)();
 /* Generic function pointer taking no arguments */
-typedef void (*ENGINE_GEN_INT_FUNC_PTR)(void);
+typedef int (*ENGINE_GEN_INT_FUNC_PTR)(void);
 /* Specific control function pointer */
 typedef int (*ENGINE_CTRL_FUNC_PTR)(int cmd, long i, void *p, void (*f)());
 
@@ -126,8 +128,8 @@ typedef int (*ENGINE_CTRL_FUNC_PTR)(int cmd, long i, void *p, void (*f)());
  * pointers (not dynamic because static is fine for now and we otherwise
  * have to hook an appropriate load/unload function in to initialise and
  * cleanup). */
+struct engine_st;
 typedef struct engine_st ENGINE;
-#endif
 
 /* STRUCTURE functions ... all of these functions deal with pointers to
  * ENGINE structures where the pointers have a "structural reference".
@@ -151,6 +153,13 @@ int ENGINE_add(ENGINE *e);
 int ENGINE_remove(ENGINE *e);
 /* Retrieve an engine from the list by its unique "id" value. */
 ENGINE *ENGINE_by_id(const char *id);
+/* Add all the built-in engines.  By default, only the OpenSSL software
+   engine is loaded */
+void ENGINE_load_cswift(void);
+void ENGINE_load_chil(void);
+void ENGINE_load_atalla(void);
+void ENGINE_load_nuron(void);
+void ENGINE_load_builtin_engines(void);
 
 /* These functions are useful for manufacturing new ENGINE
  * structures. They don't address reference counting at all -
@@ -172,9 +181,9 @@ ENGINE *ENGINE_new(void);
 int ENGINE_free(ENGINE *e);
 int ENGINE_set_id(ENGINE *e, const char *id);
 int ENGINE_set_name(ENGINE *e, const char *name);
-int ENGINE_set_RSA(ENGINE *e, RSA_METHOD *rsa_meth);
-int ENGINE_set_DSA(ENGINE *e, DSA_METHOD *dsa_meth);
-int ENGINE_set_DH(ENGINE *e, DH_METHOD *dh_meth);
+int ENGINE_set_RSA(ENGINE *e, const RSA_METHOD *rsa_meth);
+int ENGINE_set_DSA(ENGINE *e, const DSA_METHOD *dsa_meth);
+int ENGINE_set_DH(ENGINE *e, const DH_METHOD *dh_meth);
 int ENGINE_set_RAND(ENGINE *e, RAND_METHOD *rand_meth);
 int ENGINE_set_BN_mod_exp(ENGINE *e, BN_MOD_EXP bn_mod_exp);
 int ENGINE_set_BN_mod_exp_crt(ENGINE *e, BN_MOD_EXP_CRT bn_mod_exp_crt);
@@ -189,9 +198,9 @@ int ENGINE_set_ctrl_function(ENGINE *e, ENGINE_CTRL_FUNC_PTR ctrl_f);
  * reference may be problematic! */
 const char *ENGINE_get_id(ENGINE *e);
 const char *ENGINE_get_name(ENGINE *e);
-RSA_METHOD *ENGINE_get_RSA(ENGINE *e);
-DSA_METHOD *ENGINE_get_DSA(ENGINE *e);
-DH_METHOD *ENGINE_get_DH(ENGINE *e);
+const RSA_METHOD *ENGINE_get_RSA(ENGINE *e);
+const DSA_METHOD *ENGINE_get_DSA(ENGINE *e);
+const DH_METHOD *ENGINE_get_DH(ENGINE *e);
 RAND_METHOD *ENGINE_get_RAND(ENGINE *e);
 BN_MOD_EXP ENGINE_get_BN_mod_exp(ENGINE *e);
 BN_MOD_EXP_CRT ENGINE_get_BN_mod_exp_crt(ENGINE *e);
@@ -297,10 +306,10 @@ void ERR_load_ENGINE_strings(void);
 /* Error codes for the ENGINE functions. */
 
 /* Function codes. */
-#define ENGINE_F_ATALLA_FINISH				 135
-#define ENGINE_F_ATALLA_INIT				 136
-#define ENGINE_F_ATALLA_MOD_EXP				 137
-#define ENGINE_F_ATALLA_RSA_MOD_EXP			 138
+#define ENGINE_F_ATALLA_FINISH				 159
+#define ENGINE_F_ATALLA_INIT				 160
+#define ENGINE_F_ATALLA_MOD_EXP				 161
+#define ENGINE_F_ATALLA_RSA_MOD_EXP			 162
 #define ENGINE_F_CSWIFT_DSA_SIGN			 133
 #define ENGINE_F_CSWIFT_DSA_VERIFY			 134
 #define ENGINE_F_CSWIFT_FINISH				 100

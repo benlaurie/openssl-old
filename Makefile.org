@@ -24,7 +24,6 @@ INSTALLTOP=/usr/local/ssl
 # Do not edit this manually. Use Configure --openssldir=DIR do change this!
 OPENSSLDIR=/usr/local/ssl
 
-# RSAref  - Define if we are to link with RSAref.
 # NO_IDEA - Define to build without the IDEA algorithm
 # NO_RC4  - Define to build without the RC4 algorithm
 # NO_RC2  - Define to build without the RC2 algorithm
@@ -150,11 +149,15 @@ RMD160_ASM_OBJ= asm/rm86-out.o
 #RMD160_ASM_OBJ= asm/rm86-out.o       # a.out, FreeBSD
 #RMD160_ASM_OBJ= asm/rm86bsdi.o       # bsdi
 
+# KRB5 stuff
+KRB5_INCLUDES=
+LIBKRB5=
+
 # When we're prepared to use shared libraries in the programs we link here
 # we might set SHLIB_MARK to '$(SHARED_LIBS)'.
 SHLIB_MARK=
 
-DIRS=   crypto ssl rsaref $(SHLIB_MARK) apps test tools
+DIRS=   crypto ssl $(SHLIB_MARK) apps test tools
 SHLIBDIRS= crypto ssl
 
 # dirs in crypto to build
@@ -163,7 +166,11 @@ SDIRS=  \
 	des rc2 rc4 rc5 idea bf cast \
 	bn rsa dsa dh dso engine rijndael \
 	buffer bio stack lhash rand err objects \
-	evp asn1 pem x509 x509v3 conf txt_db pkcs7 pkcs12 comp
+	evp asn1 pem x509 x509v3 conf txt_db pkcs7 pkcs12 comp ocsp
+
+# tests to perform.  "alltests" is a special word indicating that all tests
+# should be performed.
+TESTS = alltests
 
 MAKEFILE= Makefile.ssl
 MAKE=     make -f Makefile.ssl
@@ -201,7 +208,7 @@ sub_all:
 	do \
 	if [ -d "$$i" ]; then \
 		(cd $$i && echo "making all in $$i..." && \
-		$(MAKE) CC='${CC}' PLATFORM='${PLATFORM}' CFLAG='${CFLAG}' SDIRS='$(SDIRS)' INSTALLTOP='${INSTALLTOP}' PEX_LIBS='${PEX_LIBS}' EX_LIBS='${EX_LIBS}' BN_ASM='${BN_ASM}' DES_ENC='${DES_ENC}' BF_ENC='${BF_ENC}' CAST_ENC='${CAST_ENC}' RC4_ENC='${RC4_ENC}' RC5_ENC='${RC5_ENC}' SHA1_ASM_OBJ='${SHA1_ASM_OBJ}' MD5_ASM_OBJ='${MD5_ASM_OBJ}' RMD160_ASM_OBJ='${RMD160_ASM_OBJ}' AR='${AR}' PROCESSOR='${PROCESSOR}' PERL='${PERL}' RANLIB='${RANLIB}' all ) || exit 1; \
+		$(MAKE) CC='${CC}' PLATFORM='${PLATFORM}' CFLAG='${CFLAG}' SDIRS='$(SDIRS)' INSTALLTOP='${INSTALLTOP}' PEX_LIBS='${PEX_LIBS}' EX_LIBS='${EX_LIBS}' BN_ASM='${BN_ASM}' DES_ENC='${DES_ENC}' BF_ENC='${BF_ENC}' CAST_ENC='${CAST_ENC}' RC4_ENC='${RC4_ENC}' RC5_ENC='${RC5_ENC}' SHA1_ASM_OBJ='${SHA1_ASM_OBJ}' MD5_ASM_OBJ='${MD5_ASM_OBJ}' RMD160_ASM_OBJ='${RMD160_ASM_OBJ}' AR='${AR}' PROCESSOR='${PROCESSOR}' PERL='${PERL}' RANLIB='${RANLIB}' KRB5_INCLUDES='${KRB5_INCLUDES}' LIBKRB5='${LIBKRB5}' all ) || exit 1; \
 	else \
 		$(MAKE) $$i; \
 	fi; \
@@ -254,14 +261,14 @@ do_bsd-gcc-shared: linux-shared
 do_linux-shared:
 	libs='${SHLIBDEPS}'; for i in ${SHLIBDIRS}; do \
 	( set -x; ${CC}  -shared -o lib$$i.so.${SHLIB_MAJOR}.${SHLIB_MINOR} \
-		-Wl,-S,-soname=lib$$i.so.${SHLIB_MAJOR} \
+		-Wl,-S,-soname=lib$$i.so.${SHLIB_MAJOR}.${SHLIB_MINOR} \
 		-Wl,--whole-archive lib$$i.a \
 		-Wl,--no-whole-archive $$libs ${EX_LIBS} -lc ) || exit 1; \
 	libs="$$libs -L. -l$$i"; \
 	done
 
 # This assumes that GNU utilities are *not* used
-do_true64-shared:
+do_tru64-shared:
 	libs='${SHLIBDEPS}'; for i in ${SHLIBDIRS}; do \
 	( set -x; ${CC}  -shared -no_archive -o lib$$i.so \
 		-set_version "${SHLIB_VERSION_HISTORY}${SHLIB_VERSION_NUMBER}" \
@@ -273,28 +280,55 @@ do_true64-shared:
 do_solaris-shared:
 	libs='${SHLIBDEPS}'; for i in ${SHLIBDIRS}; do \
 	( set -x; ${CC}  -G -o lib$$i.so.${SHLIB_MAJOR}.${SHLIB_MINOR} \
-		-h lib$$i.so.${SHLIB_MAJOR} \
+		-h lib$$i.so.${SHLIB_MAJOR}.${SHLIB_MINOR} \
 		-z allextract lib$$i.a $$libs ${EX_LIBS} -lc ) || exit 1; \
 	libs="$$libs -L. -l$$i"; \
 	done
 
 # This assumes that GNU utilities are *not* used
-do_hpux-shared:
+do_irix-shared:
 	libs='${SHLIBDEPS}'; for i in ${SHLIBDIRS}; do \
-	( set -x; /usr/ccs/bin/ld +vnocompatwarnings \
-		-b -z -o lib$$i.sl.${SHLIB_MAJOR}.${SHLIB_MINOR} \
-		+h lib$$i.sl.${SHLIB_MAJOR}.${SHLIB_MINOR} \
-		-Fl lib$$i.a $$libs ${EX_LIBS} -lc ) || exit 1; \
+	( set -x; ${CC} -shared -o lib$$i.so.${SHLIB_MAJOR}.${SHLIB_MINOR} \
+		-Wl,-soname,lib$$i.so.${SHLIB_MAJOR}.${SHLIB_MINOR} \
+		-all lib$$i.a $$libs ${EX_LIBS} -lc) || exit 1; \
 	libs="$$libs -L. -l$$i"; \
 	done
 
 # This assumes that GNU utilities are *not* used
-do_hpux64-shared:
-	libs='${SHLIBDEPS}'; for i in ${SHLIBDIRS}; do \
-	( set -x; /usr/ccs/bin/ld -b -z -o lib$$i.sl.${SHLIB_MAJOR}.${SHLIB_MINOR} \
+# HP-UX includes the full pathname of libs we depend on, so we would get
+# ./libcrypto (with ./ as path information) compiled into libssl, hence
+# we omit the SHLIBDEPS. Applications must be linked with -lssl -lcrypto
+# anyway.
+# The object modules are loaded from lib$i.a using the undocumented -Fl
+# option.
+#
+# WARNING: Until DSO is fixed to support a search path, we support SHLIB_PATH
+#          by temporarily specifying "+s"!
+#
+do_hpux-shared:
+	for i in ${SHLIBDIRS}; do \
+	( set -x; /usr/ccs/bin/ld +vnocompatwarnings \
+		-b -z +s \
+		-o lib$$i.sl.${SHLIB_MAJOR}.${SHLIB_MINOR} \
 		+h lib$$i.sl.${SHLIB_MAJOR}.${SHLIB_MINOR} \
-		+forceload lib$$i.a $$libs ${EX_LIBS} -lc ) || exit 1; \
-	libs="$$libs -L. -l$$i"; \
+		-Fl lib$$i.a -ldld -lc ) || exit 1; \
+	done
+
+# This assumes that GNU utilities are *not* used
+# HP-UX includes the full pathname of libs we depend on, so we would get
+# ./libcrypto (with ./ as path information) compiled into libssl, hence
+# we omit the SHLIBDEPS. Applications must be linked with -lssl -lcrypto
+# anyway.
+#
+# HP-UX in 64bit mode has "+s" enabled by default; it will search for
+# shared libraries along LD_LIBRARY_PATH _and_ SHLIB_PATH.
+#
+do_hpux64-shared:
+	for i in ${SHLIBDIRS}; do \
+	( set -x; /usr/ccs/bin/ld -b -z \
+		-o lib$$i.sl.${SHLIB_MAJOR}.${SHLIB_MINOR} \
+		+h lib$$i.sl.${SHLIB_MAJOR}.${SHLIB_MINOR} \
+		+forceload lib$$i.a -ldl -lc ) || exit 1; \
 	done
 
 Makefile.ssl: Makefile.org
@@ -343,7 +377,7 @@ links:
 	@for i in $(DIRS); do \
 	if [ -d "$$i" ]; then \
 		(cd $$i && echo "making links in $$i..." && \
-		$(MAKE) CC='${CC}' PLATFORM='${PLATFORM}' CFLAG='${CFLAG}' SDIRS='$(SDIRS)' INSTALLTOP='${INSTALLTOP}' PEX_LIBS='${PEX_LIBS}' EX_LIBS='${EX_LIBS}' BN_ASM='${BN_ASM}' DES_ENC='${DES_ENC}' BF_ENC='${BF_ENC}' CAST_ENC='${CAST_ENC}' RC4_ENC='${RC4_ENC}' RC5_ENC='${RC5_ENC}' SHA1_ASM_OBJ='${SHA1_ASM_OBJ}' MD5_ASM_OBJ='${MD5_ASM_OBJ}' RMD160_ASM_OBJ='${RMD160_ASM_OBJ}' AR='${AR}' PERL='${PERL}' links ) || exit 1; \
+		$(MAKE) CC='${CC}' PLATFORM='${PLATFORM}' CFLAG='${CFLAG}' SDIRS='$(SDIRS)' INSTALLTOP='${INSTALLTOP}' PEX_LIBS='${PEX_LIBS}' EX_LIBS='${EX_LIBS}' BN_ASM='${BN_ASM}' DES_ENC='${DES_ENC}' BF_ENC='${BF_ENC}' CAST_ENC='${CAST_ENC}' RC4_ENC='${RC4_ENC}' RC5_ENC='${RC5_ENC}' SHA1_ASM_OBJ='${SHA1_ASM_OBJ}' MD5_ASM_OBJ='${MD5_ASM_OBJ}' RMD160_ASM_OBJ='${RMD160_ASM_OBJ}' AR='${AR}' PERL='${PERL}' KRB5_INCLUDES='${KRB5_INCLUDES}' LIBKRB5='${LIBKRB5}' links ) || exit 1; \
 	fi; \
 	done;
 
@@ -366,7 +400,7 @@ test:   tests
 
 tests: rehash
 	@(cd test && echo "testing..." && \
-	$(MAKE) CC='${CC}' CFLAG='${CFLAG}' INSTALLTOP='${INSTALLTOP}' PEX_LIBS='${PEX_LIBS}' EX_LIBS='${EX_LIBS}' BN_ASM='${BN_ASM}' DES_ENC='${DES_ENC}' BF_ENC='${BF_ENC}' CAST_ENC='${CAST_ENC}' RC4_ENC='${RC4_ENC}' RC5_ENC='${RC5_ENC}' SDIRS='${SDIRS}' SHA1_ASM_OBJ='${SHA1_ASM_OBJ}' MD5_ASM_OBJ='${MD5_ASM_OBJ}' RMD160_ASM_OBJ='${RMD160_ASM_OBJ}' AR='${AR}' tests );
+	$(MAKE) CC='${CC}' CFLAG='${CFLAG}' INSTALLTOP='${INSTALLTOP}' PEX_LIBS='${PEX_LIBS}' EX_LIBS='${EX_LIBS}' BN_ASM='${BN_ASM}' DES_ENC='${DES_ENC}' BF_ENC='${BF_ENC}' CAST_ENC='${CAST_ENC}' RC4_ENC='${RC4_ENC}' RC5_ENC='${RC5_ENC}' SDIRS='${SDIRS}' SHA1_ASM_OBJ='${SHA1_ASM_OBJ}' MD5_ASM_OBJ='${MD5_ASM_OBJ}' RMD160_ASM_OBJ='${RMD160_ASM_OBJ}' AR='${AR}' TESTS='${TESTS}' KRB5_INCLUDES='${KRB5_INCLUDES}' LIBKRB5='${LIBKRB5}' tests );
 	@apps/openssl version -a
 
 report:
@@ -475,8 +509,8 @@ install: all install_docs
 		do \
 			if [ -f "$$i" ]; then \
 			(       echo installing $$i; \
-				cp $$i $(INSTALL_PREFIX)$(INSTALLTOP)/lib; \
-				chmod 644 $(INSTALL_PREFIX)$(INSTALLTOP)/lib/$$i ); \
+				cp -f $$i $(INSTALL_PREFIX)$(INSTALLTOP)/lib; \
+				chmod 555 $(INSTALL_PREFIX)$(INSTALLTOP)/lib/$$i ); \
 			fi \
 		done; \
 		(	here="`pwd`"; \

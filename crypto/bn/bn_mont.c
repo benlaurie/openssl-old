@@ -69,20 +69,17 @@
 
 #define MONT_WORD /* use the faster word-based algorithm */
 
-int BN_mod_mul_montgomery(BIGNUM *r, BIGNUM *a, BIGNUM *b,
+int BN_mod_mul_montgomery(BIGNUM *r, const BIGNUM *a, const BIGNUM *b,
 			  BN_MONT_CTX *mont, BN_CTX *ctx)
 	{
-	BIGNUM *tmp,*tmp2;
+	BIGNUM *tmp;
 	int ret=0;
 
 	BN_CTX_start(ctx);
 	tmp = BN_CTX_get(ctx);
-	tmp2 = BN_CTX_get(ctx);
-	if (tmp == NULL || tmp2 == NULL) goto err;
+	if (tmp == NULL) goto err;
 
 	bn_check_top(tmp);
-	bn_check_top(tmp2);
-
 	if (a == b)
 		{
 		if (!BN_sqr(tmp,a,ctx)) goto err;
@@ -99,7 +96,7 @@ err:
 	return(ret);
 	}
 
-int BN_from_montgomery(BIGNUM *ret, BIGNUM *a, BN_MONT_CTX *mont,
+int BN_from_montgomery(BIGNUM *ret, const BIGNUM *a, BN_MONT_CTX *mont,
 	     BN_CTX *ctx)
 	{
 	int retn=0;
@@ -144,7 +141,7 @@ int BN_from_montgomery(BIGNUM *ret, BIGNUM *a, BN_MONT_CTX *mont,
 	n0=mont->n0;
 
 #ifdef BN_COUNT
-	printf("word BN_from_montgomery %d * %d\n",nl,nl);
+	fprintf(stderr,"word BN_from_montgomery %d * %d\n",nl,nl);
 #endif
 	for (i=0; i<nl; i++)
 		{

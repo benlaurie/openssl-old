@@ -2,7 +2,22 @@
 /* Written by Ulf Moeller. This software is distributed on an "AS IS"
    basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. */
 
-/* EME_OAEP as defined in RFC 2437 (PKCS #1 v2.0) */
+/* EME-OAEP as defined in RFC 2437 (PKCS #1 v2.0) */
+
+/* See Victor Shoup, "OAEP reconsidered," Nov. 2000,
+ * <URL: http://www.shoup.net/papers/oaep.ps.Z>
+ * for problems with the security proof for the
+ * original OAEP scheme, which EME-OAEP is based on.
+ *
+ * Note that for RSA OAEP a security proof in the
+ * random oracle model *does* exist if 160 < log_2(N/e);
+ * cf. section 7.2 ("But RSA-OAEP with exponent 3 is
+ * provably secure") of Shoup's paper.  (The slight
+ * differences between the OAEP definition used by Shoup
+ * and OAEP as defined in RFC 2437 should not affect
+ * this result.)
+ */
+
 
 #if !defined(NO_SHA) && !defined(NO_SHA1)
 #include <stdio.h>
@@ -12,10 +27,12 @@
 #include <openssl/sha.h>
 #include <openssl/rand.h>
 
-int MGF1(unsigned char *mask, long len, unsigned char *seed, long seedlen);
+int MGF1(unsigned char *mask, long len,
+	const unsigned char *seed, long seedlen);
 
 int RSA_padding_add_PKCS1_OAEP(unsigned char *to, int tlen,
-	     unsigned char *from, int flen, unsigned char *param, int plen)
+	const unsigned char *from, int flen,
+	const unsigned char *param, int plen)
     {
     int i, emlen = tlen - 1;
     unsigned char *db, *seed;
@@ -71,11 +88,11 @@ int RSA_padding_add_PKCS1_OAEP(unsigned char *to, int tlen,
     }
 
 int RSA_padding_check_PKCS1_OAEP(unsigned char *to, int tlen,
-	     unsigned char *from, int flen, int num, unsigned char *param,
-	     int plen)
+	const unsigned char *from, int flen, int num,
+	const unsigned char *param, int plen)
     {
     int i, dblen, mlen = -1;
-    unsigned char *maskeddb;
+    const unsigned char *maskeddb;
     int lzero;
     unsigned char *db, seed[SHA_DIGEST_LENGTH], phash[SHA_DIGEST_LENGTH];
 
@@ -132,7 +149,8 @@ int RSA_padding_check_PKCS1_OAEP(unsigned char *to, int tlen,
     return (mlen);
     }
 
-int MGF1(unsigned char *mask, long len, unsigned char *seed, long seedlen)
+int MGF1(unsigned char *mask, long len,
+	const unsigned char *seed, long seedlen)
     {
     long i, outlen = 0;
     unsigned char cnt[4];

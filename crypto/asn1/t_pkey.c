@@ -74,7 +74,7 @@ static int print(BIO *fp,const char *str,BIGNUM *num,
 		unsigned char *buf,int off);
 #ifndef NO_RSA
 #ifndef NO_FP_API
-int RSA_print_fp(FILE *fp, RSA *x, int off)
+int RSA_print_fp(FILE *fp, const RSA *x, int off)
         {
         BIO *b;
         int ret;
@@ -91,7 +91,7 @@ int RSA_print_fp(FILE *fp, RSA *x, int off)
         }
 #endif
 
-int RSA_print(BIO *bp, RSA *x, int off)
+int RSA_print(BIO *bp, const RSA *x, int off)
 	{
 	char str[128];
 	const char *s;
@@ -140,7 +140,7 @@ err:
 
 #ifndef NO_DSA
 #ifndef NO_FP_API
-int DSA_print_fp(FILE *fp, DSA *x, int off)
+int DSA_print_fp(FILE *fp, const DSA *x, int off)
 	{
 	BIO *b;
 	int ret;
@@ -157,7 +157,7 @@ int DSA_print_fp(FILE *fp, DSA *x, int off)
 	}
 #endif
 
-int DSA_print(BIO *bp, DSA *x, int off)
+int DSA_print(BIO *bp, const DSA *x, int off)
 	{
 	char str[128];
 	unsigned char *m=NULL;
@@ -261,7 +261,7 @@ static int print(BIO *bp, const char *number, BIGNUM *num, unsigned char *buf,
 
 #ifndef NO_DH
 #ifndef NO_FP_API
-int DHparams_print_fp(FILE *fp, DH *x)
+int DHparams_print_fp(FILE *fp, const DH *x)
         {
         BIO *b;
         int ret;
@@ -278,7 +278,7 @@ int DHparams_print_fp(FILE *fp, DH *x)
         }
 #endif
 
-int DHparams_print(BIO *bp, DH *x)
+int DHparams_print(BIO *bp, const DH *x)
 	{
 	unsigned char *m=NULL;
 	int reason=ERR_R_BUF_LIB,i,ret=0;
@@ -314,7 +314,7 @@ err:
 
 #ifndef NO_DSA
 #ifndef NO_FP_API
-int DSAparams_print_fp(FILE *fp, DSA *x)
+int DSAparams_print_fp(FILE *fp, const DSA *x)
         {
         BIO *b;
         int ret;
@@ -331,7 +331,7 @@ int DSAparams_print_fp(FILE *fp, DSA *x)
         }
 #endif
 
-int DSAparams_print(BIO *bp, DSA *x)
+int DSAparams_print(BIO *bp, const DSA *x)
 	{
 	unsigned char *m=NULL;
 	int reason=ERR_R_BUF_LIB,i,ret=0;

@@ -203,6 +203,10 @@ case "${SYSTEM}:${RELEASE}:${VERSION}:${MACHINE}" in
 	echo "ppc-apple-rhapsody"; exit 0
 	;;
 
+    Darwin:*)
+	echo "ppc-apple-darwin"; exit 0
+	;;
+
     SunOS:5.*)
 	echo "${MACHINE}-whatever-solaris2"; exit 0
 	;;
@@ -413,11 +417,27 @@ case "$GUESSOS" in
 	    esac
 	fi
 	;;
-  mips-*-linux?) OUT="linux-mips" ;;
+  mips-*-linux?)
+          cat >dummy.c <<EOF
+#include <stdio.h>  /* for printf() prototype */
+        int main (argc, argv) int argc; char *argv[]; {
+#ifdef __MIPSEB__
+  printf ("linux-%s\n", argv[1]);
+#endif
+#ifdef __MIPSEL__
+  printf ("linux-%sel\n", argv[1]);
+#endif
+  return 0;
+}
+EOF
+	${CC} -o dummy dummy.c && OUT=`./dummy ${MACHINE}`
+	rm dummy dummy.c
+	;;
   ppc-*-linux2) OUT="linux-ppc" ;;
   m68k-*-linux*) OUT="linux-m68k" ;;
   ia64-*-linux?) OUT="linux-ia64" ;;
   ppc-apple-rhapsody) OUT="rhapsody-ppc-cc" ;;
+  ppc-apple-darwin) OUT="darwin-ppc-cc" ;;
   sparc64-*-linux2)
 	#Before we can uncomment following lines we have to wait at least
 	#till 64-bit glibc for SPARC is operational:-(
@@ -427,7 +447,7 @@ case "$GUESSOS" in
 	#read waste < /dev/tty
 	OUT="linux-sparcv9" ;;
   sparc-*-linux2)
-	KARCH=`awk '/type/{print$3}' /proc/cpuinfo`
+	KARCH=`awk '/^type/{print$3}' /proc/cpuinfo`
 	case ${KARCH:-sun4} in
 	sun4u*)	OUT="linux-sparcv9" ;;
 	sun4m)	OUT="linux-sparcv8" ;;
@@ -520,6 +540,27 @@ do
     options="$options no-$i"
   fi
 done
+
+# Discover Kerberos 5 (since it's still a prototype, we don't
+# do any guesses yet, that's why this section is commented away.
+#if [ -d /usr/kerberos ]; then
+#    krb5_dir=/usr/kerberos
+#    if [ \( -f $krb5_dir/lib/libgssapi_krb5.a -o -f $krb5_dir/lib/libgssapi_krb5.so* \)\
+#	-a \( -f $krb5_dir/lib/libkrb5.a -o -f $krb5_dir/lib/libkrb5.so* \)\
+#	-a \( -f $krb5_dir/lib/libcom_err.a -o -f $krb5_dir/lib/libcom_err.so* \)\
+#	-a \( -f $krb5_dir/lib/libk5crypto.a -o -f $krb5_dir/lib/libk5crypto.so* \)\
+#	-a \( -f $krb5_dir/include/krb5.h \) ]; then
+#	options="$options --with-krb5-flavor=MIT"
+#    fi
+#elif [ -d /usr/heimdal ]; then
+#    krb5_dir=/usr/heimdal
+#    if [ \( -f $krb5_dir/lib/libgssapi.a -o -f $krb5_dir/lib/libgssapi.so* \)\
+#	-a \( -f $krb5_dir/lib/libkrb5.a -o -f $krb5_dir/lib/libkrb5.so* \)\
+#	-a \( -f $krb5_dir/lib/libcom_err.a -o -f $krb5_dir/lib/libcom_err.so* \)\
+#	-a \( -f $krb5_dir/include/krb5.h \) ]; then
+#	options="$options --with-krb5-flavor=Heimdal"
+#    fi
+#fi
 
 if [ -z "$OUT" ]; then
   OUT="$CC"

@@ -108,7 +108,7 @@ DSO *DSO_new_method(DSO_METHOD *meth)
 		}
 	memset(ret, 0, sizeof(DSO));
 	ret->meth_data = sk_new_null();
-	if((ret->meth_data = sk_new_null()) == NULL)
+	if(ret->meth_data == NULL)
 		{
 		/* sk_new doesn't generate any errors so we do */
 		DSOerr(DSO_F_DSO_NEW_METHOD,ERR_R_MALLOC_FAILURE);
@@ -209,7 +209,7 @@ DSO *DSO_load(DSO *dso, const char *filename, DSO_METHOD *meth, int flags)
 	else
 		ret = dso;
 	/* Don't load if we're currently already loaded */
-	if(dso->filename != NULL)
+	if(ret->filename != NULL)
 		{
 		DSOerr(DSO_F_DSO_LOAD,DSO_R_DSO_ALREADY_LOADED);
 		goto err;
@@ -217,12 +217,12 @@ DSO *DSO_load(DSO *dso, const char *filename, DSO_METHOD *meth, int flags)
 	/* filename can only be NULL if we were passed a dso that already has
 	 * one set. */
 	if(filename != NULL)
-		if(!DSO_set_filename(dso, filename))
+		if(!DSO_set_filename(ret, filename))
 			{
 			DSOerr(DSO_F_DSO_LOAD,DSO_R_SET_FILENAME_FAILED);
 			goto err;
 			}
-	filename = dso->filename;
+	filename = ret->filename;
 	if(filename == NULL)
 		{
 		DSOerr(DSO_F_DSO_LOAD,DSO_R_NO_FILENAME);

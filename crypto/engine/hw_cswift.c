@@ -88,16 +88,16 @@ static int cswift_init(void);
 static int cswift_finish(void);
 
 /* BIGNUM stuff */
-static int cswift_mod_exp(BIGNUM *r, BIGNUM *a, const BIGNUM *p,
+static int cswift_mod_exp(BIGNUM *r, const BIGNUM *a, const BIGNUM *p,
 		const BIGNUM *m, BN_CTX *ctx);
-static int cswift_mod_exp_crt(BIGNUM *r, BIGNUM *a, const BIGNUM *p,
+static int cswift_mod_exp_crt(BIGNUM *r, const BIGNUM *a, const BIGNUM *p,
 		const BIGNUM *q, const BIGNUM *dmp1, const BIGNUM *dmq1,
 		const BIGNUM *iqmp, BN_CTX *ctx);
 
 /* RSA stuff */
-static int cswift_rsa_mod_exp(BIGNUM *r0, BIGNUM *I, RSA *rsa);
+static int cswift_rsa_mod_exp(BIGNUM *r0, const BIGNUM *I, RSA *rsa);
 /* This function is aliased to mod_exp (with the mont stuff dropped). */
-static int cswift_mod_exp_mont(BIGNUM *r, BIGNUM *a, const BIGNUM *p,
+static int cswift_mod_exp_mont(BIGNUM *r, const BIGNUM *a, const BIGNUM *p,
 		const BIGNUM *m, BN_CTX *ctx, BN_MONT_CTX *m_ctx);
 
 /* DSA stuff */
@@ -107,7 +107,8 @@ static int cswift_dsa_verify(const unsigned char *dgst, int dgst_len,
 
 /* DH stuff */
 /* This function is alised to mod_exp (with the DH and mont dropped). */
-static int cswift_mod_exp_dh(DH *dh, BIGNUM *r, BIGNUM *a, const BIGNUM *p,
+static int cswift_mod_exp_dh(const DH *dh, BIGNUM *r,
+		const BIGNUM *a, const BIGNUM *p,
 		const BIGNUM *m, BN_CTX *ctx, BN_MONT_CTX *m_ctx);
 
 
@@ -182,8 +183,8 @@ static ENGINE engine_cswift =
  * (indeed - the lock will already be held by our caller!!!) */
 ENGINE *ENGINE_cswift()
 	{
-	RSA_METHOD *meth1;
-	DH_METHOD *meth2;
+	const RSA_METHOD *meth1;
+	const DH_METHOD *meth2;
 
 	/* We know that the "PKCS1_SSLeay()" functions hook properly
 	 * to the cswift-specific mod_exp and mod_exp_crt so we use
@@ -250,7 +251,7 @@ static void release_context(SW_CONTEXT_HANDLE hac)
 	}
 
 /* (de)initialisation functions. */
-static int cswift_init()
+static int cswift_init(void)
 	{
         SW_CONTEXT_HANDLE hac;
         t_swAcquireAccContext *p1;
@@ -307,7 +308,7 @@ err:
 	return 0;
 	}
 
-static int cswift_finish()
+static int cswift_finish(void)
 	{
 	if(cswift_dso == NULL)
 		{
@@ -328,7 +329,7 @@ static int cswift_finish()
 	}
 
 /* Un petit mod_exp */
-static int cswift_mod_exp(BIGNUM *r, BIGNUM *a, const BIGNUM *p,
+static int cswift_mod_exp(BIGNUM *r, const BIGNUM *a, const BIGNUM *p,
 			const BIGNUM *m, BN_CTX *ctx)
 	{
 	/* I need somewhere to store temporary serialised values for
@@ -428,7 +429,7 @@ err:
 	}
 
 /* Un petit mod_exp chinois */
-static int cswift_mod_exp_crt(BIGNUM *r, BIGNUM *a, const BIGNUM *p,
+static int cswift_mod_exp_crt(BIGNUM *r, const BIGNUM *a, const BIGNUM *p,
 			const BIGNUM *q, const BIGNUM *dmp1,
 			const BIGNUM *dmq1, const BIGNUM *iqmp, BN_CTX *ctx)
 	{
@@ -541,7 +542,7 @@ err:
 	return to_return;
 	}
  
-static int cswift_rsa_mod_exp(BIGNUM *r0, BIGNUM *I, RSA *rsa)
+static int cswift_rsa_mod_exp(BIGNUM *r0, const BIGNUM *I, RSA *rsa)
 	{
 	BN_CTX *ctx;
 	int to_return = 0;
@@ -562,7 +563,7 @@ err:
 	}
 
 /* This function is aliased to mod_exp (with the mont stuff dropped). */
-static int cswift_mod_exp_mont(BIGNUM *r, BIGNUM *a, const BIGNUM *p,
+static int cswift_mod_exp_mont(BIGNUM *r, const BIGNUM *a, const BIGNUM *p,
 		const BIGNUM *m, BN_CTX *ctx, BN_MONT_CTX *m_ctx)
 	{
 	return cswift_mod_exp(r, a, p, m, ctx);
@@ -796,7 +797,8 @@ err:
 	}
 
 /* This function is aliased to mod_exp (with the dh and mont dropped). */
-static int cswift_mod_exp_dh(DH *dh, BIGNUM *r, BIGNUM *a, const BIGNUM *p,
+static int cswift_mod_exp_dh(const DH *dh, BIGNUM *r,
+		const BIGNUM *a, const BIGNUM *p,
 		const BIGNUM *m, BN_CTX *ctx, BN_MONT_CTX *m_ctx)
 	{
 	return cswift_mod_exp(r, a, p, m, ctx);

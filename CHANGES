@@ -1,10 +1,225 @@
-
  OpenSSL CHANGES
  _______________
 
  Changes between 0.9.6 and 0.9.7  [xx XXX 2000]
 
-  *) Add VMS support for the Rijndael code
+  *) Changed the LHASH code to use prototypes for callbacks, and created
+     macros to declare and implement thin (optionally static) functions
+     that provide type-safety and avoid function pointer casting for the
+     type-specific callbacks.
+     [Geoff Thorpe]
+
+  *) Use better test patterns in bntest.
+     [Ulf Möller]
+
+  *) Added Kerberos Cipher Suites to be used with TLS, as written in
+     RFC 2712.
+     [Veers Staats <staatsvr@asc.hpc.mil>,
+      Jeffrey Altman <jaltman@columbia.edu>, via Richard Levitte]
+
+  *) rand_win.c fix for Borland C.
+     [Ulf Möller]
+ 
+  *) BN_rshift bugfix for n == 0.
+     [Bodo Moeller]
+
+  *) Reformat the FAQ so the different questions and answers can be divided
+     in sections depending on the subject.
+     [Richard Levitte]
+
+  *) Have the zlib compression code load ZLIB.DLL dynamically under
+     Windows.
+     [Richard Levitte]
+
+  *) New function BN_mod_sqrt for computing square roots modulo a prime
+     (Tonelli-Shanks algorithm).
+     [Lenka Fibikova <fibikova@exp-math.uni-essen.de>, Bodo Moeller]
+
+  *) Store verify_result within SSL_SESSION also for client side to
+     avoid potential security hole. (Re-used sessions on the client side
+     always resulted in verify_result==X509_V_OK, not using the original
+     result of the server certificate verification.)
+     [Lutz Jaenicke]
+
+  *) Make BN_mod_inverse faster by explicitly handling small quotients
+     in the Euclid loop. (Speed gain about 20% for small moduli [256 or
+     512 bits], about 30% for larger ones [1024 or 2048 bits].)
+     [Bodo Moeller]
+
+  *) Disable ssl2_peek and ssl3_peek (i.e., both implementations
+     of SSL_peek) because they both are completely broken.
+     They will be fixed RSN by adding an additional 'peek' parameter
+     to the internal read functions.
+     [Bodo Moeller]
+
+  *) New function BN_kronecker.
+     [Bodo Moeller]
+
+  *) Fix BN_gcd so that it works on negative inputs; the result is
+     positive unless both parameters are zero.
+     Previously something reasonably close to an infinite loop was
+     possible because numbers could be growing instead of shrinking
+     in the implementation of Euclid's algorithm.
+     [Bodo Moeller]
+
+  *) Fix BN_is_word() and BN_is_one() macros to take into account the
+     sign of the number in question.
+
+     Fix BN_is_word(a,w) to work correctly for w == 0.
+
+     The old BN_is_word(a,w) macro is now called BN_abs_is_word(a,w)
+     because its test if the absolute value of 'a' equals 'w'.
+     Note that BN_abs_is_word does *not* handle w == 0 reliably;
+     it exists mostly for use in the implementations of BN_is_zero(),
+     BN_is_one(), and BN_is_word().
+     [Bodo Moeller]
+
+  *) Initialise "ex_data" member of RSA/DSA/DH structures prior to calling
+     the method-specific "init()" handler. Also clean up ex_data after
+     calling the method-specific "finish()" handler. Previously, this was
+     happening the other way round.
+     [Geoff Thorpe]
+
+  *) New function BN_swap.
+     [Bodo Moeller]
+
+  *) Use BN_nnmod instead of BN_mod in crypto/bn/bn_exp.c so that
+     the exponentiation functions are more likely to produce reasonable
+     results on negative inputs.
+     [Bodo Moeller]
+
+  *) Change BN_mod_mul so that the result is always non-negative.
+     Previously, it could be negative if one of the factors was negative;
+     I don't think anyone really wanted that behaviour.
+     [Bodo Moeller]
+
+  *) Move BN_mod_... functions into new file crypto/bn/bn_mod.c
+     (except for exponentiation, which stays in crypto/bn/bn_exp.c,
+     and BN_mod_mul_reciprocal, which stays in crypto/bn/bn_recp.c)
+     and add new functions:
+
+          BN_nnmod
+          BN_mod_sqr
+          BN_mod_add
+          BN_mod_add_quick
+          BN_mod_sub
+          BN_mod_sub_quick
+          BN_mod_lshift1
+          BN_mod_lshift1_quick
+          BN_mod_lshift
+          BN_mod_lshift_quick
+
+     These functions always generate non-negative results.
+
+     BN_nnmod otherwise is like BN_mod (if BN_mod computes a remainder  r
+     such that  |m| < r < 0,  BN_nnmod will output  rem + |m|  instead).
+
+     BN_mod_XXX_quick(r, a, [b,] m) generates the same result as
+     BN_mod_XXX(r, a, [b,] m, ctx), but requires that  a  [and  b]
+     be reduced modulo  m.
+     [Lenka Fibikova <fibikova@exp-math.uni-essen.de>, Bodo Moeller]
+
+  *) Remove a few calls to bn_wexpand() in BN_sqr() (the one in there
+     was actually never needed) and in BN_mul().  The removal in BN_mul()
+     required a small change in bn_mul_part_recursive() and the addition
+     of the functions bn_cmp_part_words(), bn_sub_part_words() and
+     bn_add_part_words(), which do the same thing as bn_cmp_words(),
+     bn_sub_words() and bn_add_words() except they take arrays with
+     differing sizes.
+     [Richard Levitte]
+
+  *) In 'openssl passwd', verify passwords read from the terminal
+     unless the '-salt' option is used (which usually means that
+     verification would just waste user's time since the resulting
+     hash is going to be compared with some given password hash)
+     or the new '-noverify' option is used.
+
+     This is an incompatible change, but it does not affect
+     non-interactive use of 'openssl passwd' (passwords on the command
+     line, '-stdin' option, '-in ...' option) and thus should not
+     cause any problems.
+     [Bodo Moeller]
+
+  *) Remove all references to RSAref, since there's no more need for it.
+     [Richard Levitte]
+
+  *) Increase BN_CTX_NUM (the number of BIGNUMs in a BN_CTX) to 16.
+     The previous value, 12, was not always sufficient for BN_mod_exp().
+     [Bodo Moeller]
+
+  *) Make DSO load along a path given through an environment variable
+     (SHLIB_PATH) with shl_load().
+     [Richard Levitte]
+
+  *) Constify the ENGINE code as a result of BIGNUM constification.
+     Also constify the RSA code and most things related to it.  In a
+     few places, most notable in the depth of the ASN.1 code, ugly
+     casts back to non-const were required (to be solved at a later
+     time)
+     [Richard Levitte]
+
+  *) Make it so the openssl application has all engines loaded by default.
+     [Richard Levitte]
+
+  *) Constify the BIGNUM routines a little more.
+     [Richard Levitte]
+
+  *) Make sure that shared libraries get the internal name engine with
+     the full version number and not just 0.  This should mark the
+     shared libraries as not backward compatible.  Of course, this should
+     be changed again when we can guarantee backward binary compatibility.
+     [Richard Levitte]
+
+  *) Add the following functions:
+
+	ENGINE_load_cswift()
+	ENGINE_load_chil()
+	ENGINE_load_atalla()
+	ENGINE_load_nuron()
+	ENGINE_load_builtin_engines()
+
+     That way, an application can itself choose if external engines that
+     are built-in in OpenSSL shall ever be used or not.  The benefit is
+     that applications won't have to be linked with libdl or other dso
+     libraries unless it's really needed.
+
+     Changed 'openssl engine' to load all engines on demand.
+     Changed the engine header files to avoid the duplication of some
+     declarations (they differed!).
+     [Richard Levitte]
+
+  *) 'openssl engine' can now list capabilities.
+     [Richard Levitte]
+
+  *) Better error reporting in 'openssl engine'.
+     [Richard Levitte]
+
+  *) Never call load_dh_param(NULL) in s_server.
+     [Bodo Moeller]
+
+  *) Add engine application.  It can currently list engines by name and
+     identity, and test if they are actually available.
+     [Richard Levitte]
+
+  *) Add support for shared libraries under Irix.
+     [Albert Chin-A-Young <china@thewrittenword.com>]
+
+  *) Improve RPM specification file by forcing symbolic linking and making
+     sure the installed documentation is also owned by root.root.
+     [Damien Miller <djm@mindrot.org>]
+
+  *) Add configuration option to build on Linux on both big-endian and
+     little-endian MIPS.
+     [Ralf Baechle <ralf@uni-koblenz.de>]
+
+  *) Give the OpenSSL applications more possibilities to make use of
+     keys (public as well as private) handled by engines.
+     [Richard Levitte]
+
+  *) Add OCSP code that comes from CertCo.
+     [Richard Levitte]
+
+  *) Add VMS support for the Rijndael code.
      [Richard Levitte]
 
   *) Added untested support for Nuron crypto accelerator.

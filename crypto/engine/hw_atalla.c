@@ -76,13 +76,13 @@ static int atalla_init(void);
 static int atalla_finish(void);
 
 /* BIGNUM stuff */
-static int atalla_mod_exp(BIGNUM *r, BIGNUM *a, const BIGNUM *p,
+static int atalla_mod_exp(BIGNUM *r, const BIGNUM *a, const BIGNUM *p,
 		const BIGNUM *m, BN_CTX *ctx);
 
 /* RSA stuff */
-static int atalla_rsa_mod_exp(BIGNUM *r0, BIGNUM *I, RSA *rsa);
+static int atalla_rsa_mod_exp(BIGNUM *r0, const BIGNUM *I, RSA *rsa);
 /* This function is aliased to mod_exp (with the mont stuff dropped). */
-static int atalla_mod_exp_mont(BIGNUM *r, BIGNUM *a, const BIGNUM *p,
+static int atalla_mod_exp_mont(BIGNUM *r, const BIGNUM *a, const BIGNUM *p,
 		const BIGNUM *m, BN_CTX *ctx, BN_MONT_CTX *m_ctx);
 
 /* DSA stuff */
@@ -95,7 +95,8 @@ static int atalla_mod_exp_dsa(DSA *dsa, BIGNUM *r, BIGNUM *a,
 
 /* DH stuff */
 /* This function is alised to mod_exp (with the DH and mont dropped). */
-static int atalla_mod_exp_dh(DH *dh, BIGNUM *r, BIGNUM *a, const BIGNUM *p,
+static int atalla_mod_exp_dh(const DH *dh, BIGNUM *r,
+		const BIGNUM *a, const BIGNUM *p,
 		const BIGNUM *m, BN_CTX *ctx, BN_MONT_CTX *m_ctx);
 
 
@@ -170,9 +171,9 @@ static ENGINE engine_atalla =
  * (indeed - the lock will already be held by our caller!!!) */
 ENGINE *ENGINE_atalla()
 	{
-	RSA_METHOD *meth1;
-	DSA_METHOD *meth2;
-	DH_METHOD *meth3;
+	const RSA_METHOD *meth1;
+	const DSA_METHOD *meth2;
+	const DH_METHOD *meth3;
 
 	/* We know that the "PKCS1_SSLeay()" functions hook properly
 	 * to the atalla-specific mod_exp and mod_exp_crt so we use
@@ -215,7 +216,7 @@ static tfnASI_RSAPrivateKeyOpFn *p_Atalla_RSAPrivateKeyOpFn = NULL;
 static tfnASI_GetPerformanceStatistics *p_Atalla_GetPerformanceStatistics = NULL;
 
 /* (de)initialisation functions. */
-static int atalla_init()
+static int atalla_init(void)
 	{
 	tfnASI_GetHardwareConfig *p1;
 	tfnASI_RSAPrivateKeyOpFn *p2;
@@ -274,7 +275,7 @@ err:
 	return 0;
 	}
 
-static int atalla_finish()
+static int atalla_finish(void)
 	{
 	if(atalla_dso == NULL)
 		{
@@ -293,7 +294,7 @@ static int atalla_finish()
 	return 1;
 	}
 
-static int atalla_mod_exp(BIGNUM *r, BIGNUM *a, const BIGNUM *p,
+static int atalla_mod_exp(BIGNUM *r, const BIGNUM *a, const BIGNUM *p,
 			const BIGNUM *m, BN_CTX *ctx)
 	{
 	/* I need somewhere to store temporary serialised values for
@@ -366,7 +367,7 @@ err:
 	return to_return;
 	}
 
-static int atalla_rsa_mod_exp(BIGNUM *r0, BIGNUM *I, RSA *rsa)
+static int atalla_rsa_mod_exp(BIGNUM *r0, const BIGNUM *I, RSA *rsa)
 	{
 	BN_CTX *ctx = NULL;
 	int to_return = 0;
@@ -426,14 +427,15 @@ static int atalla_mod_exp_dsa(DSA *dsa, BIGNUM *r, BIGNUM *a,
 	}
 
 /* This function is aliased to mod_exp (with the mont stuff dropped). */
-static int atalla_mod_exp_mont(BIGNUM *r, BIGNUM *a, const BIGNUM *p,
+static int atalla_mod_exp_mont(BIGNUM *r, const BIGNUM *a, const BIGNUM *p,
 		const BIGNUM *m, BN_CTX *ctx, BN_MONT_CTX *m_ctx)
 	{
 	return atalla_mod_exp(r, a, p, m, ctx);
 	}
 
 /* This function is aliased to mod_exp (with the dh and mont dropped). */
-static int atalla_mod_exp_dh(DH *dh, BIGNUM *r, BIGNUM *a, const BIGNUM *p,
+static int atalla_mod_exp_dh(const DH *dh, BIGNUM *r,
+		const BIGNUM *a, const BIGNUM *p,
 		const BIGNUM *m, BN_CTX *ctx, BN_MONT_CTX *m_ctx)
 	{
 	return atalla_mod_exp(r, a, p, m, ctx);

@@ -76,7 +76,8 @@ my @known_platforms = ( "__FreeBSD__", "VMS", "WIN16", "WIN32",
 			"WINNT", "PERL5", "NeXT" );
 my @known_algorithms = ( "RC2", "RC4", "RC5", "IDEA", "DES", "BF",
 			 "CAST", "MD2", "MD4", "MD5", "SHA", "RIPEMD",
-			 "MDC2", "RSA", "DSA", "DH", "HMAC", "FP_API" );
+			 "MDC2", "RSA", "DSA", "DH", "HMAC", "FP_API",
+			 "RIJNDAEL" );
 
 my $options="";
 open(IN,"<Makefile.ssl") || die "unable to open Makefile.ssl!\n";
@@ -91,7 +92,7 @@ close(IN);
 my $no_rc2; my $no_rc4; my $no_rc5; my $no_idea; my $no_des; my $no_bf;
 my $no_cast;
 my $no_md2; my $no_md4; my $no_md5; my $no_sha; my $no_ripemd; my $no_mdc2;
-my $no_rsa; my $no_dsa; my $no_dh; my $no_hmac=0;
+my $no_rsa; my $no_dsa; my $no_dh; my $no_hmac=0; my $no_rijndael;
 my $no_fp_api;
 
 foreach (@ARGV, split(/ /, $options))
@@ -103,7 +104,7 @@ foreach (@ARGV, split(/ /, $options))
 		$NT = 1;
 	}
 	$VMS=1 if $_ eq "VMS";
-	$rsaref=1 if $_ eq "rsaref";
+	#$rsaref=1 if $_ eq "rsaref";
 
 	$do_ssl=1 if $_ eq "ssleay";
 	$do_ssl=1 if $_ eq "ssl";
@@ -132,6 +133,7 @@ foreach (@ARGV, split(/ /, $options))
 	elsif (/^no-dsa$/)      { $no_dsa=1; }
 	elsif (/^no-dh$/)       { $no_dh=1; }
 	elsif (/^no-hmac$/)	{ $no_hmac=1; }
+	elsif (/^no-rijndael$/)	{ $no_rijndael=1; }
 	}
 
 
@@ -147,7 +149,7 @@ if ($W16) {
 
 if (!$do_ssl && !$do_crypto)
 	{
-	print STDERR "usage: $0 ( ssl | crypto ) [ 16 | 32 | NT ] [rsaref]\n";
+	print STDERR "usage: $0 ( ssl | crypto ) [ 16 | 32 | NT ]\n";
 	exit(1);
 	}
 
@@ -172,6 +174,8 @@ $crypto.=" crypto/md5/md5.h" unless $no_md5;
 $crypto.=" crypto/mdc2/mdc2.h" unless $no_mdc2;
 $crypto.=" crypto/sha/sha.h" unless $no_sha;
 $crypto.=" crypto/ripemd/ripemd.h" unless $no_ripemd;
+$crypto.=" crypto/rijndael/rijndael.h" unless $no_rijndael;
+$crypto.=" crypto/rijndael/rd_fst.h" unless $no_rijndael;
 
 $crypto.=" crypto/bn/bn.h";
 $crypto.=" crypto/rsa/rsa.h" unless $no_rsa;
@@ -202,6 +206,7 @@ $crypto.=" crypto/x509/x509_vfy.h";
 $crypto.=" crypto/x509v3/x509v3.h";
 $crypto.=" crypto/rand/rand.h";
 $crypto.=" crypto/comp/comp.h";
+$crypto.=" crypto/ocsp/ocsp.h";
 $crypto.=" crypto/tmdiff.h";
 
 my $symhacks="crypto/symhacks.h";
@@ -607,6 +612,7 @@ sub maybe_add_info {
 	(my $name, *nums, my @symbols) = @_;
 	my $sym;
 	my $new_info = 0;
+	my %syms=();
 
 	print STDERR "Updating $name info\n";
 	foreach $sym (@symbols) {
@@ -619,6 +625,16 @@ sub maybe_add_info {
 				$new_info++;
 				#print STDERR "DEBUG: maybe_add_info for $s: \"$dummy\" => \"$i\"\n";
 			}
+		}
+		$syms{sym} = 1;
+	}
+
+	my @s=sort { &parse_number($nums{$a},"n") <=> &parse_number($nums{$b},"n") } keys %nums;
+	foreach $sym (@s) {
+		(my $n, my $i) = split /\\/, $nums{$sym};
+		if (!defined($syms{sym})) {
+			$new_info++;
+			#print STDERR "DEBUG: maybe_add_info for $sym: -> undefined\n";
 		}
 	}
 	if ($new_info) {
@@ -746,6 +762,7 @@ EOF
 			    && (!@a || (!$no_dsa || !grep(/^DSA$/,@a)))
 			    && (!@a || (!$no_dh || !grep(/^DH$/,@a)))
 			    && (!@a || (!$no_hmac || !grep(/^HMAC$/,@a)))
+			    && (!@a || (!$no_rijndael || !grep(/^RIJNDAEL$/,@a)))
 			    && (!@a || (!$no_fp_api || !grep(/^FP_API$/,@a)))
 			    ) {
 				printf OUT "    %s%-40s@%d\n",($W32)?"":"_",$s,$n;
@@ -847,12 +864,19 @@ sub rewrite_numbers
 		$rsyms{$s} = 1;
 	}
 
+	my %syms = ();
+	foreach $_ (@symbols) {
+		(my $n, my $i) = split /\\/;
+		$syms{$n} = 1;
+	}
+
 	my @s=sort { &parse_number($nums{$a},"n") <=> &parse_number($nums{$b},"n") } keys %nums;
 	foreach $sym (@s) {
 		(my $n, my $i) = split /\\/, $nums{$sym};
 		next if defined($i) && $i =~ /^.*?:.*?:\w+\(\w+\)/;
 		next if defined($rsyms{$sym});
-		$i="NOEXIST::FUNCTION:" if !defined($i) || $i eq "";
+		$i="NOEXIST::FUNCTION:"
+			if !defined($i) || $i eq "" || !defined($syms{$sym});
 		printf OUT "%s%-40s%d\t%s\n","",$sym,$n,$i;
 		if (exists $r{$sym}) {
 			(my $s, $i) = split /\\/,$r{$sym};

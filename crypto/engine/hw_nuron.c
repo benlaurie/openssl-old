@@ -62,18 +62,17 @@
 #include <openssl/dso.h>
 #include "engine_int.h"
 #include <openssl/engine.h>
-#include <dlfcn.h>
 
 
 #ifndef NO_HW
 #ifndef NO_HW_NURON
 
-typedef int tfnModExp(BIGNUM *r,BIGNUM *a,const BIGNUM *p,const BIGNUM *m);
+typedef int tfnModExp(BIGNUM *r,const BIGNUM *a,const BIGNUM *p,const BIGNUM *m);
 static tfnModExp *pfnModExp = NULL;
 
 static DSO *pvDSOHandle = NULL;
 
-static int nuron_init()
+static int nuron_init(void)
 	{
 	if(pvDSOHandle != NULL)
 		{
@@ -99,7 +98,7 @@ static int nuron_init()
 	return 1;
 	}
 
-static int nuron_finish()
+static int nuron_finish(void)
 	{
 	if(pvDSOHandle == NULL)
 		{
@@ -116,7 +115,7 @@ static int nuron_finish()
 	return 1;
 	}
 
-static int nuron_mod_exp(BIGNUM *r,BIGNUM *a,const BIGNUM *p,
+static int nuron_mod_exp(BIGNUM *r,const BIGNUM *a,const BIGNUM *p,
 			 const BIGNUM *m,BN_CTX *ctx)
 	{
 	if(!pvDSOHandle)
@@ -127,7 +126,7 @@ static int nuron_mod_exp(BIGNUM *r,BIGNUM *a,const BIGNUM *p,
 	return pfnModExp(r,a,p,m);
 	}
 
-static int nuron_rsa_mod_exp(BIGNUM *r0, BIGNUM *I, RSA *rsa)
+static int nuron_rsa_mod_exp(BIGNUM *r0, const BIGNUM *I, RSA *rsa)
 	{
 	return nuron_mod_exp(r0,I,rsa->d,rsa->n,NULL);
 	}
@@ -171,15 +170,16 @@ static int nuron_mod_exp_dsa(DSA *dsa, BIGNUM *r, BIGNUM *a,
 	}
 
 /* This function is aliased to mod_exp (with the mont stuff dropped). */
-static int nuron_mod_exp_mont(BIGNUM *r, BIGNUM *a, const BIGNUM *p,
+static int nuron_mod_exp_mont(BIGNUM *r, const BIGNUM *a, const BIGNUM *p,
 			      const BIGNUM *m, BN_CTX *ctx, BN_MONT_CTX *m_ctx)
 	{
 	return nuron_mod_exp(r, a, p, m, ctx);
 	}
 
 /* This function is aliased to mod_exp (with the dh and mont dropped). */
-static int nuron_mod_exp_dh(DH *dh, BIGNUM *r, BIGNUM *a, const BIGNUM *p,
-			    const BIGNUM *m, BN_CTX *ctx, BN_MONT_CTX *m_ctx)
+static int nuron_mod_exp_dh(const DH *dh, BIGNUM *r,
+		const BIGNUM *a, const BIGNUM *p,
+		const BIGNUM *m, BN_CTX *ctx, BN_MONT_CTX *m_ctx)
 	{
 	return nuron_mod_exp(r, a, p, m, ctx);
 	}
@@ -251,9 +251,9 @@ static ENGINE engine_nuron =
  * (indeed - the lock will already be held by our caller!!!) */
 ENGINE *ENGINE_nuron()
 	{
-	RSA_METHOD *meth1;
-	DSA_METHOD *meth2;
-	DH_METHOD *meth3;
+	const RSA_METHOD *meth1;
+	const DSA_METHOD *meth2;
+	const DH_METHOD *meth3;
 
 	/* We know that the "PKCS1_SSLeay()" functions hook properly
 	 * to the nuron-specific mod_exp and mod_exp_crt so we use

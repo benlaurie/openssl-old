@@ -85,6 +85,9 @@ char *default_config_file=NULL;
 BIO *bio_err=NULL;
 #endif
 
+static IMPLEMENT_LHASH_HASH_FN(hash,FUNCTION *)
+static IMPLEMENT_LHASH_COMP_FN(cmp,FUNCTION *)
+
 int main(int Argc, char *Argv[])
 	{
 	ARGS arg;
@@ -112,6 +115,7 @@ int main(int Argc, char *Argv[])
 			BIO_set_fp(bio_err,stderr,BIO_NOCLOSE|BIO_FP_TEXT);
 
 	ERR_load_crypto_strings();
+	ENGINE_load_builtin_engines();
 
 	/* Lets load up our environment a little */
 	p=getenv("OPENSSL_CONF");
@@ -350,7 +354,9 @@ static LHASH *prog_init(void)
 	    ;
 	qsort(functions,i,sizeof *functions,SortFnByName);
 
-	if ((ret=lh_new(hash,cmp)) == NULL) return(NULL);
+	if ((ret=lh_new(LHASH_HASH_FN(hash),
+			LHASH_COMP_FN(cmp))) == NULL)
+		return(NULL);
 
 	for (f=functions; f->name != NULL; f++)
 		lh_insert(ret,f);

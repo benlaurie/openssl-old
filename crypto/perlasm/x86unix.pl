@@ -3,6 +3,8 @@
 package x86unix;
 
 $label="L000";
+$const="";
+$constl=0;
 
 $align=($main'aout)?"4":"16";
 $under=($main'aout)?"_":"";
@@ -341,9 +343,12 @@ sub main'function_end
 	popl	%ebx
 	popl	%ebp
 	ret
+$const
 .${func}_end:
 EOF
 	push(@out,$tmp);
+	$const="";
+
 	if ($main'cpp)
 		{ push(@out,"\tSIZE($func,.${func}_end-$func)\n"); }
 	elsif ($main'gaswin)
@@ -458,4 +463,76 @@ sub main'file_end
 sub main'data_word
 	{
 	push(@out,"\t.long $_[0]\n");
+	}
+
+# debug output functions: puts, putx, printf
+
+sub main'puts
+	{
+	&pushvars();
+	&main'push('$Lstring' . ++$constl);
+	&main'call('puts');
+	$stack-=4;
+	&main'add("esp",4);
+	&popvars();
+
+	$const .= "Lstring$constl:\n\t.string \"@_[0]\"\n";
+	}
+
+sub main'putx
+	{
+	&pushvars();
+	&main'push($_[0]);
+	&main'push('$Lstring' . ++$constl);
+	&main'call('printf');
+	&main'add("esp",8);
+	$stack-=8;
+	&popvars();
+
+	$const .= "Lstring$constl:\n\t.string \"\%X\"\n";
+	}
+
+sub main'printf
+	{
+	$ostack = $stack;
+	&pushvars();
+	for ($i = @_ - 1; $i >= 0; $i--)
+		{
+		if ($i == 0) # change this to support %s format strings
+			{
+			&main'push('$Lstring' . ++$constl);
+			$const .= "Lstring$constl:\n\t.string \"@_[$i]\"\n";
+			}
+		else
+			{
+			if ($_[$i] =~ /([0-9]*)\(%esp\)/)
+				{
+				&main'push(($1 + $stack - $ostack) . '(%esp)');
+				}
+			else
+				{
+				&main'push($_[$i]);
+				}
+			}
+		}
+	&main'call('printf');
+	$stack-=4*@_;
+	&main'add("esp",4*@_);
+	&popvars();
+	}
+
+sub pushvars
+	{
+	&out0("pushf");
+	&main'push("edx");
+	&main'push("ecx");
+	&main'push("eax");
+	}
+
+sub popvars
+	{
+	&main'pop("eax");
+	&main'pop("ecx");
+	&main'pop("edx");
+	&out0("popf");
 	}

@@ -83,7 +83,7 @@ ASN1_SEQUENCE_cb(DSA_SIG, sig_cb) = {
 	ASN1_SIMPLE(DSA_SIG, s, CBIGNUM)
 } ASN1_SEQUENCE_END_cb(DSA_SIG, DSA_SIG);
 
-IMPLEMENT_ASN1_FUNCTIONS(DSA_SIG)
+IMPLEMENT_ASN1_FUNCTIONS_const(DSA_SIG)
 
 /* Override the default free and new methods */
 static int dsa_cb(int operation, ASN1_VALUE **pval, const ASN1_ITEM *it)
@@ -109,7 +109,7 @@ ASN1_SEQUENCE_cb(DSAPrivateKey, dsa_cb) = {
 	ASN1_SIMPLE(DSA, priv_key, BIGNUM)
 } ASN1_SEQUENCE_END_cb(DSA, DSAPrivateKey);
 
-IMPLEMENT_ASN1_ENCODE_FUNCTIONS_fname(DSA, DSAPrivateKey, DSAPrivateKey)
+IMPLEMENT_ASN1_ENCODE_FUNCTIONS_const_fname(DSA, DSAPrivateKey, DSAPrivateKey)
 
 ASN1_SEQUENCE_cb(DSAparams, dsa_cb) = {
 	ASN1_SIMPLE(DSA, p, BIGNUM),
@@ -117,7 +117,7 @@ ASN1_SEQUENCE_cb(DSAparams, dsa_cb) = {
 	ASN1_SIMPLE(DSA, g, BIGNUM),
 } ASN1_SEQUENCE_END_cb(DSA, DSAparams);
 
-IMPLEMENT_ASN1_ENCODE_FUNCTIONS_fname(DSA, DSAparams, DSAparams)
+IMPLEMENT_ASN1_ENCODE_FUNCTIONS_const_fname(DSA, DSAparams, DSAparams)
 
 /* DSA public key is a bit trickier... its effectively a CHOICE type
  * decided by a field called write_params which can either write out
@@ -137,4 +137,4 @@ ASN1_CHOICE_cb(DSAPublicKey, dsa_cb) = {
 	ASN1_EX_COMBINE(0, 0, dsa_pub_internal)
 } ASN1_CHOICE_END_cb(DSA, DSAPublicKey, write_params);
 
-IMPLEMENT_ASN1_ENCODE_FUNCTIONS_fname(DSA, DSAPublicKey, DSAPublicKey)
+IMPLEMENT_ASN1_ENCODE_FUNCTIONS_const_fname(DSA, DSAPublicKey, DSAPublicKey)

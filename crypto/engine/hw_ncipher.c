@@ -93,19 +93,20 @@ static void hwcrhk_mutex_unlock(HWCryptoHook_Mutex*);
 static void hwcrhk_mutex_destroy(HWCryptoHook_Mutex*);
 
 /* BIGNUM stuff */
-static int hwcrhk_mod_exp(BIGNUM *r, BIGNUM *a, const BIGNUM *p,
+static int hwcrhk_mod_exp(BIGNUM *r, const BIGNUM *a, const BIGNUM *p,
 		const BIGNUM *m, BN_CTX *ctx);
 
 /* RSA stuff */
-static int hwcrhk_rsa_mod_exp(BIGNUM *r, BIGNUM *I, RSA *rsa);
+static int hwcrhk_rsa_mod_exp(BIGNUM *r, const BIGNUM *I, RSA *rsa);
 /* This function is aliased to mod_exp (with the mont stuff dropped). */
-static int hwcrhk_mod_exp_mont(BIGNUM *r, BIGNUM *a, const BIGNUM *p,
+static int hwcrhk_mod_exp_mont(BIGNUM *r, const BIGNUM *a, const BIGNUM *p,
 		const BIGNUM *m, BN_CTX *ctx, BN_MONT_CTX *m_ctx);
 
 /* DH stuff */
 /* This function is alised to mod_exp (with the DH and mont dropped). */
-static int hwcrhk_mod_exp_dh(DH *dh, BIGNUM *r, BIGNUM *a, const BIGNUM *p,
-		const BIGNUM *m, BN_CTX *ctx, BN_MONT_CTX *m_ctx);
+static int hwcrhk_mod_exp_dh(const DH *dh, BIGNUM *r,
+	const BIGNUM *a, const BIGNUM *p,
+	const BIGNUM *m, BN_CTX *ctx, BN_MONT_CTX *m_ctx);
 
 /* RAND stuff */
 static int hwcrhk_rand_bytes(unsigned char *buf, int num);
@@ -291,8 +292,8 @@ static HWCryptoHook_InitInfo hwcrhk_globals = {
  * (indeed - the lock will already be held by our caller!!!) */
 ENGINE *ENGINE_ncipher()
 	{
-	RSA_METHOD *meth1;
-	DH_METHOD *meth2;
+	const RSA_METHOD *meth1;
+	const DH_METHOD *meth2;
 
 	/* We know that the "PKCS1_SSLeay()" functions hook properly
 	 * to the cswift-specific mod_exp and mod_exp_crt so we use
@@ -375,7 +376,7 @@ static void release_context(HWCryptoHook_ContextHandle hac)
 	}
 
 /* (de)initialisation functions. */
-static int hwcrhk_init()
+static int hwcrhk_init(void)
 	{
 	HWCryptoHook_Init_t *p1;
 	HWCryptoHook_Finish_t *p2;
@@ -474,7 +475,7 @@ err:
 	return 0;
 	}
 
-static int hwcrhk_finish()
+static int hwcrhk_finish(void)
 	{
 	int to_return = 1;
 	if(hwcrhk_dso == NULL)
@@ -681,7 +682,7 @@ static EVP_PKEY *hwcrhk_load_pubkey(const char *key_id, const char *passphrase)
 	}
 
 /* A little mod_exp */
-static int hwcrhk_mod_exp(BIGNUM *r, BIGNUM *a, const BIGNUM *p,
+static int hwcrhk_mod_exp(BIGNUM *r, const BIGNUM *a, const BIGNUM *p,
 			const BIGNUM *m, BN_CTX *ctx)
 	{
 	char tempbuf[1024];
@@ -737,7 +738,7 @@ err:
 	return to_return;
 	}
  
-static int hwcrhk_rsa_mod_exp(BIGNUM *r, BIGNUM *I, RSA *rsa)
+static int hwcrhk_rsa_mod_exp(BIGNUM *r, const BIGNUM *I, RSA *rsa)
 	{
 	char tempbuf[1024];
 	HWCryptoHook_ErrMsgBuf rmsg;
@@ -853,14 +854,15 @@ err:
 	}
 
 /* This function is aliased to mod_exp (with the mont stuff dropped). */
-static int hwcrhk_mod_exp_mont(BIGNUM *r, BIGNUM *a, const BIGNUM *p,
+static int hwcrhk_mod_exp_mont(BIGNUM *r, const BIGNUM *a, const BIGNUM *p,
 		const BIGNUM *m, BN_CTX *ctx, BN_MONT_CTX *m_ctx)
 	{
 	return hwcrhk_mod_exp(r, a, p, m, ctx);
 	}
 
 /* This function is aliased to mod_exp (with the dh and mont dropped). */
-static int hwcrhk_mod_exp_dh(DH *dh, BIGNUM *r, BIGNUM *a, const BIGNUM *p,
+static int hwcrhk_mod_exp_dh(const DH *dh, BIGNUM *r,
+		const BIGNUM *a, const BIGNUM *p,
 		const BIGNUM *m, BN_CTX *ctx, BN_MONT_CTX *m_ctx)
 	{
 	return hwcrhk_mod_exp(r, a, p, m, ctx);

@@ -9,6 +9,7 @@ L EVP		crypto/evp/evp.h		crypto/evp/evp_err.c
 L BUF		crypto/buffer/buffer.h		crypto/buffer/buf_err.c
 L BIO		crypto/bio/bio.h		crypto/bio/bio_err.c
 L OBJ		crypto/objects/objects.h	crypto/objects/obj_err.c
+L OCSP		crypto/ocsp/ocsp.h		crypto/ocsp/ocsp_err.c
 L PEM		crypto/pem/pem.h		crypto/pem/pem_err.c
 L X509		crypto/x509/x509.h		crypto/x509/x509_err.c
 L NONE		crypto/x509/x509_vfy.h		NONE
@@ -19,7 +20,6 @@ L CONF		crypto/conf/conf.h		crypto/conf/conf_err.c
 #L PROXY		crypto/proxy/proxy.h		crypto/proxy/proxy_err.c
 L PKCS7		crypto/pkcs7/pkcs7.h		crypto/pkcs7/pkcs7err.c
 L PKCS12	crypto/pkcs12/pkcs12.h		crypto/pkcs12/pk12err.c
-L RSAREF	rsaref/rsaref.h			rsaref/rsar_err.c
 L SSL		ssl/ssl.h			ssl/ssl_err.c
 L COMP		crypto/comp/comp.h		crypto/comp/comp_err.c
 L RAND		crypto/rand/rand.h		crypto/rand/rand_err.c

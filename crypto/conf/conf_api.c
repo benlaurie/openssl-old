@@ -73,6 +73,9 @@ static void value_free_stack(CONF_VALUE *a,LHASH *conf);
 static unsigned long hash(CONF_VALUE *v);
 static int cmp_conf(CONF_VALUE *a,CONF_VALUE *b);
 
+static IMPLEMENT_LHASH_HASH_FN(hash, CONF_VALUE *)
+static IMPLEMENT_LHASH_COMP_FN(cmp_conf, CONF_VALUE *)
+
 /* Up until OpenSSL 0.9.5a, this was get_section */
 CONF_VALUE *_CONF_get_section(CONF *conf, char *section)
 	{
@@ -181,7 +184,8 @@ int _CONF_new_data(CONF *conf)
 		return 0;
 		}
 	if (conf->data == NULL)
-		if ((conf->data = lh_new(hash,cmp_conf)) == NULL)
+		if ((conf->data = lh_new(LHASH_HASH_FN(hash),
+					LHASH_COMP_FN(cmp_conf))) == NULL)
 			{
 			return 0;
 			}
@@ -194,12 +198,14 @@ void _CONF_free_data(CONF *conf)
 
 	conf->data->down_load=0; /* evil thing to make sure the 'OPENSSL_free()'
 				  * works as expected */
-	lh_doall_arg(conf->data,(void (*)())value_free_hash,conf->data);
+	lh_doall_arg(conf->data, (LHASH_DOALL_ARG_FN_TYPE)value_free_hash,
+			conf->data);
 
 	/* We now have only 'section' entries in the hash table.
 	 * Due to problems with */
 
-	lh_doall_arg(conf->data,(void (*)())value_free_stack,conf->data);
+	lh_doall_arg(conf->data, (LHASH_DOALL_ARG_FN_TYPE)value_free_stack,
+			conf->data);
 	lh_free(conf->data);
 	}
 

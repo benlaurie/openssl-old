@@ -174,10 +174,13 @@ static int add_cmp(ADDED_OBJ *ca, ADDED_OBJ *cb)
 	return(1); /* should not get here */
 	}
 
+static IMPLEMENT_LHASH_HASH_FN(add_hash, ADDED_OBJ *)
+static IMPLEMENT_LHASH_COMP_FN(add_cmp, ADDED_OBJ *)
+
 static int init_added(void)
 	{
 	if (added != NULL) return(1);
-	added=lh_new(add_hash,add_cmp);
+	added=lh_new(LHASH_HASH_FN(add_hash),LHASH_COMP_FN(add_cmp));
 	return(added != NULL);
 	}
 
@@ -203,9 +206,9 @@ void OBJ_cleanup(void)
 	{
 	if (added == NULL) return;
 	added->down_load=0;
-	lh_doall(added,cleanup1); /* zero counters */
-	lh_doall(added,cleanup2); /* set counters */
-	lh_doall(added,cleanup3); /* free objects */
+	lh_doall(added,(LHASH_DOALL_FN_TYPE)cleanup1); /* zero counters */
+	lh_doall(added,(LHASH_DOALL_FN_TYPE)cleanup2); /* set counters */
+	lh_doall(added,(LHASH_DOALL_FN_TYPE)cleanup3); /* free objects */
 	lh_free(added);
 	added=NULL;
 	}

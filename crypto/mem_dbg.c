@@ -234,6 +234,9 @@ static unsigned long mem_hash(MEM *a)
 	return(ret);
 	}
 
+static IMPLEMENT_LHASH_HASH_FN(mem_hash, MEM *)
+static IMPLEMENT_LHASH_COMP_FN(mem_cmp, MEM *)
+
 static int app_info_cmp(APP_INFO *a, APP_INFO *b)
 	{
 	return(a->thread != b->thread);
@@ -249,7 +252,10 @@ static unsigned long app_info_hash(APP_INFO *a)
 	return(ret);
 	}
 
-static APP_INFO *pop_info()
+static IMPLEMENT_LHASH_HASH_FN(app_info_hash, APP_INFO *)
+static IMPLEMENT_LHASH_COMP_FN(app_info_cmp, APP_INFO *)
+
+static APP_INFO *pop_info(void)
 	{
 	APP_INFO tmp;
 	APP_INFO *ret = NULL;
@@ -266,7 +272,7 @@ static APP_INFO *pop_info()
 				next->references++;
 				lh_insert(amih,(char *)next);
 				}
-#ifdef LEVITTE_DEBUG
+#ifdef LEVITTE_DEBUG_MEM
 			if (ret->thread != tmp.thread)
 				{
 				fprintf(stderr, "pop_info(): deleted info has other thread ID (%lu) than the current thread (%lu)!!!!\n",
@@ -302,7 +308,8 @@ int CRYPTO_push_info_(const char *info, const char *file, int line)
 			}
 		if (amih == NULL)
 			{
-			if ((amih=lh_new(app_info_hash,app_info_cmp)) == NULL)
+			if ((amih=lh_new(LHASH_HASH_FN(app_info_hash),
+					LHASH_COMP_FN(app_info_cmp))) == NULL)
 				{
 				OPENSSL_free(ami);
 				ret=0;
@@ -319,7 +326,7 @@ int CRYPTO_push_info_(const char *info, const char *file, int line)
 
 		if ((amim=(APP_INFO *)lh_insert(amih,(char *)ami)) != NULL)
 			{
-#ifdef LEVITTE_DEBUG
+#ifdef LEVITTE_DEBUG_MEM
 			if (ami->thread != amim->thread)
 				{
 				fprintf(stderr, "CRYPTO_push_info(): previous info has other thread ID (%lu) than the current thread (%lu)!!!!\n",
@@ -394,7 +401,8 @@ void CRYPTO_dbg_malloc(void *addr, int num, const char *file, int line,
 				}
 			if (mh == NULL)
 				{
-				if ((mh=lh_new(mem_hash,mem_cmp)) == NULL)
+				if ((mh=lh_new(LHASH_HASH_FN(mem_hash),
+					LHASH_COMP_FN(mem_cmp))) == NULL)
 					{
 					OPENSSL_free(addr);
 					OPENSSL_free(m);
@@ -418,8 +426,8 @@ void CRYPTO_dbg_malloc(void *addr, int num, const char *file, int line,
 				m->order=order;
 				}
 			m->order=order++;
-#ifdef LEVITTE_DEBUG
-			fprintf(stderr, "LEVITTE_DEBUG: [%5d] %c 0x%p (%d)\n",
+#ifdef LEVITTE_DEBUG_MEM
+			fprintf(stderr, "LEVITTE_DEBUG_MEM: [%5d] %c 0x%p (%d)\n",
 				m->order,
 				(before_p & 128) ? '*' : '+',
 				m->addr, m->num);
@@ -473,8 +481,8 @@ void CRYPTO_dbg_free(void *addr, int before_p)
 			mp=(MEM *)lh_delete(mh,(char *)&m);
 			if (mp != NULL)
 				{
-#ifdef LEVITTE_DEBUG
-			fprintf(stderr, "LEVITTE_DEBUG: [%5d] - 0x%p (%d)\n",
+#ifdef LEVITTE_DEBUG_MEM
+			fprintf(stderr, "LEVITTE_DEBUG_MEM: [%5d] - 0x%p (%d)\n",
 				mp->order, mp->addr, mp->num);
 #endif
 				if (mp->app_info != NULL)
@@ -497,8 +505,8 @@ void CRYPTO_dbg_realloc(void *addr1, void *addr2, int num,
 	{
 	MEM m,*mp;
 
-#ifdef LEVITTE_DEBUG
-	fprintf(stderr, "LEVITTE_DEBUG: --> CRYPTO_dbg_malloc(addr1 = %p, addr2 = %p, num = %d, file = \"%s\", line = %d, before_p = %d)\n",
+#ifdef LEVITTE_DEBUG_MEM
+	fprintf(stderr, "LEVITTE_DEBUG_MEM: --> CRYPTO_dbg_malloc(addr1 = %p, addr2 = %p, num = %d, file = \"%s\", line = %d, before_p = %d)\n",
 		addr1, addr2, num, file, line, before_p);
 #endif
 
@@ -524,8 +532,8 @@ void CRYPTO_dbg_realloc(void *addr1, void *addr2, int num,
 			mp=(MEM *)lh_delete(mh,(char *)&m);
 			if (mp != NULL)
 				{
-#ifdef LEVITTE_DEBUG
-				fprintf(stderr, "LEVITTE_DEBUG: [%5d] * 0x%p (%d) -> 0x%p (%d)\n",
+#ifdef LEVITTE_DEBUG_MEM
+				fprintf(stderr, "LEVITTE_DEBUG_MEM: [%5d] * 0x%p (%d) -> 0x%p (%d)\n",
 					mp->order,
 					mp->addr, mp->num,
 					addr2, num);
@@ -626,7 +634,7 @@ static void print_leak(MEM *m, MEM_LEAK *l)
 		}
 	while(amip && amip->thread == ti);
 		
-#ifdef LEVITTE_DEBUG
+#ifdef LEVITTE_DEBUG_MEM
 	if (amip)
 		{
 		fprintf(stderr, "Thread switch detected in backtrace!!!!\n");
@@ -647,7 +655,8 @@ void CRYPTO_mem_leaks(BIO *b)
 	ml.chunks=0;
 	MemCheck_off(); /* obtains CRYPTO_LOCK_MALLOC2 */
 	if (mh != NULL)
-		lh_doall_arg(mh,(void (*)())print_leak,(char *)&ml);
+		lh_doall_arg(mh, (LHASH_DOALL_ARG_FN_TYPE)print_leak,
+				(char *)&ml);
 	if (ml.chunks != 0)
 		{
 		sprintf(buf,"%ld bytes leaked in %d chunks\n",
@@ -725,6 +734,6 @@ void CRYPTO_mem_leaks_cb(void (*cb)(unsigned long, const char *, int, int, void 
 	{
 	if (mh == NULL) return;
 	CRYPTO_w_lock(CRYPTO_LOCK_MALLOC2);
-	lh_doall_arg(mh,(void (*)())cb_leak,(void *)&cb);
+	lh_doall_arg(mh, (LHASH_DOALL_ARG_FN_TYPE)cb_leak,(void *)&cb);
 	CRYPTO_w_unlock(CRYPTO_LOCK_MALLOC2);
 	}

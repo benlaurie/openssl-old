@@ -74,6 +74,7 @@
 #include <openssl/err.h>
 #include <openssl/rand.h>
 #ifdef WINDOWS
+#include <winsock.h>
 #include "../crypto/bio/bss_file.c"
 #endif
 
@@ -84,6 +85,11 @@
 #  define TEST_SERVER_CERT "../apps/server.pem"
 #  define TEST_CLIENT_CERT "../apps/client.pem"
 #endif
+
+/* There is really no standard for this, so let's assign some tentative
+   numbers.  In any case, these numbers are only for this test */
+#define COMP_RLE	1
+#define COMP_ZLIB	2
 
 static int MS_CALLBACK verify_callback(int ok, X509_STORE_CTX *ctx);
 #ifndef NO_RSA
@@ -148,6 +154,8 @@ static void sv_usage(void)
 	fprintf(stderr," -bio_pair     - Use BIO pairs\n");
 	fprintf(stderr," -f            - Test even cases that can't work\n");
 	fprintf(stderr," -time         - measure processor time used by client and server\n");
+	fprintf(stderr," -zlib         - use zlib compression\n");
+	fprintf(stderr," -time         - use rle compression\n");
 	}
 
 static void print_details(SSL *c_ssl, const char *prefix)
@@ -220,6 +228,8 @@ int main(int argc, char *argv[])
 	int no_dhe = 0;
 	int print_time = 0;
 	clock_t s_time = 0, c_time = 0;
+	int comp = 0;
+	COMP_METHOD *cm = NULL;
 
 	verbose = 0;
 	debug = 0;
@@ -333,6 +343,14 @@ int main(int argc, char *argv[])
 			{
 			print_time = 1;
 			}
+		else if	(strcmp(*argv,"-zlib") == 0)
+			{
+			comp = COMP_ZLIB;
+			}
+		else if	(strcmp(*argv,"-rle") == 0)
+			{
+			comp = COMP_RLE;
+			}
 		else
 			{
 			fprintf(stderr,"unknown option %s\n",*argv);
@@ -373,6 +391,23 @@ bad:
 
 	SSL_library_init();
 	SSL_load_error_strings();
+
+	if (comp == COMP_ZLIB) cm = COMP_zlib();
+	if (comp == COMP_RLE) cm = COMP_rle();
+	if (cm != NULL)
+		{
+		if (cm->type != NID_undef)
+			SSL_COMP_add_compression_method(comp, cm);
+		else
+			{
+			fprintf(stderr,
+				"Warning: %s compression not supported\n",
+				(comp == COMP_RLE ? "rle" :
+					(comp == COMP_ZLIB ? "zlib" :
+						"unknown")));
+			ERR_print_errors_fp(stderr);
+			}
+		}
 
 #if !defined(NO_SSL2) && !defined(NO_SSL3)
 	if (ssl2)
@@ -482,6 +517,19 @@ bad:
 
 	c_ssl=SSL_new(c_ctx);
 	s_ssl=SSL_new(s_ctx);
+
+#ifndef NO_KRB5
+	if (c_ssl  &&  c_ssl->kssl_ctx)
+                {
+                char	localhost[257];
+
+		if (gethostname(localhost, 256) == 0)
+                        {
+			kssl_ctx_setstring(c_ssl->kssl_ctx, KSSL_SERVER,
+                                localhost);
+			}
+		}
+#endif    /* NO_KRB5  */
 
 	for (i=0; i<number; i++)
 		{

@@ -310,7 +310,7 @@ int RAND_poll(void)
 			{
 			if (gen(hProvider, sizeof(buf), buf) != 0)
 				{
-				RAND_add(buf, sizeof(buf), sizeof(buf));
+				RAND_add(buf, sizeof(buf), 0);
 #ifdef DEBUG
 				printf("randomness from PROV_RSA_FULL\n");
 #endif
@@ -461,7 +461,7 @@ int RAND_poll(void)
 						hlist.th32ProcessID,
 						hlist.th32HeapID))
 						{
-						int entrycnt = 50;
+						int entrycnt = 80;
 						do
 							RAND_add(&hentry,
 								hentry.dwSize, 5);
@@ -570,7 +570,7 @@ static void readtimer(void)
 	DWORD w;
 	LARGE_INTEGER l;
 	static int have_perfc = 1;
-#ifndef __GNUC__
+#ifdef _MSC_VER
 	static int have_tsc = 1;
 	DWORD cyclecount;
 

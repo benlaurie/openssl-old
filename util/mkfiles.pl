@@ -23,6 +23,7 @@ my @dirs = (
 "crypto/idea",
 "crypto/bf",
 "crypto/cast",
+"crypto/rijndael",
 "crypto/bn",
 "crypto/rsa",
 "crypto/dsa",
@@ -46,8 +47,8 @@ my @dirs = (
 "crypto/pkcs12",
 "crypto/comp",
 "crypto/engine",
+"crypto/ocsp",
 "ssl",
-"rsaref",
 "apps",
 "test",
 "tools"

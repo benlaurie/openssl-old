@@ -416,9 +416,6 @@ int MAIN(int argc, char *argv[])
 	int state=0;
 	SSL_METHOD *meth=NULL;
 	ENGINE *e=NULL;
-#ifndef NO_DH
-	DH *dh=NULL;
-#endif
 
 #if !defined(NO_SSL2) && !defined(NO_SSL3)
 	meth=SSLv23_server_method();
@@ -682,7 +679,13 @@ bad:
 #ifndef NO_DH
 	if (!no_dhe)
 		{
-		dh=load_dh_param(dhfile ? dhfile : s_cert_file);
+		DH *dh=NULL;
+
+		if (dhfile)
+			dh = load_dh_param(dhfile);
+		else if (s_cert_file)
+			dh = load_dh_param(s_cert_file);
+
 		if (dh != NULL)
 			{
 			BIO_printf(bio_s_out,"Setting temp DH parameters\n");
@@ -818,6 +821,13 @@ static int sv_body(char *hostname, int s, unsigned char *context)
 
 	if (con == NULL) {
 		con=SSL_new(ctx);
+#ifndef NO_KRB5
+		if ((con->kssl_ctx = kssl_ctx_new()) != NULL)
+                        {
+                        kssl_ctx_setstring(con->kssl_ctx, KSSL_SERVICE, KRB5SVC);
+                        kssl_ctx_setstring(con->kssl_ctx, KSSL_KEYTAB, KRB5KEYTAB);
+                        }
+#endif	/* NO_KRB5 */
 		if(context)
 		      SSL_set_session_id_context(con, context,
 						 strlen((char *)context));

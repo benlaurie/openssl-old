@@ -657,7 +657,7 @@ typedef struct ASN1_AUX_st {
 #define IMPLEMENT_ASN1_FUNCTIONS_ENCODE_name(stname, itname) \
 			IMPLEMENT_ASN1_FUNCTIONS_ENCODE_fname(stname, itname, itname)
 
-#define IMPLEMENT_ASN1_FUNCTIONS_fname(stname, itname, fname) \
+#define IMPLEMENT_ASN1_ALLOC_FUNCTIONS_fname(stname, itname, fname) \
 	stname *fname##_new(void) \
 	{ \
 		return (stname *)ASN1_item_new(&itname##_it); \
@@ -665,8 +665,11 @@ typedef struct ASN1_AUX_st {
 	void fname##_free(stname *a) \
 	{ \
 		ASN1_item_free((ASN1_VALUE *)a, &itname##_it); \
-	} \
-	IMPLEMENT_ASN1_ENCODE_FUNCTIONS_fname(stname, itname, fname)
+	}
+
+#define IMPLEMENT_ASN1_FUNCTIONS_fname(stname, itname, fname) \
+	IMPLEMENT_ASN1_ENCODE_FUNCTIONS_fname(stname, itname, fname) \
+	IMPLEMENT_ASN1_ALLOC_FUNCTIONS_fname(stname, itname, fname)
 
 #define IMPLEMENT_ASN1_ENCODE_FUNCTIONS_fname(stname, itname, fname) \
 	stname *d2i_##fname(stname **a, unsigned char **in, long len) \
@@ -677,6 +680,26 @@ typedef struct ASN1_AUX_st {
 	{ \
 		return ASN1_item_i2d((ASN1_VALUE *)a, out, &itname##_it);\
 	} 
+
+/* This includes evil casts to remove const: they will go away when full
+ * ASN1 constification is done.
+ */
+#define IMPLEMENT_ASN1_ENCODE_FUNCTIONS_const_fname(stname, itname, fname) \
+	stname *d2i_##fname(stname **a, const unsigned char **in, long len) \
+	{ \
+		return (stname *)ASN1_item_d2i((ASN1_VALUE **)a, (unsigned char **)in, len, &itname##_it);\
+	} \
+	int i2d_##fname(const stname *a, unsigned char **out) \
+	{ \
+		return ASN1_item_i2d((ASN1_VALUE *)a, out, &itname##_it);\
+	} 
+
+#define IMPLEMENT_ASN1_FUNCTIONS_const(name) \
+		IMPLEMENT_ASN1_FUNCTIONS_const_fname(name, name, name)
+
+#define IMPLEMENT_ASN1_FUNCTIONS_const_fname(stname, itname, fname) \
+	IMPLEMENT_ASN1_ENCODE_FUNCTIONS_const_fname(stname, itname, fname) \
+	IMPLEMENT_ASN1_ALLOC_FUNCTIONS_fname(stname, itname, fname)
 
 /* external definitions for primitive types */
 

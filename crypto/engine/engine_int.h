@@ -66,6 +66,9 @@
 #include <openssl/bn.h>
 #include <openssl/evp.h>
 
+/* Take public definitions from engine.h */
+#include <openssl/engine.h>
+
 #ifdef  __cplusplus
 extern "C" {
 #endif
@@ -73,38 +76,15 @@ extern "C" {
 /* Bitwise OR-able values for the "flags" variable in ENGINE. */
 #define ENGINE_FLAGS_MALLOCED	0x0001
 
-#ifndef HEADER_ENGINE_H
-/* Regrettably, we need to reproduce the "BN" function types here
- * because there is no such "BIGNUM_METHOD" as there is with RSA,
- * DSA, etc. We do this so that we don't have a case where engine.h
- * and engine_int.h conflict with each other. */
-typedef int (*BN_MOD_EXP)(BIGNUM *r, BIGNUM *a, const BIGNUM *p,
-		const BIGNUM *m, BN_CTX *ctx);
- 
-/* private key operation for RSA, provided seperately in case other
- * RSA implementations wish to use it. */
-typedef int (*BN_MOD_EXP_CRT)(BIGNUM *r, BIGNUM *a, const BIGNUM *p,
-		const BIGNUM *q, const BIGNUM *dmp1, const BIGNUM *dmq1,
-		const BIGNUM *iqmp, BN_CTX *ctx);
-
-/* Generic function pointer */
-typedef int (*ENGINE_GEN_FUNC_PTR)();
-/* Generic function pointer taking no arguments */
-typedef int (*ENGINE_GEN_INT_FUNC_PTR)(void);
-/* Specific control function pointer */
-typedef int (*ENGINE_CTRL_FUNC_PTR)(int cmd, long i, void *p, void (*f)());
-
-#endif
-
 /* This is a structure for storing implementations of various crypto
  * algorithms and functions. */
-typedef struct engine_st
+struct engine_st
 	{
 	const char *id;
 	const char *name;
-	RSA_METHOD *rsa_meth;
-	DSA_METHOD *dsa_meth;
-	DH_METHOD *dh_meth;
+	const RSA_METHOD *rsa_meth;
+	const DSA_METHOD *dsa_meth;
+	const DH_METHOD *dh_meth;
 	RAND_METHOD *rand_meth;
 	BN_MOD_EXP bn_mod_exp;
 	BN_MOD_EXP_CRT bn_mod_exp_crt;
@@ -125,7 +105,7 @@ typedef struct engine_st
 	/* Used to maintain the linked-list of engines. */
 	struct engine_st *prev;
 	struct engine_st *next;
-	} ENGINE;
+	};
 
 /* BUILT-IN ENGINES. (these functions are only ever called once and
  * do not return references - they are purely for bootstrapping). */

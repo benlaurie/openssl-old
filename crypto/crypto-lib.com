@@ -196,7 +196,7 @@ $ LIB_BF = "bf_skey,bf_ecb,bf_enc,bf_cfb64,bf_ofb64"
 $ LIB_CAST = "c_skey,c_ecb,c_enc,c_cfb64,c_ofb64"
 $ LIB_BN_ASM = "[.asm]vms.mar,vms-helper"
 $ IF F$TRNLNM("OPENSSL_NO_ASM").OR.ARCH.EQS."AXP" THEN LIB_BN_ASM = "bn_asm"
-$ LIB_BN = "bn_add,bn_div,bn_exp,bn_lib,bn_ctx,bn_mul,"+ -
+$ LIB_BN = "bn_add,bn_div,bn_exp,bn_lib,bn_ctx,bn_mul,bn_mod,bn_kron,bn_sqrt"+ -
 	"bn_print,bn_rand,bn_shift,bn_word,bn_blind,"+ -
 	"bn_gcd,bn_prime,bn_err,bn_sqr,"+LIB_BN_ASM+",bn_recp,bn_mont,"+ -
 	"bn_mpi,bn_exp2"
@@ -206,9 +206,9 @@ $ LIB_DSA = "dsa_gen,dsa_key,dsa_lib,dsa_asn1,dsa_vrf,dsa_sign,dsa_err,dsa_ossl"
 $ LIB_DH = "dh_gen,dh_key,dh_lib,dh_check,dh_err"
 $ LIB_DSO = "dso_dl,dso_dlfcn,dso_err,dso_lib,dso_null,"+ -
 	"dso_openssl,dso_win32,dso_vms"
-$ LIB_ENGINE = "engine_err,engine_lib,engine_list,engine_openssl,"+ -
-	"hw_atalla,hw_cswift,hw_ncipher"
-$ LIB_RIJNDAEL = "rijndael-alg-fst"
+$ LIB_ENGINE = "engine_err,engine_lib,engine_list,engine_all,engine_openssl,"+ -
+	"hw_atalla,hw_cswift,hw_ncipher,hw_nuron"
+$ LIB_RIJNDAEL = "rd_fst"
 $ LIB_BUFFER = "buffer,buf_err"
 $ LIB_BIO = "bio_lib,bio_cb,bio_err,"+ -
 	"bss_mem,bss_null,bss_fd,"+ -
@@ -223,7 +223,7 @@ $ LIB_ERR = "err,err_all,err_prn"
 $ LIB_OBJECTS = "o_names,obj_dat,obj_lib,obj_err"
 $ LIB_EVP = "encode,digest,evp_enc,evp_key,"+ -
 	"e_des,e_bf,e_idea,e_des3,"+ -
-	"e_rc4,names,"+ -
+	"e_rc4,e_rd,names,"+ -
 	"e_xcbc_d,e_rc2,e_cast,e_rc5"
 $ LIB_EVP_2 = "m_null,m_md2,m_md4,m_md5,m_sha,m_sha1," + -
 	"m_dss,m_dss1,m_mdc2,m_ripemd,"+ -
@@ -896,6 +896,7 @@ $ ENDIF
 $!
 $! Check To See If P2 Is Blank.
 $!
+$ P2 = "NORSAREF"
 $ IF (P2.EQS."NORSAREF")
 $ THEN
 $!

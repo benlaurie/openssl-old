@@ -185,24 +185,6 @@ static int engine_internal_check(void)
 	 * with our statically compiled-in engines. */
 	if(!engine_list_add(ENGINE_openssl()))
 		return 0;
-#ifndef NO_HW
-#ifndef NO_HW_CSWIFT
-	if(!engine_list_add(ENGINE_cswift()))
-		return 0;
-#endif /* !NO_HW_CSWIFT */
-#ifndef NO_HW_NCIPHER
-	if(!engine_list_add(ENGINE_ncipher()))
-		return 0;
-#endif /* !NO_HW_NCIPHER */
-#ifndef NO_HW_ATALLA
-	if(!engine_list_add(ENGINE_atalla()))
-		return 0;
-#endif /* !NO_HW_ATALLA */
-#ifndef NO_HW_NURON
-	if(!engine_list_add(ENGINE_nuron()))
-		return 0;
-#endif /* !NO_HW_NURON */
-#endif /* !NO_HW */
 	engine_list_flag = 1;
 	return 1;
 	}
@@ -448,7 +430,7 @@ int ENGINE_set_name(ENGINE *e, const char *name)
 	return 1;
 	}
 
-int ENGINE_set_RSA(ENGINE *e, RSA_METHOD *rsa_meth)
+int ENGINE_set_RSA(ENGINE *e, const RSA_METHOD *rsa_meth)
 	{
 	if((e == NULL) || (rsa_meth == NULL))
 		{
@@ -460,7 +442,7 @@ int ENGINE_set_RSA(ENGINE *e, RSA_METHOD *rsa_meth)
 	return 1;
 	}
 
-int ENGINE_set_DSA(ENGINE *e, DSA_METHOD *dsa_meth)
+int ENGINE_set_DSA(ENGINE *e, const DSA_METHOD *dsa_meth)
 	{
 	if((e == NULL) || (dsa_meth == NULL))
 		{
@@ -472,7 +454,7 @@ int ENGINE_set_DSA(ENGINE *e, DSA_METHOD *dsa_meth)
 	return 1;
 	}
 
-int ENGINE_set_DH(ENGINE *e, DH_METHOD *dh_meth)
+int ENGINE_set_DH(ENGINE *e, const DH_METHOD *dh_meth)
 	{
 	if((e == NULL) || (dh_meth == NULL))
 		{
@@ -578,7 +560,7 @@ const char *ENGINE_get_name(ENGINE *e)
 	return e->name;
 	}
 
-RSA_METHOD *ENGINE_get_RSA(ENGINE *e)
+const RSA_METHOD *ENGINE_get_RSA(ENGINE *e)
 	{
 	if(e == NULL)
 		{
@@ -589,7 +571,7 @@ RSA_METHOD *ENGINE_get_RSA(ENGINE *e)
 	return e->rsa_meth;
 	}
 
-DSA_METHOD *ENGINE_get_DSA(ENGINE *e)
+const DSA_METHOD *ENGINE_get_DSA(ENGINE *e)
 	{
 	if(e == NULL)
 		{
@@ -600,7 +582,7 @@ DSA_METHOD *ENGINE_get_DSA(ENGINE *e)
 	return e->dsa_meth;
 	}
 
-DH_METHOD *ENGINE_get_DH(ENGINE *e)
+const DH_METHOD *ENGINE_get_DH(ENGINE *e)
 	{
 	if(e == NULL)
 		{

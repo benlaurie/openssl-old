@@ -8,7 +8,8 @@
        - No more feature commits, please. 
        - Commit bugfixes and cleanups only, please.
        - Already successfully tested platform:
-         o  FreeBSD 3.1           Ralf S. Engelschall
+         o  FreeBSD 3.1    Ralf S. Engelschall   all silent
+         o  Solaris 2.6    Ralf S. Engelschall   ctype-related warnings, test fails
 
        Proposed release time: Monday, March 15th 1999
 

@@ -127,6 +127,11 @@ static int asn1_item_ex_combine_new(ASN1_VALUE **pval, const ASN1_ITEM *it, int 
 		break;
 
 		case ASN1_ITYPE_CHOICE:
+		if(asn1_cb) {
+			i = asn1_cb(ASN1_OP_NEW_PRE, pval, it);
+			if(!i) goto auxerr;
+			if(i==2) return 1;
+		}
 		if(!combine) {
 			*pval = OPENSSL_malloc(it->size);
 			if(!*pval) goto memerr;

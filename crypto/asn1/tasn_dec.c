@@ -230,7 +230,6 @@ int ASN1_item_ex_d2i(ASN1_VALUE **pval, unsigned char **in, long len, const ASN1
 			/* Otherwise must be an ASN1 parsing error */
 			errtt = tt;
 			ASN1err(ASN1_F_ASN1_ITEM_EX_D2I, ERR_R_NESTED_ASN1_ERROR);
-			/* FIXME: note choice type that did this */
 			return 0;
 		}
 		/* Did we fall off the end without reading anything? */

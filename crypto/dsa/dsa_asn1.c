@@ -101,6 +101,7 @@ static int dsa_cb(int operation, ASN1_VALUE **pval, const ASN1_ITEM *it)
 }
 
 ASN1_SEQUENCE_cb(DSAPrivateKey, dsa_cb) = {
+	ASN1_SIMPLE(DSA, version, LONG),
 	ASN1_SIMPLE(DSA, p, BIGNUM),
 	ASN1_SIMPLE(DSA, q, BIGNUM),
 	ASN1_SIMPLE(DSA, g, BIGNUM),
@@ -118,3 +119,22 @@ ASN1_SEQUENCE_cb(DSAparams, dsa_cb) = {
 
 IMPLEMENT_ASN1_ENCODE_FUNCTIONS_fname(DSA, DSAparams, DSAparams)
 
+/* DSA public key is a bit trickier... its effectively a CHOICE type
+ * decided by a field called write_params which can either write out
+ * just the public key as an INTEGER or the parameters and public key
+ * in a SEQUENCE
+ */
+
+ASN1_SEQUENCE(dsa_pub_internal) = {
+	ASN1_SIMPLE(DSA, pub_key, BIGNUM),
+	ASN1_SIMPLE(DSA, p, BIGNUM),
+	ASN1_SIMPLE(DSA, q, BIGNUM),
+	ASN1_SIMPLE(DSA, g, BIGNUM)
+} ASN1_SEQUENCE_END_name(DSA, dsa_pub_internal);
+
+ASN1_CHOICE_cb(DSAPublicKey, dsa_cb) = {
+	ASN1_SIMPLE(DSA, pub_key, BIGNUM),
+	ASN1_EX_COMBINE(0, 0, dsa_pub_internal)
+} ASN1_CHOICE_END_cb(DSA, DSAPublicKey, write_params);
+
+IMPLEMENT_ASN1_ENCODE_FUNCTIONS_fname(DSA, DSAPublicKey, DSAPublicKey)

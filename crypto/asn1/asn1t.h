@@ -178,7 +178,7 @@ extern "C" {
 
 #define ASN1_CHOICE_END_selector(stname, tname, selname) \
 	;\
-	ASN1_ITEM tname##_it = { \
+	const ASN1_ITEM tname##_it = { \
 		ASN1_ITYPE_CHOICE,\
 		offsetof(stname,selname) ,\
 		tname##_ch_tt,\
@@ -627,22 +627,9 @@ typedef struct ASN1_AUX_st {
 /* external definitions for primitive types */
 
 extern const ASN1_ITEM ASN1_BOOLEAN_it;
-extern const ASN1_ITEM ASN1_INTEGER_it;
-extern const ASN1_ITEM ASN1_BIT_STRING_it;
-extern const ASN1_ITEM ASN1_OCTET_STRING_it;
-extern const ASN1_ITEM ASN1_NULL_it;
 extern const ASN1_ITEM ASN1_OBJECT_it;
-extern const ASN1_ITEM ASN1_ENUMERATED_it;
-extern const ASN1_ITEM ASN1_UTF8STRING_it;
-extern const ASN1_ITEM ASN1_PRINTABLESTRING_it;
-extern const ASN1_ITEM ASN1_T61STRING_it;
-extern const ASN1_ITEM ASN1_IA5STRING_it;
-extern const ASN1_ITEM ASN1_UTCTIME_it;
-extern const ASN1_ITEM ASN1_GENERALIZEDTIME_it;
-extern const ASN1_ITEM ASN1_VISIBLESTRING_it;
-extern const ASN1_ITEM ASN1_UNIVERSALSTRING_it;
-extern const ASN1_ITEM ASN1_BMPSTRING_it;
 extern const ASN1_ITEM ASN1_ANY_it;
+extern const ASN1_ITEM ASN1_SEQUENCE_it;
 
 int asn1_do_lock(ASN1_VALUE *pval, int op, const ASN1_ITEM *it);
 

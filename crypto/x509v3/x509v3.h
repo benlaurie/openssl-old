@@ -156,29 +156,46 @@ ASN1_OBJECT *type_id;
 ASN1_TYPE *value;
 } OTHERNAME;
 
+typedef struct EDIPartyName_st {
+	ASN1_STRING *nameAssigner;
+	ASN1_STRING *partyName;
+} EDIPARTYNAME;
+
 typedef struct GENERAL_NAME_st {
 
-#define GEN_OTHERNAME	(0|V_ASN1_CONTEXT_SPECIFIC)
-#define GEN_EMAIL	(1|V_ASN1_CONTEXT_SPECIFIC)
-#define GEN_DNS		(2|V_ASN1_CONTEXT_SPECIFIC)
-#define GEN_X400	(3|V_ASN1_CONTEXT_SPECIFIC)
-#define GEN_DIRNAME	(4|V_ASN1_CONTEXT_SPECIFIC)
-#define GEN_EDIPARTY	(5|V_ASN1_CONTEXT_SPECIFIC)
-#define GEN_URI		(6|V_ASN1_CONTEXT_SPECIFIC)
-#define GEN_IPADD	(7|V_ASN1_CONTEXT_SPECIFIC)
-#define GEN_RID		(8|V_ASN1_CONTEXT_SPECIFIC)
+#define GEN_OTHERNAME	0
+#define GEN_EMAIL	1
+#define GEN_DNS		2
+#define GEN_X400	3
+#define GEN_DIRNAME	4
+#define GEN_EDIPARTY	5
+#define GEN_URI		6
+#define GEN_IPADD	7
+#define GEN_RID		8
 
 int type;
 union {
 	char *ptr;
-	ASN1_IA5STRING *ia5;/* rfc822Name, dNSName, uniformResourceIdentifier */
+	OTHERNAME *otherName; /* otherName */
+	ASN1_IA5STRING *rfc822Name;
+	ASN1_IA5STRING *dNSName;
+	ASN1_TYPE *x400Address;
+	X509_NAME *directoryName;
+	EDIPARTYNAME *ediPartyName;
+	ASN1_IA5STRING *uniformResourceIdentifier;
+	ASN1_OCTET_STRING *iPAddress;
+	ASN1_OBJECT *registeredID;
+
+	/* Old names */
 	ASN1_OCTET_STRING *ip; /* iPAddress */
 	X509_NAME *dirn;		/* dirn */
+	ASN1_IA5STRING *ia5;/* rfc822Name, dNSName, uniformResourceIdentifier */
 	ASN1_OBJECT *rid; /* registeredID */
-	OTHERNAME *otherName; /* otherName */
-	ASN1_TYPE *other; /* ediPartyName, x400Address */
+	ASN1_TYPE *other; /* x400Address */
 } d;
 } GENERAL_NAME;
+
+typedef STACK_OF(GENERAL_NAME) GENERAL_NAMES;
 
 typedef struct ACCESS_DESCRIPTION_st {
 	ASN1_OBJECT *method;
@@ -372,21 +389,8 @@ BASIC_CONSTRAINTS *d2i_BASIC_CONSTRAINTS(BASIC_CONSTRAINTS **a, unsigned char **
 BASIC_CONSTRAINTS *BASIC_CONSTRAINTS_new(void);
 void BASIC_CONSTRAINTS_free(BASIC_CONSTRAINTS *a);
 
-int i2d_GENERAL_NAME(GENERAL_NAME *a, unsigned char **pp);
-GENERAL_NAME *d2i_GENERAL_NAME(GENERAL_NAME **a, unsigned char **pp, long length);
-GENERAL_NAME *GENERAL_NAME_new(void);
-void GENERAL_NAME_free(GENERAL_NAME *a);
-STACK_OF(CONF_VALUE) *i2v_GENERAL_NAME(X509V3_EXT_METHOD *method, GENERAL_NAME *gen, STACK_OF(CONF_VALUE) *ret);
-
-int i2d_SXNET(SXNET *a, unsigned char **pp);
-SXNET *d2i_SXNET(SXNET **a, unsigned char **pp, long length);
-SXNET *SXNET_new(void);
-void SXNET_free(SXNET *a);
-
-int i2d_SXNETID(SXNETID *a, unsigned char **pp);
-SXNETID *d2i_SXNETID(SXNETID **a, unsigned char **pp, long length);
-SXNETID *SXNETID_new(void);
-void SXNETID_free(SXNETID *a);
+DECLARE_ASN1_FUNCTIONS(SXNET)
+DECLARE_ASN1_FUNCTIONS(SXNETID)
 
 int SXNET_add_id_asc(SXNET **psx, char *zone, char *user, int userlen); 
 int SXNET_add_id_ulong(SXNET **psx, unsigned long lzone, char *user, int userlen); 
@@ -396,29 +400,23 @@ ASN1_OCTET_STRING *SXNET_get_id_asc(SXNET *sx, char *zone);
 ASN1_OCTET_STRING *SXNET_get_id_ulong(SXNET *sx, unsigned long lzone);
 ASN1_OCTET_STRING *SXNET_get_id_INTEGER(SXNET *sx, ASN1_INTEGER *zone);
 
-int i2d_AUTHORITY_KEYID(AUTHORITY_KEYID *a, unsigned char **pp);
-AUTHORITY_KEYID *d2i_AUTHORITY_KEYID(AUTHORITY_KEYID **a, unsigned char **pp, long length);
-AUTHORITY_KEYID *AUTHORITY_KEYID_new(void);
-void AUTHORITY_KEYID_free(AUTHORITY_KEYID *a);
+DECLARE_ASN1_FUNCTIONS(AUTHORITY_KEYID)
 
-int i2d_PKEY_USAGE_PERIOD(PKEY_USAGE_PERIOD *a, unsigned char **pp);
-PKEY_USAGE_PERIOD *d2i_PKEY_USAGE_PERIOD(PKEY_USAGE_PERIOD **a, unsigned char **pp, long length);
-PKEY_USAGE_PERIOD *PKEY_USAGE_PERIOD_new(void);
-void PKEY_USAGE_PERIOD_free(PKEY_USAGE_PERIOD *a);
+DECLARE_ASN1_FUNCTIONS(PKEY_USAGE_PERIOD)
 
-STACK_OF(GENERAL_NAME) *GENERAL_NAMES_new(void);
-void GENERAL_NAMES_free(STACK_OF(GENERAL_NAME) *a);
-STACK_OF(GENERAL_NAME) *d2i_GENERAL_NAMES(STACK_OF(GENERAL_NAME) **a, unsigned char **pp, long length);
-int i2d_GENERAL_NAMES(STACK_OF(GENERAL_NAME) *a, unsigned char **pp);
+DECLARE_ASN1_FUNCTIONS(GENERAL_NAME)
+
+STACK_OF(CONF_VALUE) *i2v_GENERAL_NAME(X509V3_EXT_METHOD *method, GENERAL_NAME *gen, STACK_OF(CONF_VALUE) *ret);
+
+DECLARE_ASN1_FUNCTIONS(GENERAL_NAMES)
+
 STACK_OF(CONF_VALUE) *i2v_GENERAL_NAMES(X509V3_EXT_METHOD *method,
 		STACK_OF(GENERAL_NAME) *gen, STACK_OF(CONF_VALUE) *extlist);
 STACK_OF(GENERAL_NAME) *v2i_GENERAL_NAMES(X509V3_EXT_METHOD *method,
 				X509V3_CTX *ctx, STACK_OF(CONF_VALUE) *nval);
 
-int i2d_OTHERNAME(OTHERNAME *a, unsigned char **pp);
-OTHERNAME *OTHERNAME_new(void);
-OTHERNAME *d2i_OTHERNAME(OTHERNAME **a, unsigned char **pp, long length);
-void OTHERNAME_free(OTHERNAME *a);
+DECLARE_ASN1_FUNCTIONS(OTHERNAME)
+DECLARE_ASN1_FUNCTIONS(EDIPARTYNAME)
 
 char *i2s_ASN1_OCTET_STRING(X509V3_EXT_METHOD *method, ASN1_OCTET_STRING *ia5);
 ASN1_OCTET_STRING *s2i_ASN1_OCTET_STRING(X509V3_EXT_METHOD *method, X509V3_CTX *ctx, char *str);

@@ -83,7 +83,7 @@ clean:
 
 # DO NOT DELETE THIS LINE -- make depend depends on it.
 
-v3_akey.o: ../../include/openssl/asn1.h ../../include/openssl/asn1_mac.h
+v3_akey.o: ../../include/openssl/asn1.h ../../include/openssl/asn1t.h
 v3_akey.o: ../../include/openssl/bio.h ../../include/openssl/blowfish.h
 v3_akey.o: ../../include/openssl/bn.h ../../include/openssl/buffer.h
 v3_akey.o: ../../include/openssl/cast.h ../../include/openssl/conf.h
@@ -285,7 +285,7 @@ v3_extku.o: ../../include/openssl/sha.h ../../include/openssl/stack.h
 v3_extku.o: ../../include/openssl/symhacks.h ../../include/openssl/x509.h
 v3_extku.o: ../../include/openssl/x509_vfy.h ../../include/openssl/x509v3.h
 v3_extku.o: ../cryptlib.h
-v3_genn.o: ../../include/openssl/asn1.h ../../include/openssl/asn1_mac.h
+v3_genn.o: ../../include/openssl/asn1.h ../../include/openssl/asn1t.h
 v3_genn.o: ../../include/openssl/bio.h ../../include/openssl/blowfish.h
 v3_genn.o: ../../include/openssl/bn.h ../../include/openssl/buffer.h
 v3_genn.o: ../../include/openssl/cast.h ../../include/openssl/conf.h
@@ -395,7 +395,7 @@ v3_lib.o: ../../include/openssl/sha.h ../../include/openssl/stack.h
 v3_lib.o: ../../include/openssl/symhacks.h ../../include/openssl/x509.h
 v3_lib.o: ../../include/openssl/x509_vfy.h ../../include/openssl/x509v3.h
 v3_lib.o: ../cryptlib.h ext_dat.h
-v3_pku.o: ../../include/openssl/asn1.h ../../include/openssl/asn1_mac.h
+v3_pku.o: ../../include/openssl/asn1.h ../../include/openssl/asn1t.h
 v3_pku.o: ../../include/openssl/bio.h ../../include/openssl/blowfish.h
 v3_pku.o: ../../include/openssl/bn.h ../../include/openssl/buffer.h
 v3_pku.o: ../../include/openssl/cast.h ../../include/openssl/conf.h
@@ -483,7 +483,7 @@ v3_skey.o: ../../include/openssl/sha.h ../../include/openssl/stack.h
 v3_skey.o: ../../include/openssl/symhacks.h ../../include/openssl/x509.h
 v3_skey.o: ../../include/openssl/x509_vfy.h ../../include/openssl/x509v3.h
 v3_skey.o: ../cryptlib.h
-v3_sxnet.o: ../../include/openssl/asn1.h ../../include/openssl/asn1_mac.h
+v3_sxnet.o: ../../include/openssl/asn1.h ../../include/openssl/asn1t.h
 v3_sxnet.o: ../../include/openssl/bio.h ../../include/openssl/blowfish.h
 v3_sxnet.o: ../../include/openssl/bn.h ../../include/openssl/buffer.h
 v3_sxnet.o: ../../include/openssl/cast.h ../../include/openssl/conf.h

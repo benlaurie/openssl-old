@@ -136,3 +136,9 @@ is normally accessed via higher level functions this shouldn't break too much.
 The top level 'detached' field in the PKCS7 structure is no longer set when
 a PKCS#7 structure is read in. PKCS7_is_detached() should be called instead.
 The behaviour of PKCS7_get_detached() is unaffected.
+
+The values of 'type' in the GENERAL_NAME structure have changed. This is
+because the old code use the ASN1 initial octet as the selector. The new
+code uses the index in the ASN1_CHOICE template.
+
+

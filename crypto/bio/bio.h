@@ -602,7 +602,7 @@ typedef void * VOID_L32p;
 
 int BIO_sock_error(int sock);
 #ifdef OPENSSL_SYS_VMS
-int BIO_socket_ioctl(int fd, long type, UINT_L32p arg);
+int BIO_socket_ioctl(int fd, long type, VOID_L32p arg);
 #else
 int BIO_socket_ioctl(int fd, long type, void *arg);
 #endif

@@ -4,6 +4,18 @@
 
  Changes between 0.9.7 and 0.9.8  [xx XXX xxxx]
 
+  *) ECDSA routines: under certain error conditions uninitialized BN objects
+     could be freed. Solution: make sure initialization is performed early
+     enough. (Reported and fix supplied by Nils Larsch <nla@trustcenter.de>
+     via PR#459)
+     [Lutz Jaenicke]
+
+  *) Key-generation can now be implemented in RSA_METHOD, DSA_METHOD
+     and DH_METHOD (eg. by ENGINE implementations) to override the normal
+     software implementations. For DSA and DH, parameter generation can
+     also be overriden by providing the appropriate method callbacks.
+     [Geoff Thorpe]
+
   *) Change the "progress" mechanism used in key-generation and
      primality testing to functions that take a new BN_GENCB pointer in
      place of callback/argument pairs. The new API functions have "_ex"
@@ -368,6 +380,25 @@ TODO: bug: pad  x  with leading zeros if necessary
      [Nils Larsch <nla@trustcenter.de, Bodo Moeller]
  
  Changes between 0.9.7 and 0.9.7a  [XX xxx 2003]
+
+  *) DSA routines: under certain error conditions uninitialized BN objects
+     could be freed. Solution: make sure initialization is performed early
+     enough. (Reported and fix supplied by Ivan D Nestlerode <nestler@MIT.EDU>,
+     Nils Larsch <nla@trustcenter.de> via PR#459)
+     [Lutz Jaenicke]
+
+  *) Another fix for SSLv2 session ID handling: the session ID was incorrectly
+     checked on reconnect on the client side, therefore session resumption
+     could still fail with a "ssl session id is different" error. This
+     behaviour is masked when SSL_OP_ALL is used due to
+     SSL_OP_MICROSOFT_SESS_ID_BUG being set.
+     Behaviour observed by Crispin Flowerday <crispin@flowerday.cx> as
+     followup to PR #377.
+     [Lutz Jaenicke]
+
+  *) IA-32 assembler support enhancements: unified ELF targets, support
+     for SCO/Caldera platforms, fix for Cygwin shared build.
+     [Andy Polyakov]
 
   *) Add support for FreeBSD on sparc64.  As a consequence, support for
      FreeBSD on non-x86 processors is separate from x86 processors on

@@ -193,11 +193,11 @@ DECLARE_ASN1_SET_OF(X509_EXTENSION)
 typedef struct x509_attributes_st
 	{
 	ASN1_OBJECT *object;
-	int set; /* 1 for a set, 0 for a single item (which is wrong) */
+	int single; /* 0 for a set, 1 for a single item (which is wrong) */
 	union	{
 		char		*ptr;
-/* 1 */		STACK_OF(ASN1_TYPE) *set;
-/* 0 */		ASN1_TYPE	*single;
+/* 0 */		STACK_OF(ASN1_TYPE) *set;
+/* 1 */		ASN1_TYPE	*single;
 		} value;
 	} X509_ATTRIBUTE;
 

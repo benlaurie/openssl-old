@@ -91,7 +91,7 @@ static int asn1_item_ex_combine_new(ASN1_VALUE **pval, const ASN1_ITEM *it, int 
 	if(aux && aux->asn1_cb) asn1_cb = aux->asn1_cb;
 	else asn1_cb = 0;
 
-	*pval = NULL;
+	if(!combine) *pval = NULL;
 
 	switch(it->itype) {
 

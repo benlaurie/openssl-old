@@ -126,8 +126,9 @@ int asn1_do_lock(ASN1_VALUE *pval, int op, const ASN1_ITEM *it)
 
 ASN1_VALUE *asn1_get_field(ASN1_VALUE *val, const ASN1_TEMPLATE *tt)
 {
-	ASN1_VALUE **ptr = offset2ptr(val, tt->offset);
+	ASN1_VALUE **ptr;
 	if(tt->flags & ASN1_TFLG_COMBINE) return val;
+	ptr = offset2ptr(val, tt->offset);
 	/* NOTE for BOOLEAN types the field is just a plain
  	 * int so we don't dereference it. This means that
 	 * BOOLEAN is an (int *).
@@ -147,8 +148,9 @@ ASN1_VALUE *asn1_get_field(ASN1_VALUE *val, const ASN1_TEMPLATE *tt)
 /* Given an ASN1_TEMPLATE get a pointer to a field */
 ASN1_VALUE ** asn1_get_field_ptr(ASN1_VALUE **pval, const ASN1_TEMPLATE *tt)
 {
-	ASN1_VALUE **pvaltmp = offset2ptr(*pval, tt->offset);
+	ASN1_VALUE **pvaltmp;
 	if(tt->flags & ASN1_TFLG_COMBINE) return pval;
+	pvaltmp = offset2ptr(*pval, tt->offset);
 	/* NOTE for BOOLEAN types the field is just a plain
  	 * int so we can't return int **, so settle for
 	 * (int *).

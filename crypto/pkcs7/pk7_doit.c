@@ -838,7 +838,7 @@ static ASN1_TYPE *get_attribute(STACK_OF(X509_ATTRIBUTE) *sk, int nid)
 		xa=sk_X509_ATTRIBUTE_value(sk,i);
 		if (OBJ_cmp(xa->object,o) == 0)
 			{
-			if (xa->set && sk_ASN1_TYPE_num(xa->value.set))
+			if (!xa->single && sk_ASN1_TYPE_num(xa->value.set))
 				return(sk_ASN1_TYPE_value(xa->value.set,0));
 			else
 				return(NULL);

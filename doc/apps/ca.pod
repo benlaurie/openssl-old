@@ -384,10 +384,16 @@ versions of OpenSSL.  However, to make CA certificate roll-over easier,
 it's recommended to use the value B<no>, especially if combined with
 the B<-selfsign> command line option.
 
-=item B<serialfile>
+=item B<serial>
 
 a text file containing the next serial number to use in hex. Mandatory.
 This file must be present and contain a valid serial number.
+
+=item B<crlnumber>
+
+a text file containing the next CRL number to use in hex. The crl number
+will be inserted in the CRLs only if this file exists. If this file is
+present, it must contain a valid CRL number.
 
 =item B<x509_extensions>
 
@@ -425,7 +431,7 @@ here, except the B<no_signame> and B<no_sigdump> are permanently set
 and cannot be disabled (this is because the certificate signature cannot
 be displayed because the certificate has not been signed at this point).
 
-For convenience the values B<default_ca> are accepted by both to produce
+For convenience the values B<ca_default> are accepted by both to produce
 a reasonable output.
 
 If neither option is present the format used in earlier versions of
@@ -538,8 +544,8 @@ A sample configuration file with the relevant sections for B<ca>:
  policy         = policy_any            # default policy
  email_in_dn    = no                    # Don't add the email into cert DN
 
- nameopt	= default_ca		# Subject name display option
- certopt	= default_ca		# Certificate display option
+ nameopt	= ca_default		# Subject name display option
+ certopt	= ca_default		# Certificate display option
  copy_extensions = none			# Don't copy extensions from request
 
  [ policy_any ]

@@ -88,7 +88,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <signal.h>
+
 #include <string.h>
 #include <math.h>
 #include "apps.h"
@@ -104,6 +104,10 @@
 #include OPENSSL_UNISTD
 #endif
 
+#ifndef OPENSSL_SYS_NETWARE
+#include <signal.h>
+#endif
+
 #if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(OPENSSL_SYS_MACOSX)
 # define USE_TOD
 #elif !defined(OPENSSL_SYS_MSDOS) && !defined(OPENSSL_SYS_VXWORKS) && (!defined(OPENSSL_SYS_VMS) || defined(__DECC))
@@ -111,6 +115,12 @@
 #endif
 #if !defined(_UNICOS) && !defined(__OpenBSD__) && !defined(sgi) && !defined(__FreeBSD__) && !(defined(__bsdi) || defined(__bsdi__)) && !defined(_AIX) && !defined(OPENSSL_SYS_MPE) && !defined(__NetBSD__) && !defined(OPENSSL_SYS_VXWORKS) /* FIXME */
 # define TIMEB
+#endif
+
+#if defined(OPENSSL_SYS_NETWARE)
+#undef TIMES
+#undef TIMEB
+#include <time.h>
 #endif
 
 #ifndef _IRIX
@@ -137,7 +147,7 @@
 #include <sys/timeb.h>
 #endif
 
-#if !defined(TIMES) && !defined(TIMEB) && !defined(USE_TOD) && !defined(OPENSSL_SYS_VXWORKS)
+#if !defined(TIMES) && !defined(TIMEB) && !defined(USE_TOD) && !defined(OPENSSL_SYS_VXWORKS) && !defined(OPENSSL_SYS_NETWARE)
 #error "It seems neither struct tms nor struct timeb is supported in this platform!"
 #endif
 
@@ -208,11 +218,21 @@
 #include <openssl/ecdh.h>
 #endif
 
+/*
+ * The following "HZ" timing stuff should be sync'd up with the code in
+ * crypto/tmdiff.[ch]. That appears to try to do the same job, though I think
+ * this code is more up to date than libcrypto's so there may be features to
+ * migrate over first. This is used in two places further down AFAICS. 
+ * The point is that nothing in openssl actually *uses* that tmdiff stuff, so
+ * either speed.c should be using it or it should go because it's obviously not
+ * useful enough. Anyone want to do a janitorial job on this?
+ */
+
 /* The following if from times(3) man page.  It may need to be changed */
 #ifndef HZ
 # if defined(_SC_CLK_TCK) \
      && (!defined(OPENSSL_SYS_VMS) || __CTRL_VER >= 70000000)
-#  define HZ ((double)sysconf(_SC_CLK_TCK))
+#  define HZ sysconf(_SC_CLK_TCK)
 # else
 #  ifndef CLK_TCK
 #   ifndef _BSD_CLK_TCK_ /* FreeBSD hack */
@@ -226,7 +246,7 @@
 # endif
 #endif
 
-#if !defined(OPENSSL_SYS_VMS) && !defined(OPENSSL_SYS_WINDOWS) && !defined(OPENSSL_SYS_MACINTOSH_CLASSIC) && !defined(OPENSSL_SYS_OS2)
+#if !defined(OPENSSL_SYS_VMS) && !defined(OPENSSL_SYS_WINDOWS) && !defined(OPENSSL_SYS_MACINTOSH_CLASSIC) && !defined(OPENSSL_SYS_OS2) && !defined(OPENSSL_SYS_NETWARE)
 # define HAVE_FORK 1
 #endif
 
@@ -288,13 +308,39 @@ static SIGRETTYPE sig_done(int sig)
 #define START	0
 #define STOP	1
 
+#if defined(OPENSSL_SYS_NETWARE)
+
+   /* for NetWare the best we can do is use clock() which returns the
+    * time, in hundredths of a second, since the NLM began executing
+   */
+static double Time_F(int s)
+	{
+	double ret;
+
+   static clock_t tstart,tend;
+
+   if (s == START)
+   {
+      tstart=clock();
+      return(0);
+   }
+   else
+   {
+      tend=clock();
+      ret=(double)((double)(tend)-(double)(tstart));
+      return((ret < 0.001)?0.001:ret);
+   }
+   }
+
+#else
+
 static double Time_F(int s)
 	{
 	double ret;
 
 #ifdef USE_TOD
 	if(usertime)
-	    {
+		{
 		static struct rusage tstart,tend;
 
 		getrusage_used = 1;
@@ -349,7 +395,8 @@ static double Time_F(int s)
 		else
 			{
 			times(&tend);
-			ret=((double)(tend.tms_utime-tstart.tms_utime))/HZ;
+			ret = HZ;
+			ret=(double)(tend.tms_utime-tstart.tms_utime) / ret;
 			return((ret < 1e-3)?1e-3:ret);
 			}
 		}
@@ -395,6 +442,7 @@ static double Time_F(int s)
 # endif
 #endif
 	}
+#endif /* if defined(OPENSSL_SYS_NETWARE) */
 
 
 static const int KDF1_SHA1_len = 20;
@@ -928,6 +976,7 @@ int MAIN(int argc, char **argv)
 			{
 			dsa_doit[R_DSA_512]=1;
 			dsa_doit[R_DSA_1024]=1;
+			dsa_doit[R_DSA_2048]=1;
 			}
 		else
 #endif
@@ -1219,6 +1268,9 @@ int MAIN(int argc, char **argv)
 	c[D_CBC_RC5][0]=count;
 	c[D_CBC_BF][0]=count;
 	c[D_CBC_CAST][0]=count;
+	c[D_CBC_128_AES][0]=count;
+	c[D_CBC_192_AES][0]=count;
+	c[D_CBC_256_AES][0]=count;
 
 	for (i=1; i<SIZE_NUM; i++)
 		{
@@ -1244,6 +1296,9 @@ int MAIN(int argc, char **argv)
 		c[D_CBC_RC5][i]=c[D_CBC_RC5][i-1]*l0/l1;
 		c[D_CBC_BF][i]=c[D_CBC_BF][i-1]*l0/l1;
 		c[D_CBC_CAST][i]=c[D_CBC_CAST][i-1]*l0/l1;
+		c[D_CBC_128_AES][i]=c[D_CBC_128_AES][i-1]*l0/l1;
+		c[D_CBC_192_AES][i]=c[D_CBC_192_AES][i-1]*l0/l1;
+		c[D_CBC_256_AES][i]=c[D_CBC_256_AES][i-1]*l0/l1;
 		}
 #ifndef OPENSSL_NO_RSA
 	rsa_c[R_RSA_512][0]=count/2000;
@@ -2079,12 +2134,28 @@ int MAIN(int argc, char **argv)
 					}
 				else
 					{
-					secret_size_a = ECDH_compute_key(secret_a, KDF1_SHA1_len,
+					/* If field size is not more than 24 octets, then use SHA-1 hash of result;
+					 * otherwise, use result (see section 4.8 of draft-ietf-tls-ecc-03.txt).
+					 */
+					int field_size, outlen;
+					void *(*kdf)(void *in, size_t inlen, void *out, size_t xoutlen);
+					field_size = EC_GROUP_get_degree(ecdh_a[j]->group);
+					if (field_size <= 24 * 8)
+						{
+						outlen = KDF1_SHA1_len;
+						kdf = KDF1_SHA1;
+						}
+					else
+						{
+						outlen = (field_size+7)/8;
+						kdf = NULL;
+						}
+					secret_size_a = ECDH_compute_key(secret_a, outlen,
 						ecdh_b[j]->pub_key,
-						ecdh_a[j], KDF1_SHA1);
-					secret_size_b = ECDH_compute_key(secret_b, KDF1_SHA1_len,
+						ecdh_a[j], kdf);
+					secret_size_b = ECDH_compute_key(secret_b, outlen,
 						ecdh_a[j]->pub_key,
-						ecdh_b[j], KDF1_SHA1);
+						ecdh_b[j], kdf);
 					if (secret_size_a != secret_size_b) 
 						ecdh_checks = 0;
 					else
@@ -2113,9 +2184,9 @@ int MAIN(int argc, char **argv)
 					Time_F(START);
 					for (count=0,run=1; COND(ecdh_c[j][0]); count++)
 						{
-						ECDH_compute_key(secret_a, KDF1_SHA1_len,
+						ECDH_compute_key(secret_a, outlen,
 						ecdh_b[j]->pub_key,
-						ecdh_a[j], KDF1_SHA1);
+						ecdh_a[j], kdf);
 						}
 					d=Time_F(STOP);
 					BIO_printf(bio_err, mr ? "+R7:%ld:%d:%.2f\n" :"%ld %d-bit ECDH ops in %.2fs\n",
@@ -2175,7 +2246,10 @@ show_res:
 #endif
 #ifdef HZ
 #define as_string(s) (#s)
-		printf("HZ=%g", (double)HZ);
+		{
+		double dbl = HZ;
+		printf("HZ=%g", dbl);
+		}
 # ifdef _SC_CLK_TCK
 		printf(" [sysconf value]");
 # endif

@@ -167,7 +167,9 @@ static const char* lock_names[CRYPTO_NUM_LOCKS] =
 	"ecdh",
 	"bn",
 	"ec_pre_comp",
-#if CRYPTO_NUM_LOCKS != 37
+	"store",
+	"comp",
+#if CRYPTO_NUM_LOCKS != 39
 # error "Inconsistency between crypto.h and cryptlib.c"
 #endif
 	};

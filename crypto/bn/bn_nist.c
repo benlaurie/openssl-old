@@ -1,4 +1,4 @@
-/* crypto/bn/bn_nist.p */
+/* crypto/bn/bn_nist.c */
 /* ====================================================================
  * Copyright (c) 1998-2002 The OpenSSL Project.  All rights reserved.
  *
@@ -129,36 +129,36 @@ const static BN_ULONG _nist_p_521[] = {0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
 
 const BIGNUM *BN_get0_nist_prime_192(void)
 	{
-	static BIGNUM const_nist_192={(BN_ULONG *)_nist_p_192,BN_NIST_192_TOP,
-		BN_NIST_192_TOP, 0, BN_FLG_STATIC_DATA};
+	static BIGNUM const_nist_192 = { (BN_ULONG *)_nist_p_192,
+		BN_NIST_192_TOP, BN_NIST_192_TOP, 0, BN_FLG_STATIC_DATA };
 	return &const_nist_192;
 	}
 
 const BIGNUM *BN_get0_nist_prime_224(void)
 	{
-	static BIGNUM const_nist_224={(BN_ULONG *)_nist_p_224,BN_NIST_224_TOP,
-		BN_NIST_224_TOP, 0, BN_FLG_STATIC_DATA};
+	static BIGNUM const_nist_224 = { (BN_ULONG *)_nist_p_224,
+		BN_NIST_224_TOP, BN_NIST_224_TOP, 0, BN_FLG_STATIC_DATA };
 	return &const_nist_224;
 	}
 
 const BIGNUM *BN_get0_nist_prime_256(void)
 	{
-	static BIGNUM const_nist_256={(BN_ULONG *)_nist_p_256,BN_NIST_256_TOP,
-		BN_NIST_256_TOP, 0, BN_FLG_STATIC_DATA};
+	static BIGNUM const_nist_256 = { (BN_ULONG *)_nist_p_256,
+		BN_NIST_256_TOP, BN_NIST_256_TOP, 0, BN_FLG_STATIC_DATA };
 	return &const_nist_256;
 	}
 
 const BIGNUM *BN_get0_nist_prime_384(void)
 	{
-	static BIGNUM const_nist_384={(BN_ULONG *)_nist_p_384,BN_NIST_384_TOP,
-		BN_NIST_384_TOP, 0, BN_FLG_STATIC_DATA};
+	static BIGNUM const_nist_384 = { (BN_ULONG *)_nist_p_384,
+		BN_NIST_384_TOP, BN_NIST_384_TOP, 0, BN_FLG_STATIC_DATA };
 	return &const_nist_384;
 	}
 
 const BIGNUM *BN_get0_nist_prime_521(void)
 	{
-	static BIGNUM const_nist_521={(BN_ULONG *)_nist_p_521,BN_NIST_521_TOP,
-		BN_NIST_521_TOP, 0, BN_FLG_STATIC_DATA};
+	static BIGNUM const_nist_521 = { (BN_ULONG *)_nist_p_521,
+		BN_NIST_521_TOP, BN_NIST_521_TOP, 0, BN_FLG_STATIC_DATA };
 	return &const_nist_521;
 	}
 
@@ -357,14 +357,15 @@ int BN_nist_mod_192(BIGNUM *r, const BIGNUM *a, const BIGNUM *field,
 #if 1
 	bn_clear_top2max(r);
 #endif
-	bn_fix_top(r);
+	bn_correct_top(r);
 
 	if (BN_ucmp(r, field) >= 0)
 		{
 		bn_sub_words(r_d, r_d, _nist_p_192, BN_NIST_192_TOP);
-		bn_fix_top(r);
+		bn_correct_top(r);
 		}
 
+	bn_check_top(r);
 	return 1;
 	}
 
@@ -449,13 +450,14 @@ int BN_nist_mod_224(BIGNUM *r, const BIGNUM *a, const BIGNUM *field,
 #if 1
 	bn_clear_top2max(r);
 #endif
-	bn_fix_top(r);
+	bn_correct_top(r);
 
 	if (BN_ucmp(r, field) >= 0)
 		{
 		bn_sub_words(r_d, r_d, _nist_p_224, BN_NIST_224_TOP);
-		bn_fix_top(r);
+		bn_correct_top(r);
 		}
+	bn_check_top(r);
 	return 1;
 #else
 	return 0;
@@ -607,13 +609,14 @@ int BN_nist_mod_256(BIGNUM *r, const BIGNUM *a, const BIGNUM *field,
 #if 1
 	bn_clear_top2max(r);
 #endif
-	bn_fix_top(r);
+	bn_correct_top(r);
 
 	if (BN_ucmp(r, field) >= 0)
 		{
 		bn_sub_words(r_d, r_d, _nist_p_256, BN_NIST_256_TOP);
-		bn_fix_top(r);
+		bn_correct_top(r);
 		}
+	bn_check_top(r);
 	return 1;
 #else
 	return 0;
@@ -775,13 +778,14 @@ int BN_nist_mod_384(BIGNUM *r, const BIGNUM *a, const BIGNUM *field,
 #if 1
 	bn_clear_top2max(r);
 #endif
-	bn_fix_top(r);
+	bn_correct_top(r);
 
 	if (BN_ucmp(r, field) >= 0)
 		{
 		bn_sub_words(r_d, r_d, _nist_p_384, BN_NIST_384_TOP);
-		bn_fix_top(r);
+		bn_correct_top(r);
 		}
+	bn_check_top(r);
 	return 1;
 #else
 	return 0;
@@ -823,6 +827,7 @@ int BN_nist_mod_521(BIGNUM *r, const BIGNUM *a, const BIGNUM *field,
 	if (tmp->top == BN_NIST_521_TOP)
 		tmp->d[BN_NIST_521_TOP-1]  &= BN_NIST_521_TOP_MASK;
 
+	bn_correct_top(tmp);
 	if (!BN_uadd(r, tmp, r))
 		return 0;
 	top = r->top;
@@ -833,11 +838,12 @@ int BN_nist_mod_521(BIGNUM *r, const BIGNUM *a, const BIGNUM *field,
 		BN_NIST_ADD_ONE(r_d)
 		r_d[BN_NIST_521_TOP-1] &= BN_NIST_521_TOP_MASK; 
 		}
-	bn_fix_top(r);
+	bn_correct_top(r);
 
 	ret = 1;
 err:
 	BN_CTX_end(ctx);
-	
+
+	bn_check_top(r);
 	return ret;
 	}

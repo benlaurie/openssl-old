@@ -126,16 +126,6 @@
 #include <openssl/engine.h>
 #endif
 
-#ifdef OPENSSL_SYS_WINDOWS
-#define strcasecmp _stricmp
-#else
-#  ifdef NO_STRINGS_H
-    int	strcasecmp();
-#  else
-#    include <strings.h>
-#  endif /* NO_STRINGS_H */
-#endif
-
 #define NON_MAIN
 #include "apps.h"
 #undef NON_MAIN
@@ -260,7 +250,7 @@ int str2fmt(char *s)
 		return(FORMAT_UNDEF);
 	}
 
-#if defined(OPENSSL_SYS_MSDOS) || defined(OPENSSL_SYS_WIN32) || defined(OPENSSL_SYS_WIN16)
+#if defined(OPENSSL_SYS_MSDOS) || defined(OPENSSL_SYS_WIN32) || defined(OPENSSL_SYS_WIN16) || defined(OPENSSL_SYS_NETWARE)
 void program_name(char *in, char *out, int size)
 	{
 	int i,n;
@@ -279,12 +269,23 @@ void program_name(char *in, char *out, int size)
 	if (p == NULL)
 		p=in;
 	n=strlen(p);
+
+#if defined(OPENSSL_SYS_NETWARE)
+   /* strip off trailing .nlm if present. */
+   if ((n > 4) && (p[n-4] == '.') &&
+      ((p[n-3] == 'n') || (p[n-3] == 'N')) &&
+      ((p[n-2] == 'l') || (p[n-2] == 'L')) &&
+      ((p[n-1] == 'm') || (p[n-1] == 'M')))
+      n-=4;
+#else
 	/* strip off trailing .exe if present. */
 	if ((n > 4) && (p[n-4] == '.') &&
 		((p[n-3] == 'e') || (p[n-3] == 'E')) &&
 		((p[n-2] == 'x') || (p[n-2] == 'X')) &&
 		((p[n-1] == 'e') || (p[n-1] == 'E')))
 		n-=4;
+#endif
+
 	if (n > size-1)
 		n=size-1;
 
@@ -375,22 +376,6 @@ int WIN32_rename(char *from, char *to)
 	return result;
 	}
 #endif
-	}
-#endif
-
-#ifdef OPENSSL_SYS_VMS
-int VMS_strcasecmp(const char *str1, const char *str2)
-	{
-	while (*str1 && *str2)
-		{
-		int res = toupper(*str1) - toupper(*str2);
-		if (res) return res < 0 ? -1 : 1;
-		}
-	if (*str1)
-		return 1;
-	if (*str2)
-		return -1;
-	return 0;
 	}
 #endif
 
@@ -501,7 +486,7 @@ static int ui_read(UI *ui, UI_STRING *uis)
 			{
 			const char *password =
 				((PW_CB_DATA *)UI_get0_user_data(ui))->password;
-			if (password[0] != '\0')
+			if (password && password[0] != '\0')
 				{
 				UI_set_result(ui, uis, password);
 				return 1;
@@ -525,7 +510,7 @@ static int ui_write(UI *ui, UI_STRING *uis)
 			{
 			const char *password =
 				((PW_CB_DATA *)UI_get0_user_data(ui))->password;
-			if (password[0] != '\0')
+			if (password && password[0] != '\0')
 				return 1;
 			}
 		default:
@@ -1411,14 +1396,16 @@ int load_config(BIO *err, CONF *cnf)
 char *make_config_name()
 	{
 	const char *t=X509_get_default_cert_area();
+	size_t len;
 	char *p;
 
-	p=OPENSSL_malloc(strlen(t)+strlen(OPENSSL_CONF)+2);
-	strcpy(p,t);
+	len=strlen(t)+strlen(OPENSSL_CONF)+2;
+	p=OPENSSL_malloc(len);
+	BUF_strlcpy(p,t,len);
 #ifndef OPENSSL_SYS_VMS
-	strcat(p,"/");
+	BUF_strlcat(p,"/",len);
 #endif
-	strcat(p,OPENSSL_CONF);
+	BUF_strlcat(p,OPENSSL_CONF,len);
 
 	return p;
 	}
@@ -1722,22 +1709,7 @@ CA_DB *load_index(char *dbfile, DB_ATTR *db_attr)
 #ifdef RL_DEBUG
 			BIO_printf(bio_err, "DEBUG[load_index]: unique_subject = \"%s\"\n", p);
 #endif
-			switch(*p)
-				{
-			case 'f': /* false */
-			case 'F': /* FALSE */
-			case 'n': /* no */
-			case 'N': /* NO */
-				retdb->attributes.unique_subject = 0;
-				break;
-			case 't': /* true */
-			case 'T': /* TRUE */
-			case 'y': /* yes */
-			case 'Y': /* YES */
-			default:
-				retdb->attributes.unique_subject = 1;
-				break;
-				}
+			retdb->attributes.unique_subject = parse_yesno(p,1);
 			}
 		}
 
@@ -1976,3 +1948,169 @@ void free_index(CA_DB *db)
 		OPENSSL_free(db);
 		}
 	}
+
+int parse_yesno(char *str, int def)
+	{
+	int ret = def;
+	if (str)
+		{
+		switch (*str)
+			{
+		case 'f': /* false */
+		case 'F': /* FALSE */
+		case 'n': /* no */
+		case 'N': /* NO */
+		case '0': /* 0 */
+			ret = 0;
+			break;
+		case 't': /* true */
+		case 'T': /* TRUE */
+		case 'y': /* yes */
+		case 'Y': /* YES */
+		case '1': /* 1 */
+			ret = 0;
+			break;
+		default:
+			ret = def;
+			break;
+			}
+		}
+	return ret;
+	}
+
+/*
+ * subject is expected to be in the format /type0=value0/type1=value1/type2=...
+ * where characters may be escaped by \
+ */
+X509_NAME *parse_name(char *subject, long chtype, int multirdn)
+	{
+	size_t buflen = strlen(subject)+1; /* to copy the types and values into. due to escaping, the copy can only become shorter */
+	char *buf = OPENSSL_malloc(buflen);
+	size_t max_ne = buflen / 2 + 1; /* maximum number of name elements */
+	char **ne_types = OPENSSL_malloc(max_ne * sizeof (char *));
+	char **ne_values = OPENSSL_malloc(max_ne * sizeof (char *));
+	int *mval = OPENSSL_malloc (max_ne * sizeof (int));
+
+	char *sp = subject, *bp = buf;
+	int i, ne_num = 0;
+
+	X509_NAME *n = NULL;
+	int nid;
+
+	if (!buf || !ne_types || !ne_values)
+		{
+		BIO_printf(bio_err, "malloc error\n");
+		goto error;
+		}	
+
+	if (*subject != '/')
+		{
+		BIO_printf(bio_err, "Subject does not start with '/'.\n");
+		goto error;
+		}
+	sp++; /* skip leading / */
+
+	/* no multivalued RDN by default */
+	mval[ne_num] = 0;
+
+	while (*sp)
+		{
+		/* collect type */
+		ne_types[ne_num] = bp;
+		while (*sp)
+			{
+			if (*sp == '\\') /* is there anything to escape in the type...? */
+				{
+				if (*++sp)
+					*bp++ = *sp++;
+				else	
+					{
+					BIO_printf(bio_err, "escape character at end of string\n");
+					goto error;
+					}
+				}	
+			else if (*sp == '=')
+				{
+				sp++;
+				*bp++ = '\0';
+				break;
+				}
+			else
+				*bp++ = *sp++;
+			}
+		if (!*sp)
+			{
+			BIO_printf(bio_err, "end of string encountered while processing type of subject name element #%d\n", ne_num);
+			goto error;
+			}
+		ne_values[ne_num] = bp;
+		while (*sp)
+			{
+			if (*sp == '\\')
+				{
+				if (*++sp)
+					*bp++ = *sp++;
+				else
+					{
+					BIO_printf(bio_err, "escape character at end of string\n");
+					goto error;
+					}
+				}
+			else if (*sp == '/')
+				{
+				sp++;
+				/* no multivalued RDN by default */
+				mval[ne_num+1] = 0;
+				break;
+				}
+			else if (*sp == '+' && multirdn)
+				{
+				/* a not escaped + signals a mutlivalued RDN */
+				sp++;
+				mval[ne_num+1] = -1;
+				break;
+				}
+			else
+				*bp++ = *sp++;
+			}
+		*bp++ = '\0';
+		ne_num++;
+		}	
+
+	if (!(n = X509_NAME_new()))
+		goto error;
+
+	for (i = 0; i < ne_num; i++)
+		{
+		if ((nid=OBJ_txt2nid(ne_types[i])) == NID_undef)
+			{
+			BIO_printf(bio_err, "Subject Attribute %s has no known NID, skipped\n", ne_types[i]);
+			continue;
+			}
+
+		if (!*ne_values[i])
+			{
+			BIO_printf(bio_err, "No value provided for Subject Attribute %s, skipped\n", ne_types[i]);
+			continue;
+			}
+
+		if (!X509_NAME_add_entry_by_NID(n, nid, chtype, (unsigned char*)ne_values[i], -1,-1,mval[i]))
+			goto error;
+		}
+
+	OPENSSL_free(ne_values);
+	OPENSSL_free(ne_types);
+	OPENSSL_free(buf);
+	return n;
+
+error:
+	X509_NAME_free(n);
+	if (ne_values)
+		OPENSSL_free(ne_values);
+	if (ne_types)
+		OPENSSL_free(ne_types);
+	if (buf)
+		OPENSSL_free(buf);
+	return NULL;
+}
+

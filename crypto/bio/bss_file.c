@@ -213,12 +213,36 @@ static long MS_CALLBACK file_ctrl(BIO *b, int cmd, long num, void *ptr)
 		b->shutdown=(int)num&BIO_CLOSE;
 		b->ptr=(char *)ptr;
 		b->init=1;
-#if defined(OPENSSL_SYS_MSDOS) || defined(OPENSSL_SYS_WINDOWS)
+#if defined(OPENSSL_SYS_WINDOWS)
+		if (num & BIO_FP_TEXT)
+			_setmode(fd,_O_TEXT);
+		else
+			_setmode(fd,_O_BINARY);
+#elif defined(OPENSSL_SYS_NETWARE) && defined(NETWARE_CLIB)
+         /* Under CLib there are differences in file modes
+         */
+		if (num & BIO_FP_TEXT)
+			_setmode(fileno((FILE *)ptr),O_TEXT);
+		else
+			_setmode(fileno((FILE *)ptr),O_BINARY);
+#elif defined(OPENSSL_SYS_MSDOS)
+		{
+		int fd = fileno((FILE*)ptr);
 		/* Set correct text/binary mode */
 		if (num & BIO_FP_TEXT)
-			_setmode(fileno((FILE *)ptr),_O_TEXT);
+			_setmode(fd,_O_TEXT);
+		/* Dangerous to set stdin/stdout to raw (unless redirected) */
 		else
-			_setmode(fileno((FILE *)ptr),_O_BINARY);
+			{
+			if (fd == STDIN_FILENO || fd == STDOUT_FILENO)
+				{
+				if (isatty(fd) <= 0)
+					_setmode(fd,_O_BINARY);
+				}
+			else
+				_setmode(fd,_O_BINARY);
+			}
+		}
 #elif defined(OPENSSL_SYS_OS2)
 		if (num & BIO_FP_TEXT)
 			setmode(fileno((FILE *)ptr), O_TEXT);
@@ -232,15 +256,15 @@ static long MS_CALLBACK file_ctrl(BIO *b, int cmd, long num, void *ptr)
 		if (num & BIO_FP_APPEND)
 			{
 			if (num & BIO_FP_READ)
-				strcpy(p,"a+");
-			else	strcpy(p,"a");
+				BUF_strlcpy(p,"a+",sizeof p);
+			else	BUF_strlcpy(p,"a",sizeof p);
 			}
 		else if ((num & BIO_FP_READ) && (num & BIO_FP_WRITE))
-			strcpy(p,"r+");
+			BUF_strlcpy(p,"r+",sizeof p);
 		else if (num & BIO_FP_WRITE)
-			strcpy(p,"w");
+			BUF_strlcpy(p,"w",sizeof p);
 		else if (num & BIO_FP_READ)
-			strcpy(p,"r");
+			BUF_strlcpy(p,"r",sizeof p);
 		else
 			{
 			BIOerr(BIO_F_FILE_CTRL,BIO_R_BAD_FOPEN_MODE);
@@ -253,7 +277,13 @@ static long MS_CALLBACK file_ctrl(BIO *b, int cmd, long num, void *ptr)
 		else
 			strcat(p,"t");
 #endif
-		fp=fopen(ptr,p);
+#if defined(OPENSSL_SYS_NETWARE)
+		if (!(num & BIO_FP_TEXT))
+			strcat(p,"b");
+		else
+			strcat(p,"t");
+#endif
+fp=fopen(ptr,p);
 		if (fp == NULL)
 			{
 			SYSerr(SYS_F_FOPEN,get_last_sys_error());

@@ -138,6 +138,10 @@ int PKCS7_set_content(PKCS7 *p7, PKCS7 *p7_data)
 		p7->d.sign->contents=p7_data;
 		break;
 	case NID_pkcs7_digest:
+		if (p7->d.digest->contents != NULL)
+			PKCS7_free(p7->d.digest->contents);
+		p7->d.digest->contents=p7_data;
+		break;
 	case NID_pkcs7_data:
 	case NID_pkcs7_enveloped:
 	case NID_pkcs7_signedAndEnveloped:
@@ -197,6 +201,11 @@ int PKCS7_set_type(PKCS7 *p7, int type)
 		break;
 
 	case NID_pkcs7_digest:
+		p7->type=obj;
+		if ((p7->d.digest=PKCS7_DIGEST_new())
+			== NULL) goto err;
+		ASN1_INTEGER_set(p7->d.digest->version,0);
+		break;
 	default:
 		PKCS7err(PKCS7_F_PKCS7_SET_TYPE,PKCS7_R_UNSUPPORTED_CONTENT_TYPE);
 		goto err;
@@ -204,6 +213,13 @@ int PKCS7_set_type(PKCS7 *p7, int type)
 	return(1);
 err:
 	return(0);
+	}
+
+int PKCS7_set0_type_other(PKCS7 *p7, int type, ASN1_TYPE *other)
+	{
+	p7->type = OBJ_nid2obj(type);
+	p7->d.other = other;
+	return 1;
 	}
 
 int PKCS7_add_signer(PKCS7 *p7, PKCS7_SIGNER_INFO *psi)
@@ -396,6 +412,24 @@ PKCS7_SIGNER_INFO *PKCS7_add_signature(PKCS7 *p7, X509 *x509, EVP_PKEY *pkey,
 	return(si);
 err:
 	return(NULL);
+	}
+
+int PKCS7_set_digest(PKCS7 *p7, const EVP_MD *md)
+	{
+	if (PKCS7_type_is_digest(p7))
+		{
+		if(!(p7->d.digest->md->parameter = ASN1_TYPE_new()))
+			{
+			PKCS7err(PKCS7_F_PKCS7_SET_DIGEST,ERR_R_MALLOC_FAILURE);
+			return 0;
+			}
+		p7->d.digest->md->parameter->type = V_ASN1_NULL;
+		p7->d.digest->md->algorithm = OBJ_nid2obj(EVP_MD_nid(md));
+		return 1;
+		}
+		
+	PKCS7err(PKCS7_F_PKCS7_SET_DIGEST,PKCS7_R_WRONG_CONTENT_TYPE);
+	return 1;
 	}
 
 STACK_OF(PKCS7_SIGNER_INFO) *PKCS7_get_signer_info(PKCS7 *p7)

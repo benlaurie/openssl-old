@@ -2,7 +2,136 @@
  OpenSSL CHANGES
  _______________
 
- Changes between 0.9.7a and 0.9.8  [xx XXX xxxx]
+ Changes between 0.9.7c and 0.9.8  [xx XXX xxxx]
+
+  *) An audit of the BIGNUM code is underway, for which debugging code is
+     enabled when BN_DEBUG is defined. This makes stricter enforcements on what
+     is considered valid when processing BIGNUMs, and causes execution to
+     assert() when a problem is discovered. If BN_DEBUG_RAND is defined,
+     further steps are taken to deliberately pollute unused data in BIGNUM
+     structures to try and expose faulty code further on. For now, openssl will
+     (in its default mode of operation) continue to tolerate the inconsistent
+     forms that it has tolerated in the past, but authors and packagers should
+     consider trying openssl and their own applications when compiled with
+     these debugging symbols defined. It will help highlight potential bugs in
+     their own code, and will improve the test coverage for OpenSSL itself. At
+     some point, these tighter rules will become openssl's default to improve
+     maintainability, though the assert()s and other overheads will remain only
+     in debugging configurations. See bn.h for more details.
+     [Geoff Thorpe]
+
+  *) BN_CTX_init() has been deprecated, as BN_CTX is an opaque structure
+     that can only be obtained through BN_CTX_new() (which implicitly
+     initialises it). The presence of this function only made it possible
+     to overwrite an existing structure (and cause memory leaks).
+     [Geoff Thorpe]
+
+  *) Because of the callback-based approach for implementing LHASH as a
+     template type, lh_insert() adds opaque objects to hash-tables and
+     lh_doall() or lh_doall_arg() are typically used with a destructor callback
+     to clean up those corresponding objects before destroying the hash table
+     (and losing the object pointers). So some over-zealous constifications in
+     LHASH have been relaxed so that lh_insert() does not take (nor store) the
+     objects as "const" and the lh_doall[_arg] callback wrappers are not
+     prototyped to have "const" restrictions on the object pointers they are
+     given (and so aren't required to cast them away any more).
+     [Geoff Thorpe]
+
+  *) The tmdiff.h API was so ugly and minimal that our own timing utility
+     (speed) prefers to use its own implementation. The two implementations
+     haven't been consolidated as yet (volunteers?) but the tmdiff API has had
+     its object type properly exposed (MS_TM) instead of casting to/from "char
+     *". This may still change yet if someone realises MS_TM and "ms_time_***"
+     aren't necessarily the greatest nomenclatures - but this is what was used
+     internally to the implementation so I've used that for now.
+     [Geoff Thorpe]
+
+  *) Ensure that deprecated functions do not get compiled when
+     OPENSSL_NO_DEPRECATED is defined. Some "openssl" subcommands and a few of
+     the self-tests were still using deprecated key-generation functions so
+     these have been updated also.
+     [Geoff Thorpe]
+
+  *) Reorganise PKCS#7 code to separate the digest location functionality
+     into PKCS7_find_digest(), digest addtion into PKCS7_bio_add_digest().
+     New function PKCS7_set_digest() to set the digest type for PKCS#7
+     digestedData type. Add additional code to correctly generate the
+     digestedData type and add support for this type in PKCS7 initialization
+     functions.
+     [Steve Henson]
+
+  *) New function PKCS7_set0_type_other() this initializes a PKCS7 
+     structure of type "other".
+     [Steve Henson]
+
+  *) Fix prime generation loop in crypto/bn/bn_prime.pl by making
+     sure the loop does correctly stop and breaking ("division by zero")
+     modulus operations are not performed. The (pre-generated) prime
+     table crypto/bn/bn_prime.h was already correct, but it could not be
+     re-generated on some platforms because of the "division by zero"
+     situation in the script.
+     [Ralf S. Engelschall]
+
+  *) Update support for ECC-based TLS ciphersuites according to
+     draft-ietf-tls-ecc-03.txt: the KDF1 key derivation function with
+     SHA-1 now is only used for "small" curves (where the
+     representation of a field element takes up to 24 bytes); for
+     larger curves, the field element resulting from ECDH is directly
+     used as premaster secret.
+     [Douglas Stebila (Sun Microsystems Laboratories)]
+
+  *) Add code for kP+lQ timings to crypto/ec/ectest.c, and add SEC2
+     curve secp160r1 to the tests.
+     [Douglas Stebila (Sun Microsystems Laboratories)]
+
+  *) Add the possibility to load symbols globally with DSO.
+     [Götz Babin-Ebell <babin-ebell@trustcenter.de> via Richard Levitte]
+
+  *) Add the functions ERR_set_mark() and ERR_pop_to_mark() for better
+     control of the error stack.
+     [Richard Levitte]
+
+  *) Add support for STORE in ENGINE.
+     [Richard Levitte]
+
+  *) Add the STORE type.  The intention is to provide a common interface
+     to certificate and key stores, be they simple file-based stores, or
+     HSM-type store, or LDAP stores, or...
+     NOTE: The code is currently UNTESTED and isn't really used anywhere.
+     [Richard Levitte]
+
+  *) Add a generic structure called OPENSSL_ITEM.  This can be used to
+     pass a list of arguments to any function as well as provide a way
+     for a function to pass data back to the caller.
+     [Richard Levitte]
+
+  *) Add the functions BUF_strndup() and BUF_memdup().  BUF_strndup()
+     works like BUF_strdup() but can be used to duplicate a portion of
+     a string.  The copy gets NUL-terminated.  BUF_memdup() duplicates
+     a memory area.
+     [Richard Levitte]
+
+  *) Add the function sk_find_ex() which works like sk_find(), but will
+     return an index to an element even if an exact match couldn't be
+     found.  The index is guaranteed to point at the element where the
+     searched-for key would be inserted to preserve sorting order.
+     [Richard Levitte]
+
+  *) Add the function OBJ_bsearch_ex() which works like OBJ_bsearch() but
+     takes an extra flags argument for optional functionality.  Currently,
+     the following flags are defined:
+
+	OBJ_BSEARCH_VALUE_ON_NOMATCH
+	This one gets OBJ_bsearch_ex() to return a pointer to the first
+	element where the comparing function returns a negative or zero
+	number.
+
+	OBJ_BSEARCH_FIRST_VALUE_ON_MATCH
+	This one gets OBJ_bsearch_ex() to return a pointer to the first
+	element where the comparing function returns zero.  This is useful
+	if there are more than one element where the comparing function
+	returns zero.
+     [Richard Levitte]
 
   *) Make it possible to create self-signed certificates with 'openssl ca'
      in such a way that the self-signed certificate becomes part of the
@@ -57,11 +186,6 @@
   *) Make it possible to link applications using Makefile.shared.
      Make that possible even when linking against static libraries!
      [Richard Levitte]
-
-  *) Various fixes to base64 BIO and non blocking I/O. On write 
-     flushes were not handled properly if the BIO retried. On read
-     data was not being buffered properly and had various logic bugs.
-     [Steve Henson]
 
   *) Support for single pass processing for S/MIME signing. This now
      means that S/MIME signing can be done from a pipe, in addition
@@ -491,7 +615,66 @@
      differing sizes.
      [Richard Levitte]
 
- Changes between 0.9.7a and 0.9.7b  [xx XXX 2003]
+ Changes between 0.9.7c and 0.9.7d  [xx XXX XXXX]
+
+  *) Print out GeneralizedTime and UTCTime in ASN1_STRING_print_ex().
+     [Peter Sylvester <Peter.Sylvester@EdelWeb.fr>]
+
+  *) Use the correct content when signing type "other".
+     [Steve Henson]
+
+ Changes between 0.9.7b and 0.9.7c  [30 Sep 2003]
+
+  *) Fix various bugs revealed by running the NISCC test suite:
+
+     Stop out of bounds reads in the ASN1 code when presented with
+     invalid tags (CAN-2003-0543 and CAN-2003-0544).
+     
+     Free up ASN1_TYPE correctly if ANY type is invalid (CAN-2003-0545).
+
+     If verify callback ignores invalid public key errors don't try to check
+     certificate signature with the NULL public key.
+
+     [Steve Henson]
+
+  *) New -ignore_err option in ocsp application to stop the server
+     exiting on the first error in a request.
+     [Steve Henson]
+
+  *) In ssl3_accept() (ssl/s3_srvr.c) only accept a client certificate
+     if the server requested one: as stated in TLS 1.0 and SSL 3.0
+     specifications.
+     [Steve Henson]
+
+  *) In ssl3_get_client_hello() (ssl/s3_srvr.c), tolerate additional
+     extra data after the compression methods not only for TLS 1.0
+     but also for SSL 3.0 (as required by the specification).
+     [Bodo Moeller; problem pointed out by Matthias Loepfe]
+
+  *) Change X509_certificate_type() to mark the key as exported/exportable
+     when it's 512 *bits* long, not 512 bytes.
+     [Richard Levitte]
+
+  *) Change AES_cbc_encrypt() so it outputs exact multiple of
+     blocks during encryption.
+     [Richard Levitte]
+
+  *) Various fixes to base64 BIO and non blocking I/O. On write 
+     flushes were not handled properly if the BIO retried. On read
+     data was not being buffered properly and had various logic bugs.
+     This also affects blocking I/O when the data being decoded is a
+     certain size.
+     [Steve Henson]
+
+  *) Various S/MIME bugfixes and compatibility changes:
+     output correct application/pkcs7 MIME type if
+     PKCS7_NOOLDMIMETYPE is set. Tolerate some broken signatures.
+     Output CR+LF for EOL if PKCS7_CRLFEOL is set (this makes opening
+     of files as .eml work). Correctly handle very long lines in MIME
+     parser.
+     [Steve Henson]
+
+ Changes between 0.9.7a and 0.9.7b  [10 Apr 2003]
 
   *) Countermeasure against the Klima-Pokorny-Rosa extension of
      Bleichbacher's attack on PKCS #1 v1.5 padding: treat
@@ -605,6 +788,9 @@ yet to be integrated into this CVS branch:
      [Richard Levitte & Kris Kennaway <kris@obsecurity.org>]
 
  Changes between 0.9.6h and 0.9.7  [31 Dec 2002]
+
+  [NB: OpenSSL 0.9.6i and later 0.9.6 patch levels were released after
+  OpenSSL 0.9.7.]
 
   *) Fix session ID handling in SSLv2 client code: the SERVER FINISHED
      code (06) was taken as the first octet of the session ID and the last
@@ -2423,6 +2609,67 @@ des-cbc           3624.96k     5258.21k     5530.91k     5624.30k     5628.26k
 
   *) Clean old EAY MD5 hack from e_os.h.
      [Richard Levitte]
+
+ Changes between 0.9.6j and 0.9.6k  [30 Sep 2003]
+
+  *) Fix various bugs revealed by running the NISCC test suite:
+
+     Stop out of bounds reads in the ASN1 code when presented with
+     invalid tags (CAN-2003-0543 and CAN-2003-0544).
+     
+     If verify callback ignores invalid public key errors don't try to check
+     certificate signature with the NULL public key.
+
+     [Steve Henson]
+
+  *) Fix various bugs revealed by running the NISCC test suite:
+
+     Stop out of bounds reads in the ASN1 code when presented with
+     invalid tags (CAN-2003-0543 and CAN-2003-0544).
+     
+     If verify callback ignores invalid public key errors don't try to check
+     certificate signature with the NULL public key.
+
+     [Steve Henson]
+
+  *) In ssl3_accept() (ssl/s3_srvr.c) only accept a client certificate
+     if the server requested one: as stated in TLS 1.0 and SSL 3.0
+     specifications.
+     [Steve Henson]
+
+  *) In ssl3_get_client_hello() (ssl/s3_srvr.c), tolerate additional
+     extra data after the compression methods not only for TLS 1.0
+     but also for SSL 3.0 (as required by the specification).
+     [Bodo Moeller; problem pointed out by Matthias Loepfe]
+
+  *) Change X509_certificate_type() to mark the key as exported/exportable
+     when it's 512 *bits* long, not 512 bytes.
+     [Richard Levitte]
+
+ Changes between 0.9.6i and 0.9.6j  [10 Apr 2003]
+
+  *) Countermeasure against the Klima-Pokorny-Rosa extension of
+     Bleichbacher's attack on PKCS #1 v1.5 padding: treat
+     a protocol version number mismatch like a decryption error
+     in ssl3_get_client_key_exchange (ssl/s3_srvr.c).
+     [Bodo Moeller]
+
+  *) Turn on RSA blinding by default in the default implementation
+     to avoid a timing attack. Applications that don't want it can call
+     RSA_blinding_off() or use the new flag RSA_FLAG_NO_BLINDING.
+     They would be ill-advised to do so in most cases.
+     [Ben Laurie, Steve Henson, Geoff Thorpe, Bodo Moeller]
+
+  *) Change RSA blinding code so that it works when the PRNG is not
+     seeded (in this case, the secret RSA exponent is abused as
+     an unpredictable seed -- if it is not unpredictable, there
+     is no point in blinding anyway).  Make RSA blinding thread-safe
+     by remembering the creator's thread ID in rsa->blinding and
+     having all other threads use local one-time blinding factors
+     (this requires more computation than sharing rsa->blinding, but
+     avoids excessive locking; and if an RSA object is not shared
+     between threads, blinding will still be very fast).
+     [Bodo Moeller]
 
  Changes between 0.9.6h and 0.9.6i  [19 Feb 2003]
 

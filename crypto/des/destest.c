@@ -333,7 +333,8 @@ static int cfb64_test(unsigned char *cfb_cipher);
 static int ede_cfb64_test(unsigned char *cfb_cipher);
 int main(int argc, char *argv[])
 	{
-	int i,j,err=0;
+	int j,err=0;
+	unsigned int i;
 	des_cblock in,out,outin,iv3,iv2;
 	des_key_schedule ks,ks2,ks3;
 	unsigned char cbc_in[40];
@@ -391,7 +392,7 @@ int main(int argc, char *argv[])
 	DES_ede3_cbcm_encrypt(cbc_out,cbc_in,i,&ks,&ks2,&ks3,&iv3,&iv2,DES_DECRYPT);
 	if (memcmp(cbc_in,cbc_data,strlen((char *)cbc_data)+1) != 0)
 		{
-		int n;
+		unsigned int n;
 
 		printf("des_ede3_cbcm_encrypt decrypt error\n");
 		for(n=0 ; n < i ; ++n)
@@ -431,7 +432,7 @@ int main(int argc, char *argv[])
 
 #ifndef LIBDES_LIT
 	printf("Doing ede ecb\n");
-	for (i=0; i<(NUM_TESTS-1); i++)
+	for (i=0; i<(NUM_TESTS-2); i++)
 		{
 		DES_set_key_unchecked(&key_data[i],&ks);
 		DES_set_key_unchecked(&key_data[i+1],&ks2);
@@ -540,7 +541,7 @@ int main(int argc, char *argv[])
 	if (memcmp(cbc_out,cbc3_ok,
 		(unsigned int)(strlen((char *)cbc_data)+1+7)/8*8) != 0)
 		{
-		int n;
+		unsigned int n;
 
 		printf("des_ede3_cbc_encrypt encrypt error\n");
 		for(n=0 ; n < i ; ++n)
@@ -556,7 +557,7 @@ int main(int argc, char *argv[])
 	des_ede3_cbc_encrypt(cbc_out,cbc_in,i,ks,ks2,ks3,&iv3,DES_DECRYPT);
 	if (memcmp(cbc_in,cbc_data,strlen((char *)cbc_data)+1) != 0)
 		{
-		int n;
+		unsigned int n;
 
 		printf("des_ede3_cbc_encrypt decrypt error\n");
 		for(n=0 ; n < i ; ++n)
@@ -820,6 +821,9 @@ plain[8+4], plain[8+5], plain[8+6], plain[8+7]);
 		printf("fast crypt error, %s should be yA1Rp/1hZXIJk\n",str);
 		err=1;
 		}
+#ifdef OPENSSL_SYS_NETWARE
+    if (err) printf("ERROR: %d\n", err);
+#endif
 	printf("\n");
 	return(err);
 	}

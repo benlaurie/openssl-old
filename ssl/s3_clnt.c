@@ -130,7 +130,6 @@
 #include <openssl/objects.h>
 #include <openssl/evp.h>
 #include <openssl/md5.h>
-#include "cryptlib.h"
 
 static SSL_METHOD *ssl3_get_client_method(int ver);
 static int ssl3_client_hello(SSL *s);
@@ -582,7 +581,7 @@ static int ssl3_client_hello(SSL *s)
 		*(p++)=i;
 		if (i != 0)
 			{
-			if (i > sizeof s->session->session_id)
+			if (i > (int)sizeof(s->session->session_id))
 				{
 				SSLerr(SSL_F_SSL3_CLIENT_HELLO, ERR_R_INTERNAL_ERROR);
 				goto err;
@@ -1870,6 +1869,7 @@ static int ssl3_send_client_key_exchange(SSL *s)
 			{
 			EC_GROUP *srvr_group = NULL;
 			int ecdh_clnt_cert = 0;
+			int field_size = 0;
 
 			/* Did we send out the client's
 			 * ECDH share for use in premaster
@@ -1962,7 +1962,21 @@ static int ssl3_send_client_key_exchange(SSL *s)
 			 * make sure to clear it out afterwards
 			 */
 
-			n=ECDH_compute_key(p, KDF1_SHA1_len, srvr_ecpoint, clnt_ecdh, KDF1_SHA1);
+			field_size = EC_GROUP_get_degree(clnt_ecdh->group);
+			if (field_size <= 0)
+				{
+				SSLerr(SSL_F_SSL3_SEND_CLIENT_KEY_EXCHANGE, 
+				       ERR_R_ECDH_LIB);
+				goto err;
+				}
+			/* If field size is not more than 24 octets, then use SHA-1 hash of result;
+			 * otherwise, use result (see section 4.8 of draft-ietf-tls-ecc-03.txt;
+			 * this is new with this version of the Internet Draft).
+			 */
+			if (field_size <= 24 * 8)
+				n=ECDH_compute_key(p, KDF1_SHA1_len, srvr_ecpoint, clnt_ecdh, KDF1_SHA1);
+			else
+				n=ECDH_compute_key(p, (field_size+7)/8, srvr_ecpoint, clnt_ecdh, NULL);
 			if (n <= 0)
 				{
 				SSLerr(SSL_F_SSL3_SEND_CLIENT_KEY_EXCHANGE, 
@@ -2146,6 +2160,7 @@ static int ssl3_send_client_verify(SSL *s)
 		*(d++)=SSL3_MT_CERTIFICATE_VERIFY;
 		l2n3(n,d);
 
+		s->state=SSL3_ST_CW_CERT_VRFY_B;
 		s->init_num=(int)n+4;
 		s->init_off=0;
 		}
@@ -2338,7 +2353,7 @@ static int ssl3_check_cert_and_algorithm(SSL *s)
 		if (algs & SSL_kRSA)
 			{
 			if (rsa == NULL
-			    || RSA_size(rsa) > SSL_C_EXPORT_PKEYLENGTH(s->s3->tmp.new_cipher))
+			    || RSA_size(rsa)*8 > SSL_C_EXPORT_PKEYLENGTH(s->s3->tmp.new_cipher))
 				{
 				SSLerr(SSL_F_SSL3_CHECK_CERT_AND_ALGORITHM,SSL_R_MISSING_EXPORT_TMP_RSA_KEY);
 				goto f_err;
@@ -2350,7 +2365,7 @@ static int ssl3_check_cert_and_algorithm(SSL *s)
 			if (algs & (SSL_kEDH|SSL_kDHr|SSL_kDHd))
 			    {
 			    if (dh == NULL
-				|| DH_size(dh) > SSL_C_EXPORT_PKEYLENGTH(s->s3->tmp.new_cipher))
+				|| DH_size(dh)*8 > SSL_C_EXPORT_PKEYLENGTH(s->s3->tmp.new_cipher))
 				{
 				SSLerr(SSL_F_SSL3_CHECK_CERT_AND_ALGORITHM,SSL_R_MISSING_EXPORT_TMP_DH_KEY);
 				goto f_err;
@@ -2375,7 +2390,8 @@ err:
 /* This is the complement of nid2curve_id in s3_srvr.c. */
 static int curve_id2nid(int curve_id)
 {
-	/* ECC curves from draft-ietf-tls-ecc-01.txt (Mar 15, 2001) */
+	/* ECC curves from draft-ietf-tls-ecc-01.txt (Mar 15, 2001)
+	 * (no changes in draft-ietf-tls-ecc-03.txt [June 2003]) */
 	static int nid_list[26] =
 	{
 		0,

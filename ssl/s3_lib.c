@@ -284,6 +284,7 @@ OPENSSL_GLOBAL SSL_CIPHER ssl3_ciphers[]={
 	SSL_ALL_STRENGTHS,
 	},
 /* Cipher 07 */
+#ifndef OPENSSL_NO_IDEA
 	{
 	1,
 	SSL3_TXT_RSA_IDEA_128_SHA,
@@ -296,6 +297,7 @@ OPENSSL_GLOBAL SSL_CIPHER ssl3_ciphers[]={
 	SSL_ALL_CIPHERS,
 	SSL_ALL_STRENGTHS,
 	},
+#endif
 /* Cipher 08 */
 	{
 	1,
@@ -1914,7 +1916,7 @@ SSL_CIPHER *ssl3_get_cipher_by_char(const unsigned char *p)
 	static SSL_CIPHER *sorted[SSL3_NUM_CIPHERS];
 	SSL_CIPHER c,*cp= &c,**cpp;
 	unsigned long id;
-	int i;
+	unsigned int i;
 
 	if (init)
 		{

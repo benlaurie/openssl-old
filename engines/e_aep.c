@@ -88,7 +88,7 @@ typedef int pid_t;
 
 static int aep_init(ENGINE *e);
 static int aep_finish(ENGINE *e);
-static int aep_ctrl(ENGINE *e, int cmd, long i, void *p, void (*f)());
+static int aep_ctrl(ENGINE *e, int cmd, long i, void *p, void (*f)(void));
 static int aep_destroy(ENGINE *e);
 
 static AEP_RV aep_get_connection(AEP_CONNECTION_HNDL_PTR hConnection);
@@ -554,7 +554,7 @@ static int aep_finish(ENGINE *e)
 	return to_return;
 	}
 
-static int aep_ctrl(ENGINE *e, int cmd, long i, void *p, void (*f)())
+static int aep_ctrl(ENGINE *e, int cmd, long i, void *p, void (*f)(void))
 	{
 	int initialised = ((aep_dso == NULL) ? 0 : 1);
 	switch(cmd)
@@ -852,7 +852,11 @@ static AEP_RV aep_get_connection(AEP_CONNECTION_HNDL_PTR phConnection)
 
 	CRYPTO_w_lock(CRYPTO_LOCK_ENGINE);
 
+#ifndef NETWARE_CLIB
 	curr_pid = getpid();
+#else
+	curr_pid = GetThreadID();
+#endif
 
 	/*Check if this is the first time this is being called from the current
 	  process*/

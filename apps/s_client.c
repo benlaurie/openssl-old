@@ -136,14 +136,10 @@ typedef unsigned int u_int;
 #include <openssl/rand.h>
 #include "s_apps.h"
 
-#ifdef OPENSSL_SYS_WINDOWS
-#include <conio.h>
-#endif
-
 #ifdef OPENSSL_SYS_VMS
 #include "term_sock.h"
 #endif
-      
+
 #ifdef OPENSSL_SYS_WINCE
 /* Windows CE incorrectly defines fileno as returning void*, so to avoid problems below... */
 #ifdef fileno
@@ -225,7 +221,7 @@ static void sc_usage(void)
 	BIO_printf(bio_err," -starttls prot - use the STARTTLS command before starting TLS\n");
 	BIO_printf(bio_err,"                 for those protocols that support it, where\n");
 	BIO_printf(bio_err,"                 'prot' defines which one to assume.  Currently,\n");
-	BIO_printf(bio_err,"                 only \"smtp\" is supported.\n");
+	BIO_printf(bio_err,"                 only \"smtp\" and \"pop3\" are supported.\n");
 #ifndef OPENSSL_NO_ENGINE
 	BIO_printf(bio_err," -engine id    - Initialise and use the specified engine\n");
 #endif
@@ -255,7 +251,7 @@ int MAIN(int argc, char **argv)
 	int write_tty,read_tty,write_ssl,read_ssl,tty_on,ssl_pending;
 	SSL_CTX *ctx=NULL;
 	int ret=1,in_init=1,i,nbio_test=0;
-	int smtp_starttls = 0;
+	int starttls_proto = 0;
 	int prexit = 0, vflags = 0;
 	SSL_METHOD *meth=NULL;
 	BIO *sbio;
@@ -264,7 +260,7 @@ int MAIN(int argc, char **argv)
 	char *engine_id=NULL;
 	ENGINE *e=NULL;
 #endif
-#ifdef OPENSSL_SYS_WINDOWS
+#if defined(OPENSSL_SYS_WINDOWS) || defined(OPENSSL_SYS_MSDOS) || defined(OPENSSL_SYS_NETWARE)
 	struct timeval tv;
 #endif
 #ifdef OPENSSL_SYS_VMS
@@ -424,7 +420,9 @@ int MAIN(int argc, char **argv)
 			if (--argc < 1) goto bad;
 			++argv;
 			if (strcmp(*argv,"smtp") == 0)
-				smtp_starttls = 1;
+				starttls_proto = 1;
+			else if (strcmp(*argv,"pop3") == 0)
+				starttls_proto = 2;
 			else
 				goto bad;
 			}
@@ -601,10 +599,16 @@ re_start:
 	sbuf_off=0;
 
 	/* This is an ugly hack that does a lot of assumptions */
-	if (smtp_starttls)
+	if (starttls_proto == 1)
 		{
 		BIO_read(sbio,mbuf,BUFSIZZ);
 		BIO_printf(sbio,"STARTTLS\r\n");
+		BIO_read(sbio,sbuf,BUFSIZZ);
+		}
+	if (starttls_proto == 2)
+		{
+		BIO_read(sbio,mbuf,BUFSIZZ);
+		BIO_printf(sbio,"STLS\r\n");
 		BIO_read(sbio,sbuf,BUFSIZZ);
 		}
 
@@ -627,11 +631,11 @@ re_start:
 				print_stuff(bio_c_out,con,full_log);
 				if (full_log > 0) full_log--;
 
-				if (smtp_starttls)
+				if (starttls_proto)
 					{
 					BIO_printf(bio_err,"%s",mbuf);
 					/* We don't need to know any more */
-					smtp_starttls = 0;
+					starttls_proto = 0;
 					}
 
 				if (reconnect)
@@ -650,7 +654,7 @@ re_start:
 
 		if (!ssl_pending)
 			{
-#ifndef OPENSSL_SYS_WINDOWS
+#if !defined(OPENSSL_SYS_WINDOWS) && !defined(OPENSSL_SYS_MSDOS) && !defined(OPENSSL_SYS_NETWARE)
 			if (tty_on)
 				{
 #ifdef OPENSSL_SYS_VMS
@@ -681,8 +685,8 @@ re_start:
 			 * will choke the compiler: if you do have a cast then
 			 * you can either go for (int *) or (void *).
 			 */
-#ifdef OPENSSL_SYS_WINDOWS
-			/* Under Windows we make the assumption that we can
+#if defined(OPENSSL_SYS_WINDOWS) || defined(OPENSSL_SYS_MSDOS)
+                        /* Under Windows/DOS we make the assumption that we can
 			 * always write to the tty: therefore if we need to
 			 * write to the tty we just fall through. Otherwise
 			 * we timeout the select every second and see if there
@@ -696,7 +700,7 @@ re_start:
 					tv.tv_usec = 0;
 					i=select(width,(void *)&readfds,(void *)&writefds,
 						 NULL,&tv);
-#ifdef OPENSSL_SYS_WINCE
+#if defined(OPENSSL_SYS_WINCE) || defined(OPENSSL_SYS_MSDOS)
 					if(!i && (!_kbhit() || !read_tty) ) continue;
 #else
 					if(!i && (!((_kbhit()) || (WAIT_OBJECT_0 == WaitForSingleObject(GetStdHandle(STD_INPUT_HANDLE), 0))) || !read_tty) ) continue;
@@ -784,8 +788,13 @@ re_start:
 				goto shut;
 				}
 			}
+<<<<<<< s_client.c
 #if defined(OPENSSL_SYS_WINDOWS) || defined(OPENSSL_SYS_MSDOS) || defined(OPENSSL_SYS_VMS)
 		/* Assume Windows/DOS and VMS can always write */
+=======
+#if defined(OPENSSL_SYS_WINDOWS) || defined(OPENSSL_SYS_MSDOS) || defined(OPENSSL_SYS_NETWARE)
+		/* Assume Windows/DOS can always write */
+>>>>>>> 1.67
 		else if (!ssl_pending && write_tty)
 #else
 		else if (!ssl_pending && FD_ISSET(fileno(stdout),&writefds))
@@ -865,12 +874,14 @@ printf("read=%d pending=%d peek=%d\n",k,SSL_pending(con),SSL_peek(con,zbuf,10240
 				}
 			}
 
-#ifdef OPENSSL_SYS_WINDOWS
-#ifdef OPENSSL_SYS_WINCE
+#if defined(OPENSSL_SYS_WINDOWS) || defined(OPENSSL_SYS_MSDOS)
+#if defined(OPENSSL_SYS_WINCE) || defined(OPENSSL_SYS_MSDOS)
 		else if (_kbhit())
 #else
 		else if ((_kbhit()) || (WAIT_OBJECT_0 == WaitForSingleObject(GetStdHandle(STD_INPUT_HANDLE), 0)))
 #endif
+#elif defined (OPENSSL_SYS_NETWARE)
+        else if (_kbhit())
 #else
 #ifdef OPENSSL_SYS_VMS
                 else if (FD_ISSET(stdin_sock,&readfds))
@@ -973,6 +984,7 @@ static void print_stuff(BIO *bio, SSL *s, int full)
 	SSL_CIPHER *c;
 	X509_NAME *xn;
 	int j,i;
+	const COMP_METHOD *comp, *expansion;
 
 	if (full)
 		{
@@ -1075,6 +1087,12 @@ static void print_stuff(BIO *bio, SSL *s, int full)
 							 EVP_PKEY_bits(pktmp));
 		EVP_PKEY_free(pktmp);
 	}
+	comp=SSL_get_current_compression(s);
+	expansion=SSL_get_current_expansion(s);
+	BIO_printf(bio,"Compression: %s\n",
+		comp ? SSL_COMP_get_name(comp) : "NONE");
+	BIO_printf(bio,"Expansion: %s\n",
+		expansion ? SSL_COMP_get_name(expansion) : "NONE");
 	SSL_SESSION_print(bio,SSL_get_session(s));
 	BIO_printf(bio,"---\n");
 	if (peer != NULL)

@@ -26,31 +26,33 @@ CFLAGS= $(INCLUDE) $(CFLAG)
 
 LIBS=
 
-SDIRS=	md2 md5 sha mdc2 hmac ripemd \
+SDIRS=	objects \
+	md2 md4 md5 sha mdc2 hmac ripemd \
 	des rc2 rc4 rc5 idea bf cast \
 	bn ec rsa dsa ecdsa ecdh dh dso engine aes \
-	buffer bio stack lhash rand err objects \
-	evp asn1 pem x509 x509v3 conf txt_db pkcs7 pkcs12 comp ocsp ui krb5
+	buffer bio stack lhash rand err \
+	evp asn1 pem x509 x509v3 conf txt_db pkcs7 pkcs12 comp ocsp ui krb5 \
+	store
 
 GENERAL=Makefile README crypto-lib.com install.com
 
 LIB= $(TOP)/libcrypto.a
 SHARED_LIB= libcrypto$(SHLIB_EXT)
-LIBSRC=	cryptlib.c mem.c mem_clr.c mem_dbg.c cversion.c ex_data.c tmdiff.c cpt_err.c ebcdic.c uid.c o_time.c
-LIBOBJ= cryptlib.o mem.o mem_clr.o mem_dbg.o cversion.o ex_data.o tmdiff.o cpt_err.o ebcdic.o uid.o o_time.o
+LIBSRC=	cryptlib.c mem.c mem_clr.c mem_dbg.c cversion.c ex_data.c tmdiff.c cpt_err.c ebcdic.c uid.c o_time.c o_str.c
+LIBOBJ= cryptlib.o mem.o mem_clr.o mem_dbg.o cversion.o ex_data.o tmdiff.o cpt_err.o ebcdic.o uid.o o_time.o o_str.o
 
 SRC= $(LIBSRC)
 
 EXHEADER= crypto.h tmdiff.h opensslv.h opensslconf.h ebcdic.h symhacks.h \
 	ossl_typ.h
-HEADER=	cryptlib.h buildinf.h md32_common.h o_time.h $(EXHEADER)
+HEADER=	cryptlib.h buildinf.h md32_common.h o_time.h o_str.h $(EXHEADER)
 
 ALL=    $(GENERAL) $(SRC) $(HEADER)
 
 top:
 	@(cd ..; $(MAKE) DIRS=$(DIR) all)
 
-all: buildinf.h lib subdirs shared
+all: shared
 
 buildinf.h: ../Makefile.ssl
 	( echo "#ifndef MK1MF_BUILD"; \
@@ -81,11 +83,11 @@ files:
 	done;
 
 links:
-	@$(TOP)/util/point.sh Makefile.ssl Makefile
+	@sh $(TOP)/util/point.sh Makefile.ssl Makefile
 	@$(PERL) $(TOP)/util/mklink.pl ../include/openssl $(EXHEADER)
 	@$(PERL) $(TOP)/util/mklink.pl ../test $(TEST)
 	@$(PERL) $(TOP)/util/mklink.pl ../apps $(APPS)
-	@$(TOP)/util/point.sh Makefile.ssl Makefile
+	@sh $(TOP)/util/point.sh Makefile.ssl Makefile
 	@for i in $(SDIRS); do \
 	(cd $$i && echo "making links in crypto/$$i..." && \
 	$(MAKE) CC='$(CC)' INCLUDES='${INCLUDES}' CFLAG='${CFLAG}' INSTALLTOP='${INSTALLTOP}' PEX_LIBS='${PEX_LIBS}' EX_LIBS='${EX_LIBS}' BN_ASM='${BN_ASM}' DES_ENC='${DES_ENC}' SHA1_ASM_OBJ='${SHA1_ASM_OBJ}' MD5_ASM_OBJ='${MD5_ASM_OBJ}' RMD160_ASM_OBJ='${RMD160_ASM_OBJ}' BF_ENC='${BF_ENC}' CAST_ENC='${CAST_ENC}' RC4_ENC='${RC4_ENC}' RC5_ENC='${RC5_ENC}' AR='${AR}' PERL='${PERL}' links ); \
@@ -96,7 +98,7 @@ lib:	$(LIBOBJ)
 	$(RANLIB) $(LIB) || echo Never mind.
 	@touch lib
 
-shared:
+shared: buildinf.h lib subdirs
 	if [ -n "$(SHARED_LIBS)" ]; then \
 		(cd ..; $(MAKE) $(SHARED_LIB)); \
 	fi
@@ -203,6 +205,8 @@ mem_dbg.o: ../include/openssl/err.h ../include/openssl/lhash.h
 mem_dbg.o: ../include/openssl/opensslconf.h ../include/openssl/opensslv.h
 mem_dbg.o: ../include/openssl/safestack.h ../include/openssl/stack.h
 mem_dbg.o: ../include/openssl/symhacks.h cryptlib.h mem_dbg.c
+o_str.o: ../include/openssl/e_os2.h ../include/openssl/opensslconf.h o_str.c
+o_str.o: o_str.h
 o_time.o: ../include/openssl/e_os2.h ../include/openssl/opensslconf.h o_time.c
 o_time.o: o_time.h
 tmdiff.o: ../e_os.h ../include/openssl/bio.h ../include/openssl/buffer.h

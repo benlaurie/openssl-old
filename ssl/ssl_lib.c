@@ -125,7 +125,6 @@
 #include <openssl/objects.h>
 #include <openssl/lhash.h>
 #include <openssl/x509v3.h>
-#include "cryptlib.h"
 
 const char *SSL_version_str=OPENSSL_VERSION_TEXT;
 
@@ -476,6 +475,11 @@ void SSL_free(SSL *s)
 		sk_X509_NAME_pop_free(s->client_CA,X509_NAME_free);
 
 	if (s->method != NULL) s->method->ssl_free(s);
+
+#ifndef	OPENSSL_NO_KRB5
+	if (s->kssl_ctx != NULL)
+		kssl_ctx_free(s->kssl_ctx);
+#endif	/* OPENSSL_NO_KRB5 */
 
 	OPENSSL_free(s);
 	}
@@ -2199,6 +2203,20 @@ SSL_CIPHER *SSL_get_current_cipher(SSL *s)
 	{
 	if ((s->session != NULL) && (s->session->cipher != NULL))
 		return(s->session->cipher);
+	return(NULL);
+	}
+
+const COMP_METHOD *SSL_get_current_compression(SSL *s)
+	{
+	if (s->compress != NULL)
+		return(s->compress->meth);
+	return(NULL);
+	}
+
+const COMP_METHOD *SSL_get_current_expansion(SSL *s)
+	{
+	if (s->expand != NULL)
+		return(s->expand->meth);
 	return(NULL);
 	}
 

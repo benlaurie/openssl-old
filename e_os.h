@@ -174,6 +174,13 @@ extern "C" {
 #define closesocket(s)          close(s)
 #define readsocket(s,b,n)       recv((s),(b),(n),0)
 #define writesocket(s,b,n)      send((s),(b),(n),0)
+#elif defined(OPENSSL_SYS_VXWORKS)
+#define get_last_socket_error()	errno
+#define clear_socket_error()	errno=0
+#define ioctlsocket(a,b,c)	    ioctl((a),(b),(int)(c))
+#define closesocket(s)		    close(s)
+#define readsocket(s,b,n)	    read((s),(b),(n))
+#define writesocket(s,b,n)	    write((s),(char *)(b),(n))
 #else
 #define get_last_socket_error()	errno
 #define clear_socket_error()	errno=0
@@ -250,7 +257,7 @@ extern "C" {
 #    define EXIT(n) _wsetexit(_WINEXITNOPERSIST)
 #    define OPENSSL_EXIT(n) do { if (n == 0) EXIT(n); return(n); } while(0)
 #  else
-#    define EXIT(n) return(n)
+#    define EXIT(n) exit(n)
 #  endif
 #  define LIST_SEPARATOR_CHAR ';'
 #  ifndef X_OK
@@ -314,6 +321,26 @@ extern "C" {
                                      __VMS_EXIT |= 0x10000000; \
 				     exit(__VMS_EXIT); } while(0)
 #    define NO_SYS_PARAM_H
+
+#  elif defined(OPENSSL_SYS_NETWARE)
+#    include <fcntl.h>
+#    include <unistd.h>
+#    define NO_SYS_TYPES_H
+#    undef  DEVRANDOM
+#    ifdef NETWARE_CLIB
+#      define getpid GetThreadID
+#    endif
+#    define NO_SYSLOG
+#    define _setmode setmode
+#    define _kbhit kbhit
+#    define _O_TEXT O_TEXT
+#    define _O_BINARY O_BINARY
+#    define OPENSSL_CONF   "openssl.cnf"
+#    define SSLEAY_CONF    OPENSSL_CONF
+#    define RFILE    ".rnd"
+#    define LIST_SEPARATOR_CHAR ';'
+#    define EXIT(n)  { if (n) printf("ERROR: %d\n", (int)n); exit(n); }
+
 #  else
      /* !defined VMS */
 #    ifdef OPENSSL_SYS_MPE
@@ -331,6 +358,8 @@ extern "C" {
 #      define pid_t int /* pid_t is missing on NEXTSTEP/OPENSTEP
                          * (unless when compiling with -D_POSIX_SOURCE,
                          * which doesn't work for us) */
+#    endif
+#    if defined(NeXT) || defined(OPENSSL_SYS_NEWS4) || defined(OPENSSL_SYS_SUNOS)
 #      define ssize_t int /* ditto */
 #    endif
 #    ifdef OPENSSL_SYS_NEWS4 /* setvbuf is missing on mips-sony-bsd */
@@ -383,6 +412,19 @@ extern HINSTANCE _hInstance;
 #    define SSLeay_Read(a,b,c)		MacSocket_recv((a),(b),(c),true)
 #    define SHUTDOWN(fd)		MacSocket_close(fd)
 #    define SHUTDOWN2(fd)		MacSocket_close(fd)
+
+#  elif defined(OPENSSL_SYS_NETWARE)
+         /* NetWare uses the WinSock2 interfaces
+         */
+#      if defined(NETWARE_CLIB)
+#        include <ws2nlm.h>
+#      elif defined(NETWARE_LIBC)
+#        include <novsock2.h>
+#      endif
+#      define SSLeay_Write(a,b,c)   send((a),(b),(c),0)
+#      define SSLeay_Read(a,b,c) recv((a),(b),(c),0)
+#      define SHUTDOWN(fd)    { shutdown((fd),0); closesocket(fd); }
+#      define SHUTDOWN2(fd)      { shutdown((fd),2); closesocket(fd); }
 
 #  else
 
@@ -501,11 +543,33 @@ extern char *sys_errlist[]; extern int sys_nerr;
 #define IRIX_CC_BUG	/* CDS++ up to V2.0Bsomething suffered from the same bug.*/
 #endif
 
+#if defined(OPENSSL_SYS_WINDOWS)
+#  define strcasecmp _stricmp
+#  define strncasecmp _strnicmp
+#elif defined(OPENSSL_SYS_VMS)
+/* VMS below version 7.0 doesn't have strcasecmp() */
+#  include <openssl/o_str.h>
+#  define strcasecmp OPENSSL_strcasecmp
+#  define strncasecmp OPENSSL_strncasecmp
+#elif defined(OPENSSL_SYS_OS2) && defined(__EMX__)
+#  define strcasecmp stricmp
+#  define strncasecmp strnicmp
+#elif defined(OPENSSL_SYS_NETWARE) && defined(NETWARE_CLIB)
+#  define strcasecmp stricmp
+#  define strncasecmp strnicmp
+#else
+#  ifdef NO_STRINGS_H
+    int	strcasecmp();
+    int	strncasecmp();
+#  else
+#    include <strings.h>
+#  endif /* NO_STRINGS_H */
+#endif
+
 #if defined(OPENSSL_SYS_OS2) && defined(__EMX__)
 # include <io.h>
 # include <fcntl.h>
 # define NO_SYSLOG
-# define strcasecmp stricmp
 #endif
 
 /* vxworks */
@@ -517,10 +581,6 @@ extern char *sys_errlist[]; extern int sys_nerr;
 #define TTY_STRUCT int
 
 #define sleep(a) taskDelay((a) * sysClkRateGet())
-#if defined(ioctlsocket)
-#undef ioctlsocket
-#endif
-#define ioctlsocket(a,b,c) ioctl((a),(b),*(c))
 
 #include <vxWorks.h>
 #include <sockLib.h>

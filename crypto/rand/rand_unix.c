@@ -108,6 +108,7 @@
  * Hudson (tjh@cryptsoft.com).
  *
  */
+#include <stdio.h>
 
 #define USE_SOCKETS
 #include "e_os.h"
@@ -115,7 +116,7 @@
 #include <openssl/rand.h>
 #include "rand_lcl.h"
 
-#if !(defined(OPENSSL_SYS_WINDOWS) || defined(OPENSSL_SYS_WIN32) || defined(OPENSSL_SYS_VMS) || defined(OPENSSL_SYS_OS2) || defined(OPENSSL_SYS_VXWORKS))
+#if !(defined(OPENSSL_SYS_WINDOWS) || defined(OPENSSL_SYS_WIN32) || defined(OPENSSL_SYS_VMS) || defined(OPENSSL_SYS_OS2) || defined(OPENSSL_SYS_VXWORKS) || defined(OPENSSL_SYS_NETWARE)) 
 
 #include <sys/types.h>
 #include <sys/time.h>
@@ -124,6 +125,24 @@
 #include <unistd.h>
 #include <time.h>
 
+#ifdef __OpenBSD__
+int RAND_poll(void)
+{
+	u_int32_t rnd = 0, i;
+	unsigned char buf[ENTROPY_NEEDED];
+
+	for (i = 0; i < sizeof(buf); i++) {
+		if (i % 4 == 0)
+			rnd = arc4random();
+		buf[i] = rnd;
+		rnd >>= 8;
+	}
+	RAND_add(buf, sizeof(buf), ENTROPY_NEEDED);
+	memset(buf, 0, sizeof(buf));
+
+	return 1;
+}
+#else
 int RAND_poll(void)
 {
 	unsigned long l;
@@ -235,6 +254,7 @@ int RAND_poll(void)
 #endif
 }
 
+#endif
 #endif
 
 #if defined(OPENSSL_SYS_VXWORKS)

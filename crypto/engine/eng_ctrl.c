@@ -160,15 +160,19 @@ static int int_ctrl_helper(ENGINE *e, int cmd, long i, void *p, void (*f)())
 	case ENGINE_CTRL_GET_NAME_LEN_FROM_CMD:
 		return strlen(e->cmd_defns[idx].cmd_name);
 	case ENGINE_CTRL_GET_NAME_FROM_CMD:
-		return sprintf(s, "%s", e->cmd_defns[idx].cmd_name);
+		return BIO_snprintf(s,strlen(e->cmd_defns[idx].cmd_name) + 1,
+				    "%s", e->cmd_defns[idx].cmd_name);
 	case ENGINE_CTRL_GET_DESC_LEN_FROM_CMD:
 		if(e->cmd_defns[idx].cmd_desc)
 			return strlen(e->cmd_defns[idx].cmd_desc);
 		return strlen(int_no_description);
 	case ENGINE_CTRL_GET_DESC_FROM_CMD:
 		if(e->cmd_defns[idx].cmd_desc)
-			return sprintf(s, "%s", e->cmd_defns[idx].cmd_desc);
-		return sprintf(s, "%s", int_no_description);
+			return BIO_snprintf(s,
+					    strlen(e->cmd_defns[idx].cmd_desc) + 1,
+					    "%s", e->cmd_defns[idx].cmd_desc);
+		return BIO_snprintf(s, strlen(int_no_description) + 1,"%s",
+				    int_no_description);
 	case ENGINE_CTRL_GET_CMD_FLAGS:
 		return e->cmd_defns[idx].cmd_flags;
 		}
@@ -177,7 +181,7 @@ static int int_ctrl_helper(ENGINE *e, int cmd, long i, void *p, void (*f)())
 	return -1;
 	}
 
-int ENGINE_ctrl(ENGINE *e, int cmd, long i, void *p, void (*f)())
+int ENGINE_ctrl(ENGINE *e, int cmd, long i, void *p, void (*f)(void))
 	{
 	int ctrl_exists, ref_exists;
 	if(e == NULL)
@@ -247,7 +251,7 @@ int ENGINE_cmd_is_executable(ENGINE *e, int cmd)
 	}
 
 int ENGINE_ctrl_cmd(ENGINE *e, const char *cmd_name,
-        long i, void *p, void (*f)(), int cmd_optional)
+        long i, void *p, void (*f)(void), int cmd_optional)
         {
 	int num;
 

@@ -391,7 +391,17 @@ int BN_GENCB_call(BN_GENCB *cb, int a, int b);
 #define BN_is_odd(a)	    (((a)->top > 0) && ((a)->d[0] & 1))
 
 #define BN_one(a)	(BN_set_word((a),1))
+#define BN_zero_ex(a) \
+	do { \
+		BIGNUM *_tmp_bn = (a); \
+		_tmp_bn->top = 0; \
+		_tmp_bn->neg = 0; \
+	} while(0)
+#ifdef OPENSSL_NO_DEPRECATED
+#define BN_zero(a)	BN_zero_ex(a)
+#else
 #define BN_zero(a)	(BN_set_word((a),0))
+#endif
 /* BN_set_sign(BIGNUM *, int) sets the sign of a BIGNUM
  * (0 for a non-negative value, 1 for negative) */
 #define BN_set_sign(a,b) ((a)->neg = (b))
@@ -626,10 +636,13 @@ const BIGNUM *BN_get0_nist_prime_521(void);
 /* library internal functions */
 
 #define bn_expand(a,bits) ((((((bits+BN_BITS2-1))/BN_BITS2)) <= (a)->dmax)?\
-	(a):bn_expand2((a),(bits)/BN_BITS2+1))
+	(a):bn_expand2((a),(bits+BN_BITS2-1)/BN_BITS2))
 #define bn_wexpand(a,words) (((words) <= (a)->dmax)?(a):bn_expand2((a),(words)))
 BIGNUM *bn_expand2(BIGNUM *a, size_t words);
+#ifndef OPENSSL_NO_DEPRECATED
 BIGNUM *bn_dup_expand(const BIGNUM *a, size_t words);
+#endif
+>>>>>>> 1.88
 
 /* Bignum consistency macros
  * There is one "API" macro, bn_fix_top(), for stripping leading zeroes from

@@ -319,7 +319,10 @@ int BN_nist_mod_192(BIGNUM *r, const BIGNUM *a, const BIGNUM *field,
 
 	top = BN_ucmp(field, a);
 	if (top == 0)
-		return BN_zero(r);
+		{
+		BN_zero(r);
+		return 1;
+		}
 	else if (top > 0)
 		return (r == a)? 1 : (BN_copy(r ,a) != NULL);
 
@@ -359,12 +362,7 @@ int BN_nist_mod_192(BIGNUM *r, const BIGNUM *a, const BIGNUM *field,
 			--carry; 
 		}
 	r->top = BN_NIST_192_TOP;
-
-#if 1
-	bn_clear_top2max(r);
-#endif
 	bn_correct_top(r);
-
 	if (BN_ucmp(r, field) >= 0)
 		{
 		bn_sub_words(r_d, r_d, _nist_p_192, BN_NIST_192_TOP);
@@ -399,7 +397,10 @@ int BN_nist_mod_224(BIGNUM *r, const BIGNUM *a, const BIGNUM *field,
 
 	tmp_int = BN_ucmp(field, a);
 	if (tmp_int == 0)
-		return BN_zero(r);
+		{
+		BN_zero(r);
+		return 1;
+		}
 	else if (tmp_int > 0)
 		return (r == a)? 1 : (BN_copy(r ,a) != NULL);
 
@@ -453,11 +454,7 @@ int BN_nist_mod_224(BIGNUM *r, const BIGNUM *a, const BIGNUM *field,
 			}
 
 	r->top = BN_NIST_224_TOP;
-#if 1
-	bn_clear_top2max(r);
-#endif
 	bn_correct_top(r);
-
 	if (BN_ucmp(r, field) >= 0)
 		{
 		bn_sub_words(r_d, r_d, _nist_p_224, BN_NIST_224_TOP);
@@ -523,7 +520,10 @@ int BN_nist_mod_256(BIGNUM *r, const BIGNUM *a, const BIGNUM *field,
 	
 	tmp_int = BN_ucmp(field, a);
 	if (tmp_int == 0)
-		return BN_zero(r);
+		{
+		BN_zero(r);
+		return 1;
+		}
 	else if (tmp_int > 0)
 		return (r == a)? 1 : (BN_copy(r ,a) != NULL);
 
@@ -612,11 +612,7 @@ int BN_nist_mod_256(BIGNUM *r, const BIGNUM *a, const BIGNUM *field,
 		}
 
 	r->top = BN_NIST_256_TOP;
-#if 1
-	bn_clear_top2max(r);
-#endif
 	bn_correct_top(r);
-
 	if (BN_ucmp(r, field) >= 0)
 		{
 		bn_sub_words(r_d, r_d, _nist_p_256, BN_NIST_256_TOP);
@@ -685,7 +681,10 @@ int BN_nist_mod_384(BIGNUM *r, const BIGNUM *a, const BIGNUM *field,
 
 	tmp_int = BN_ucmp(field, a);
 	if (tmp_int == 0)
-		return BN_zero(r);
+		{
+		BN_zero(r);
+		return 1;
+		}
 	else if (tmp_int > 0)
 		return (r == a)? 1 : (BN_copy(r ,a) != NULL);
 
@@ -781,11 +780,7 @@ int BN_nist_mod_384(BIGNUM *r, const BIGNUM *a, const BIGNUM *field,
 		}
 
 	r->top = BN_NIST_384_TOP;
-#if 1
-	bn_clear_top2max(r);
-#endif
 	bn_correct_top(r);
-
 	if (BN_ucmp(r, field) >= 0)
 		{
 		bn_sub_words(r_d, r_d, _nist_p_384, BN_NIST_384_TOP);

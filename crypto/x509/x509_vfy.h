@@ -305,17 +305,34 @@ struct x509_store_ctx_st      /* X509_STORE_CTX */
 
 #define		X509_V_ERR_UNABLE_TO_GET_CRL_ISSUER		33
 #define		X509_V_ERR_UNHANDLED_CRITICAL_EXTENSION		34
+#define		X509_V_ERR_KEYUSAGE_NO_CRL_SIGN			35
+#define		X509_V_ERR_UNHANDLED_CRITICAL_CRL_EXTENSION	36
 
 /* The application is not happy */
 #define		X509_V_ERR_APPLICATION_VERIFICATION		50
 
 /* Certificate verify flags */
 
-#define	X509_V_FLAG_CB_ISSUER_CHECK		0x1	/* Send issuer+subject checks to verify_cb */
-#define	X509_V_FLAG_USE_CHECK_TIME		0x2	/* Use check time instead of current time */
-#define	X509_V_FLAG_CRL_CHECK			0x4	/* Lookup CRLs */
-#define	X509_V_FLAG_CRL_CHECK_ALL		0x8	/* Lookup CRLs for whole chain */
-#define	X509_V_FLAG_IGNORE_CRITICAL		0x10	/* Ignore unhandled critical extensions */
+/* Send issuer+subject checks to verify_cb */
+#define	X509_V_FLAG_CB_ISSUER_CHECK		0x1
+/* Use check time instead of current time */
+#define	X509_V_FLAG_USE_CHECK_TIME		0x2
+/* Lookup CRLs */
+#define	X509_V_FLAG_CRL_CHECK			0x4
+/* Lookup CRLs for whole chain */
+#define	X509_V_FLAG_CRL_CHECK_ALL		0x8
+/* Ignore unhandled critical extensions */
+#define	X509_V_FLAG_IGNORE_CRITICAL		0x10
+/* Disable workarounds for broken certificates */
+#define	X509_V_FLAG_X509_STRICT			0x20
+/* Enable policy checking */
+#define X509_V_FLAG_POLICY_CHECK		0x40
+/* Policy variable require-explicit-policy */
+#define X509_V_FLAG_EXPLICIT_POLICY		0x80
+/* Policy variable inhibit-policy-mapping */
+#define	X509_V_FLAG_INHIBIT_ANY			0x100
+/* Policy variable inhibit-any-policy */
+#define X509_V_FLAG_INHIBIT_MAP			0x200
 
 int X509_OBJECT_idx_by_subject(STACK_OF(X509_OBJECT) *h, int type,
 	     X509_NAME *name);
@@ -400,6 +417,36 @@ void X509_STORE_CTX_set_flags(X509_STORE_CTX *ctx, long flags);
 void X509_STORE_CTX_set_time(X509_STORE_CTX *ctx, long flags, time_t t);
 void X509_STORE_CTX_set_verify_cb(X509_STORE_CTX *ctx,
 				  int (*verify_cb)(int, X509_STORE_CTX *));
+
+int X509_policy_check(X509_POLICY_TREE **ptree, int *explicit,
+			STACK_OF(X509) *certs,
+			STACK_OF(ASN1_OBJECT) *policy_oids,
+			unsigned int flags);
+
+void X509_policy_tree_free(X509_POLICY_TREE *tree);
+
+int X509_policy_tree_level_count(const X509_POLICY_TREE *tree);
+X509_POLICY_LEVEL *
+	X509_policy_tree_get0_level(const X509_POLICY_TREE *tree, int i);
+
+STACK_OF(X509_POLICY_NODE) *
+	X509_policy_tree_get0_policies(const X509_POLICY_TREE *tree);
+
+STACK_OF(X509_POLICY_NODE) *
+	X509_policy_tree_get0_user_policies(const X509_POLICY_TREE *tree);
+
+int X509_policy_level_node_count(X509_POLICY_LEVEL *level);
+
+X509_POLICY_NODE *X509_policy_level_get0_node(X509_POLICY_LEVEL *level, int i);
+
+const ASN1_OBJECT *X509_policy_node_get0_policy(const X509_POLICY_NODE *node);
+
+STACK_OF(POLICYQUALIFIER) *
+	X509_policy_node_get0_qualifiers(const X509_POLICY_NODE *node);
+const X509_POLICY_NODE *
+	X509_policy_node_get0_parent(const X509_POLICY_NODE *node);
+
+void X509_policy_lib_init(void);
 
 #ifdef  __cplusplus
 }

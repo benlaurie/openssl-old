@@ -317,18 +317,9 @@ int ASN1_item_ex_d2i(ASN1_VALUE **pval, unsigned char **in, long len, const ASN1
 				errtt = seqtt;
 				goto err;
 			} else if(ret == -1) {
-				/* OPTIONAL component absent.
-				 * Since this is the only place we take any notice of
-				 * OPTIONAL this is the only place we need to handle freeing
-				 * and zeroing the field.
-				 * BOOLEAN is a special case as always and must be set to -1.
+				/* OPTIONAL component absent. Free and zero the field
 				 */
-				if(asn1_template_is_bool(seqtt))
-					*(ASN1_BOOLEAN *)pseqval = -1;
-				else if(*pseqval) {
-					ASN1_template_free(pseqval, seqtt);
-					*pseqval = NULL;
-				}
+				ASN1_template_free(pseqval, seqtt);
 				continue;
 			}
 			/* Update length */
@@ -347,7 +338,7 @@ int ASN1_item_ex_d2i(ASN1_VALUE **pval, unsigned char **in, long len, const ASN1
 
 		/* If we get here we've got no more data in the SEQUENCE,
 		 * however we may not have read all fields so check all
-		 * remaining are OPTIONAL.
+		 * remaining are OPTIONAL and clear any that are.
 		 */
 		for(; i < it->tcount; tt++, i++) {
 			const ASN1_TEMPLATE *seqtt;
@@ -356,12 +347,7 @@ int ASN1_item_ex_d2i(ASN1_VALUE **pval, unsigned char **in, long len, const ASN1
 			if(seqtt->flags & ASN1_TFLG_OPTIONAL) {
 				ASN1_VALUE **pseqval;
 				pseqval = asn1_get_field_ptr(pval, seqtt);
-				if(asn1_template_is_bool(seqtt))
-					*(ASN1_BOOLEAN *)pseqval = -1;
-				else if(*pseqval) {
-					ASN1_template_free(pseqval, seqtt);
-					*pseqval = NULL;
-				}
+				ASN1_template_free(pseqval, seqtt);
 			} else {
 				errtt = seqtt;
 				ASN1err(ASN1_F_ASN1_ITEM_EX_D2I, ASN1_R_FIELD_MISSING);
@@ -381,8 +367,7 @@ int ASN1_item_ex_d2i(ASN1_VALUE **pval, unsigned char **in, long len, const ASN1
 	auxerr:
 	ASN1err(ASN1_F_ASN1_ITEM_EX_D2I, ASN1_R_AUX_ERROR);
 	err:
-	ASN1_item_free(*pval, it);
-	*pval = NULL;
+	ASN1_item_ex_free(pval, it);
 	if(errtt) ERR_add_error_data(4, "Field=", errtt->field_name, ", Type=", it->sname);
 	else ERR_add_error_data(2, "Type=", it->sname);
 	return 0;
@@ -492,7 +477,7 @@ static int asn1_template_noexp_d2i(ASN1_VALUE **val, unsigned char **in, long le
 			ASN1_VALUE *vtmp;
 			while(sk_num(sktmp) > 0) {
 				vtmp = (ASN1_VALUE *)sk_pop(sktmp);
-				ASN1_item_free(vtmp, tt->item);
+				ASN1_item_ex_free(&vtmp, tt->item);
 			}
 		}
 				

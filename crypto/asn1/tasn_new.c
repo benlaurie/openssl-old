@@ -163,7 +163,7 @@ static int asn1_item_ex_combine_new(ASN1_VALUE **pval, const ASN1_ITEM *it, int 
 
 	auxerr:
 	ASN1err(ASN1_F_ASN1_ITEM_NEW, ASN1_R_AUX_ERROR);
-	ASN1_item_free(*pval, it);
+	ASN1_item_ex_free(pval, it);
 	return 0;
 	
 }

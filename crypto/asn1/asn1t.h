@@ -643,6 +643,7 @@ extern const ASN1_ITEM ASN1_SEQUENCE_it;
 /* Functions used internally by the ASN1 code */
 
 int ASN1_item_ex_new(ASN1_VALUE **pval, const ASN1_ITEM *it);
+void ASN1_item_ex_free(ASN1_VALUE **pval, const ASN1_ITEM *it);
 int ASN1_template_new(ASN1_VALUE **pval, const ASN1_TEMPLATE *tt);
 int ASN1_primitive_new(ASN1_VALUE **pval, long utype);
 

@@ -71,6 +71,11 @@ void ASN1_item_free(ASN1_VALUE *val, const ASN1_ITEM *it)
 	asn1_item_combine_free(&val, it, 0);
 }
 
+void ASN1_item_ex_free(ASN1_VALUE **pval, const ASN1_ITEM *it)
+{
+	asn1_item_combine_free(pval, it, 0);
+}
+
 static void asn1_item_combine_free(ASN1_VALUE **pval, const ASN1_ITEM *it, int combine)
 {
 	const ASN1_TEMPLATE *tt = NULL, *seqtt;
@@ -79,7 +84,8 @@ static void asn1_item_combine_free(ASN1_VALUE **pval, const ASN1_ITEM *it, int c
 	const ASN1_AUX *aux = it->funcs;
 	ASN1_aux_cb *asn1_cb;
 	int i;
-	if(!pval || !*pval) return;
+	if(!pval) return;
+	if((it->itype != ASN1_ITYPE_PRIMITIVE) && !*pval) return;
 	if(aux && aux->asn1_cb) asn1_cb = aux->asn1_cb;
 	else asn1_cb = 0;
 
@@ -104,7 +110,10 @@ static void asn1_item_combine_free(ASN1_VALUE **pval, const ASN1_ITEM *it, int c
 			ASN1_template_free(pchval, tt);
 		}
 		if(asn1_cb) asn1_cb(ASN1_OP_FREE_POST, pval, it);
-		if(!combine) OPENSSL_free(*pval);
+		if(!combine) {
+			OPENSSL_free(*pval);
+			*pval = NULL;
+		}
 		break;
 
 		case ASN1_ITYPE_COMPAT:
@@ -135,7 +144,10 @@ static void asn1_item_combine_free(ASN1_VALUE **pval, const ASN1_ITEM *it, int c
 			ASN1_template_free(pseqval, seqtt);
 		}
 		if(asn1_cb) asn1_cb(ASN1_OP_FREE_POST, pval, it);
-		if(!combine) OPENSSL_free(*pval);
+		if(!combine) {
+			OPENSSL_free(*pval);
+			*pval = NULL;
+		}
 		break;
 	}
 }
@@ -145,19 +157,21 @@ void ASN1_template_free(ASN1_VALUE **pval, const ASN1_TEMPLATE *tt)
 	int i;
 	if(tt->flags & ASN1_TFLG_SK_MASK) {
 		STACK *sk = (STACK *)*pval;
+		if(!sk) return;
 		for(i = 0; i < sk_num(sk); i++) {
 			ASN1_VALUE *vtmp;
 			vtmp = (ASN1_VALUE *)sk_value(sk, i);
 			asn1_item_combine_free(&vtmp, tt->item, 0);
 		}
 		sk_free(sk);
+		*pval = NULL;
 	} else asn1_item_combine_free(pval, tt->item, tt->flags & ASN1_TFLG_COMBINE);
 }
 
 void ASN1_primitive_free(ASN1_VALUE **pval, long utype)
 {
 	ASN1_TYPE *typ;
-	if(!*pval) return;
+	if((utype != V_ASN1_BOOLEAN) && !*pval) return;
 	switch(utype) {
 		case V_ASN1_OBJECT:
 		ASN1_OBJECT_free((ASN1_OBJECT *)*pval);
@@ -175,6 +189,9 @@ void ASN1_primitive_free(ASN1_VALUE **pval, long utype)
 
 		default:
 		ASN1_STRING_free((ASN1_STRING*)*pval);
+		*pval = NULL;
 		break;
 	}
+	if(utype == V_ASN1_BOOLEAN) *(int *)pval = -1;
+	else *pval = NULL;
 }

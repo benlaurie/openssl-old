@@ -1,14 +1,15 @@
 #!/usr/local/bin/perl
 
-package x86unix;
+package x86unix;	# GAS actually...
 
 $label="L000";
 $const="";
 $constl=0;
 
 $align=($main'aout)?"4":"16";
-$under=($main'aout)?"_":"";
-$com_start=($main'sol)?"/":"#";
+$under=($main'aout or $main'coff)?"_":"";
+$dot=($main'aout)?"":".";
+$com_start="#" if ($main'aout or $main'coff);
 
 sub main'asm_init_output { @out=(); }
 sub main'asm_get_output { return(@out); }
@@ -160,12 +161,13 @@ sub main'shl	{ &out2("sall",@_); }
 sub main'shr	{ &out2("shrl",@_); }
 sub main'xor	{ &out2("xorl",@_); }
 sub main'xorb	{ &out2("xorb",@_); }
-sub main'add	{ &out2("addl",@_); }
+sub main'add	{ &out2($_[0]=~/%[a-d][lh]/?"addb":"addl",@_); }
 sub main'adc	{ &out2("adcl",@_); }
 sub main'sub	{ &out2("subl",@_); }
+sub main'sbb	{ &out2("sbbl",@_); }
 sub main'rotl	{ &out2("roll",@_); }
 sub main'rotr	{ &out2("rorl",@_); }
-sub main'exch	{ &out2("xchg",@_); }
+sub main'exch	{ &out2($_[0]=~/%[a-d][lh]/?"xchgb":"xchgl",@_); }
 sub main'cmp	{ &out2("cmpl",@_); }
 sub main'lea	{ &out2("leal",@_); }
 sub main'mul	{ &out1("mull",@_); }
@@ -187,18 +189,27 @@ sub main'jc	{ &out1("jc",@_); }
 sub main'jnc	{ &out1("jnc",@_); }
 sub main'jno	{ &out1("jno",@_); }
 sub main'dec	{ &out1("decl",@_); }
-sub main'inc	{ &out1("incl",@_); }
+sub main'inc	{ &out1($_[0]=~/%[a-d][hl]/?"incb":"incl",@_); }
 sub main'push	{ &out1("pushl",@_); $stack+=4; }
 sub main'pop	{ &out1("popl",@_); $stack-=4; }
-sub main'pushf	{ &out0("pushf"); $stack+=4; }
-sub main'popf	{ &out0("popf"); $stack-=4; }
+sub main'pushf	{ &out0("pushfl"); $stack+=4; }
+sub main'popf	{ &out0("popfl"); $stack-=4; }
 sub main'not	{ &out1("notl",@_); }
-sub main'call	{ &out1("call",($_[0]=~/^\.L/?'':$under).$_[0]); }
+sub main'call	{	my $pre=$under;
+			foreach $i (%label)
+			{ if ($label{$i} eq $_[0]) { $pre=''; last; } }
+			&out1("call",$pre.$_[0]);
+		}
 sub main'ret	{ &out0("ret"); }
 sub main'nop	{ &out0("nop"); }
 sub main'test	{ &out2("testl",@_); }
 sub main'bt	{ &out2("btl",@_); }
 sub main'leave	{ &out0("leave"); }
+sub main'cpuid	{ &out0(".byte\t0x0f,0xa2"); }
+sub main'rdtsc	{ &out0(".byte\t0x0f,0x31"); }
+sub main'halt	{ &out0("hlt"); }
+sub main'movz	{ &out2("movzbl",@_); }
+sub main'neg	{ &out1("negl",@_); }
 
 # SSE2
 sub main'emms	{ &out0("emms"); }
@@ -320,8 +331,6 @@ sub main'file
 
 	local($tmp)=<<"EOF";
 	.file	"$file.s"
-	.version	"01.01"
-gcc2_compiled.:
 EOF
 	push(@out,$tmp);
 	}
@@ -335,15 +344,17 @@ sub main'function_begin
 
 	local($tmp)=<<"EOF";
 .text
-	.align $align
-.globl $func
+.globl	$func
 EOF
 	push(@out,$tmp);
 	if ($main'cpp)
-		{ $tmp=push(@out,"\tTYPE($func,\@function)\n"); }
-	elsif ($main'gaswin)
-		{ $tmp=push(@out,"\t.def\t$func;\t.scl\t2;\t.type\t32;\t.endef\n"); }
-	else	{ $tmp=push(@out,"\t.type\t$func,\@function\n"); }
+		{ $tmp=push(@out,"TYPE($func,\@function)\n"); }
+	elsif ($main'coff)
+		{ $tmp=push(@out,".def\t$func;\t.scl\t2;\t.type\t32;\t.endef\n"); }
+	elsif ($main'aout and !$main'pic)
+		{ }
+	else	{ $tmp=push(@out,".type\t$func,\@function\n"); }
+	push(@out,".align\t$align\n");
 	push(@out,"$func:\n");
 	$tmp=<<"EOF";
 	pushl	%ebp
@@ -365,15 +376,17 @@ sub main'function_begin_B
 
 	local($tmp)=<<"EOF";
 .text
-	.align $align
-.globl $func
+.globl	$func
 EOF
 	push(@out,$tmp);
 	if ($main'cpp)
-		{ push(@out,"\tTYPE($func,\@function)\n"); }
-	elsif ($main'gaswin)
-		{ $tmp=push(@out,"\t.def\t$func;\t.scl\t2;\t.type\t32;\t.endef\n"); }
-	else	{ push(@out,"\t.type	$func,\@function\n"); }
+		{ push(@out,"TYPE($func,\@function)\n"); }
+	elsif ($main'coff)
+		{ $tmp=push(@out,".def\t$func;\t.scl\t2;\t.type\t32;\t.endef\n"); }
+	elsif ($main'aout and !$main'pic)
+		{ }
+	else	{ push(@out,".type	$func,\@function\n"); }
+	push(@out,".align\t$align\n");
 	push(@out,"$func:\n");
 	$stack=4;
 	}
@@ -390,15 +403,15 @@ sub main'function_end
 	popl	%ebx
 	popl	%ebp
 	ret
-.L_${func}_end:
+${dot}L_${func}_end:
 EOF
 	push(@out,$tmp);
 
 	if ($main'cpp)
-		{ push(@out,"\tSIZE($func,.L_${func}_end-$func)\n"); }
-	elsif ($main'gaswin)
-                { $tmp=push(@out,"\t.align 4\n"); }
-	else	{ push(@out,"\t.size\t$func,.L_${func}_end-$func\n"); }
+		{ push(@out,"SIZE($func,${dot}L_${func}_end-$func)\n"); }
+	elsif ($main'coff or $main'aout)
+                { }
+	else	{ push(@out,".size\t$func,${dot}L_${func}_end-$func\n"); }
 	push(@out,".ident	\"$func\"\n");
 	$stack=0;
 	%label=();
@@ -424,12 +437,12 @@ sub main'function_end_B
 
 	$func=$under.$func;
 
-	push(@out,".L_${func}_end:\n");
+	push(@out,"${dot}L_${func}_end:\n");
 	if ($main'cpp)
-		{ push(@out,"\tSIZE($func,.L_${func}_end-$func)\n"); }
-        elsif ($main'gaswin)
-                { push(@out,"\t.align 4\n"); }
-	else	{ push(@out,"\t.size\t$func,.L_${func}_end-$func\n"); }
+		{ push(@out,"SIZE($func,${dot}L_${func}_end-$func)\n"); }
+        elsif ($main'coff or $main'aout)
+                { }
+	else	{ push(@out,".size\t$func,${dot}L_${func}_end-$func\n"); }
 	push(@out,".ident	\"$func\"\n");
 	$stack=0;
 	%label=();
@@ -471,9 +484,10 @@ sub main'swtmp
 
 sub main'comment
 	{
-	if ($main'elf)	# GNU and SVR4 as'es use different comment delimiters,
-		{	# so we just skip comments...
-		push(@out,"\n");
+	if (!defined($com_start) or $main'elf)
+		{	# Regarding $main'elf above...
+			# GNU and SVR4 as'es use different comment delimiters,
+		push(@out,"\n");	# so we just skip ELF comments...
 		return;
 		}
 	foreach (@_)
@@ -485,11 +499,17 @@ sub main'comment
 		}
 	}
 
+sub main'public_label
+	{
+	$label{$_[0]}="${under}${_[0]}"	if (!defined($label{$_[0]}));
+	push(@out,".globl\t$label{$_[0]}\n");
+	}
+
 sub main'label
 	{
 	if (!defined($label{$_[0]}))
 		{
-		$label{$_[0]}=".${label}${_[0]}";
+		$label{$_[0]}="${dot}${label}${_[0]}";
 		$label++;
 		}
 	return($label{$_[0]});
@@ -499,10 +519,14 @@ sub main'set_label
 	{
 	if (!defined($label{$_[0]}))
 		{
-		$label{$_[0]}=".${label}${_[0]}";
+		$label{$_[0]}="${dot}${label}${_[0]}";
 		$label++;
 		}
-	push(@out,".align $align\n") if ($_[1] != 0);
+	if ($_[1]!=0)
+		{
+		if ($_[1]>1)	{ main'align($_[1]);		}
+		else		{ push(@out,".align $align\n");	}
+		}
 	push(@out,"$label{$_[0]}:\n");
 	}
 
@@ -512,18 +536,21 @@ sub main'file_end
 	if ($main'elf && grep {/%[x]*mm[0-7]/i} @out) {
 		local($tmp);
 
-		push (@out,"\n.comm\t".$under."OPENSSL_ia32cap,8,4\n");
+		push (@out,"\n.comm\t${under}OPENSSL_ia32cap_P,4,4\n");
 
 		push (@out,".section\t.init\n");
 		# One can argue that it's wasteful to craft every
 		# SSE/MMX module with this snippet... Well, it's 72
 		# bytes long and for the moment we have two modules.
 		# Let's argue when we have 7 modules or so...
-		&main'picmeup("edx","OPENSSL_ia32cap");
+		#
+		# $1<<10 sets a reserved bit to signal that variable
+		# was initialized already...
+		&main'picmeup("edx","OPENSSL_ia32cap_P");
 		$tmp=<<___;
 		cmpl	\$0,(%edx)
 		jne	1f
-		movl	\$1,(%edx)
+		movl	\$1<<10,(%edx)
 		pushf
 		popl	%eax
 		movl	%eax,%ecx
@@ -533,18 +560,18 @@ sub main'file_end
 		pushf
 		popl	%eax
 		xorl	%ecx,%eax
-		bt	\$21,%eax
+		btl	\$21,%eax
 		jnc	1f
 		pushl	%edi
 		pushl	%ebx
 		movl	%edx,%edi
 		movl	\$1,%eax
-		cpuid
-		orl	\$1,%edx
+		.byte	0x0f,0xa2
+		orl	\$1<<10,%edx
 		movl	%edx,0(%edi)
-		movl	%ecx,4(%edi)
 		popl	%ebx
 		popl	%edi
+	.align	$align
 	1:
 ___
 		push (@out,$tmp);
@@ -565,7 +592,13 @@ sub main'data_word
 
 sub main'align
 	{
-	push(@out,".align $_[0]\n");
+	my $val=$_[0],$p2,$i;
+	if ($main'aout) {
+		for ($p2=0;$val!=0;$val>>=1) { $p2++; }
+		$val=$p2-1;
+		$val.=",0x90";
+	}
+	push(@out,".align\t$val\n");
 	}
 
 # debug output functions: puts, putx, printf
@@ -647,7 +680,6 @@ sub main'picmeup
 		{
 		local($tmp)=<<___;
 #if (defined(ELF) || defined(SOL)) && defined(PIC)
-	.align	4
 	call	1f
 1:	popl	$regs{$dst}
 	addl	\$_GLOBAL_OFFSET_TABLE_+[.-1b],$regs{$dst}
@@ -660,13 +692,12 @@ ___
 		}
 	elsif ($main'pic && ($main'elf || $main'aout))
 		{
-		push(@out,"\t.align\t4\n");
 		&main'call(&main'label("PIC_me_up"));
 		&main'set_label("PIC_me_up");
 		&main'blindpop($dst);
-		&main'add($dst,"\$$under"."_GLOBAL_OFFSET_TABLE_+[.-".
+		&main'add($dst,"\$${under}_GLOBAL_OFFSET_TABLE_+[.-".
 				&main'label("PIC_me_up") . "]");
-		&main'mov($dst,&main'DWP($sym."\@GOT",$dst));
+		&main'mov($dst,&main'DWP($under.$sym."\@GOT",$dst));
 		}
 	else
 		{
@@ -675,3 +706,39 @@ ___
 	}
 
 sub main'blindpop { &out1("popl",@_); }
+
+sub main'initseg
+	{
+	local($f)=@_;
+	local($tmp);
+	if ($main'elf)
+		{
+		$tmp=<<___;
+.section	.init
+	call	$under$f
+	.align	$align
+___
+		}
+	elsif ($main'coff)
+		{
+		$tmp=<<___;	# applies to both Cygwin and Mingw
+.section	.ctors
+.long	$under$f
+___
+		}
+	elsif ($main'aout)
+		{
+		local($ctor)="${under}_GLOBAL_\$I\$$f";
+		$tmp=".text\n";
+		$tmp.=".type	$ctor,\@function\n" if ($main'pic);
+		$tmp.=<<___;	# OpenBSD way...
+.globl	$ctor
+.align	2
+$ctor:
+	jmp	$under$f
+___
+		}
+	push(@out,$tmp) if ($tmp);
+	}
+
+1;

@@ -4,6 +4,49 @@
 
  Changes between 0.9.7e and 0.9.8  [xx XXX xxxx]
 
+  *) Change ./Configure so that certain algorithms can be disabled by default.
+     The new counterpiece to "no-xxx" is "enable-xxx", and RC5 will now be
+     disabled unless "enable-rc5" is specified.
+     [Bodo Moeller]
+
+  *) Add processing of proxy certificates (see RFC 3820).  This work was
+     sponsored by KTH (The Royal Institute of Technology in Stockholm) and
+     EGEE (Enabling Grids for E-science in Europe).
+     [Richard Levitte]
+
+  *) RC4 performance overhaul on modern architectures/implementations, such
+     as Intel P4, IA-64 and AMD64.
+     [Andy Polyakov]
+
+  *) New utility extract-section.pl. This can be used specify an alternative
+     section number in a pod file instead of having to treat each file as
+     a separate case in Makefile. This can be done by adding two lines to the
+     pod file:
+
+     =for comment openssl_section:XXX
+
+     The blank line is mandatory.
+
+     [Steve Henson]
+
+  *) New arguments -certform, -keyform and -pass for s_client and s_server
+     to allow alternative format key and certificate files and passphrase
+     sources.
+     [Steve Henson]
+
+  *) New structure X509_VERIFY_PARAM which combines current verify parameters,
+     update associated structures and add various utility functions.
+
+     Add new policy related verify parameters, include policy checking in 
+     standard verify code. Enhance 'smime' application with extra parameters
+     to support policy checking and print out.
+     [Steve Henson]
+
+  *) Add a new engine to support VIA PadLock ACE extensions in the VIA C3
+     Nehemiah processors. These extensions support AES encryption in hardware
+     as well as RNG (though RNG support is currently disabled).
+     [Michal Ludvig <michal@logix.cz>, with help from Andy Polyakov]
+
   *) Deprecate BN_[get|set]_params() functions (they were ignored internally).
      [Geoff Thorpe]
 
@@ -710,7 +753,48 @@
      differing sizes.
      [Richard Levitte]
 
- Changes between 0.9.7d and 0.9.7e  [XX xxx XXXX]
+ Changes between 0.9.7e and 0.9.7f  [XX xxx XXXX]
+
+  *) Fix hang in EGD/PRNGD query when communication socket is closed
+     prematurely by EGD/PRNGD.
+     [Darren Tucker <dtucker@zip.com.au> via Lutz Jänicke, resolves #1014]
+
+  *) Prompt for pass phrases when appropriate for PKCS12 input format.
+     [Steve Henson]
+
+  *) Add lots of checks for memory allocation failure, error codes to indicate
+     failure and freeing up memory if a failure occurs.
+     [Nauticus Networks SSL Team <openssl@nauticusnet.com>, Steve Henson]
+
+  *) Add new -passin argument to dgst.
+     [Steve Henson]
+
+  *) Perform some character comparisons of different types in X509_NAME_cmp:
+     this is needed for some certificates that reencode DNs into UTF8Strings
+     (in violation of RFC3280) and can't or wont issue name rollover
+     certificates.
+     [Steve Henson]
+
+  *) Make an explicit check during certificate validation to see that
+     the CA setting in each certificate on the chain is correct.  As a
+     side effect always do the following basic checks on extensions,
+     not just when there's an associated purpose to the check:
+
+      - if there is an unhandled critical extension (unless the user
+        has chosen to ignore this fault)
+      - if the path length has been exceeded (if one is set at all)
+      - that certain extensions fit the associated purpose (if one has
+        been given)
+     [Richard Levitte]
+
+ Changes between 0.9.7d and 0.9.7e  [25 Oct 2004]
+
+  *) Avoid a race condition when CRLs are checked in a multi threaded 
+     environment. This would happen due to the reordering of the revoked
+     entries during signature checking and serial number lookup. Now the
+     encoding is cached and the serial number sort performed under a lock.
+     Add new STACK function sk_is_sorted().
+     [Steve Henson]
 
   *) Add Delta CRL to the extension code.
      [Steve Henson]

@@ -21,6 +21,7 @@ RIP_ASM_OBJ=
 
 CFLAGS= $(INCLUDES) $(CFLAG)
 ASFLAGS= $(INCLUDES) $(ASFLAG)
+AFLAGS= $(ASFLAGS)
 
 GENERAL=Makefile
 TEST=rmdtest.c
@@ -47,20 +48,15 @@ lib:    $(LIBOBJ)
 	$(RANLIB) $(LIB) || echo Never mind.
 	@touch lib
 
-# elf
-asm/rm86-elf.s: asm/rmd-586.pl ../perlasm/x86asm.pl
-	(cd asm; $(PERL) rmd-586.pl elf $(CFLAGS) > rm86-elf.s)
-
+# ELF
+rm86-elf.s: asm/rmd-586.pl ../perlasm/x86asm.pl
+	(cd asm; $(PERL) rmd-586.pl elf $(CFLAGS) > ../$@)
+# COFF
+rm86-cof.s: asm/rmd-586.pl ../perlasm/x86asm.pl
+	(cd asm; $(PERL) rmd-586.pl coff $(CFLAGS) > ../$@)
 # a.out
-asm/rm86-out.o: asm/rm86unix.cpp
-	$(CPP) -DOUT asm/rm86unix.cpp | as -o asm/rm86-out.o
-
-# bsdi
-asm/rm86bsdi.o: asm/rm86unix.cpp
-	$(CPP) -DBSDI asm/rm86unix.cpp | sed 's/ :/:/' | as -o asm/rm86bsdi.o
-
-asm/rm86unix.cpp: asm/rmd-586.pl ../perlasm/x86asm.pl
-	(cd asm; $(PERL) rmd-586.pl cpp >rm86unix.cpp)
+rm86-out.s: asm/rmd-586.pl ../perlasm/x86asm.pl
+	(cd asm; $(PERL) rmd-586.pl a.out $(CFLAGS) > ../$@)
 
 files:
 	$(PERL) $(TOP)/util/files.pl Makefile.ssl >> $(TOP)/MINFO
@@ -72,7 +68,7 @@ links:
 	@$(PERL) $(TOP)/util/mklink.pl ../../apps $(APPS)
 
 install:
-	@for i in $(EXHEADER) ; \
+	@headerlist="$(EXHEADER)"; for i in $$headerlist ; \
 	do  \
 	(cp $$i $(INSTALL_PREFIX)$(INSTALLTOP)/include/openssl/$$i; \
 	chmod 644 $(INSTALL_PREFIX)$(INSTALLTOP)/include/openssl/$$i ); \
@@ -94,7 +90,7 @@ dclean:
 	mv -f Makefile.new $(MAKEFILE)
 
 clean:
-	rm -f asm/rm86unix.cpp asm/*-elf.* *.o asm/*.o *.obj lib tags core .pure .nfs* *.old *.bak fluff
+	rm -f *.s *.o *.obj lib tags core .pure .nfs* *.old *.bak fluff
 
 # DO NOT DELETE THIS LINE -- make depend depends on it.
 

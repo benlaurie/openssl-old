@@ -230,7 +230,7 @@ $ LIB_ENGINE = "eng_err,eng_lib,eng_list,eng_init,eng_ctrl,"+ -
 	"eng_table,eng_pkey,eng_fat,eng_all,"+ -
 	"tb_rsa,tb_dsa,tb_ecdsa,tb_dh,tb_ecdh,tb_rand,tb_store,"+ -
 	"tb_cipher,tb_digest,"+ -
-	"eng_openssl,eng_dyn,eng_cnf,eng_cryptodev"
+	"eng_openssl,eng_dyn,eng_cnf,eng_cryptodev,eng_padlock"
 $ LIB_AES = "aes_core,aes_misc,aes_ecb,aes_cbc,aes_cfb,aes_ofb,aes_ctr"
 $ LIB_BUFFER = "buffer,buf_err"
 $ LIB_BIO = "bio_lib,bio_cb,bio_err,"+ -
@@ -274,12 +274,12 @@ $ LIB_X509 = "x509_def,x509_d2,x509_r2x,x509_cmp,"+ -
 	"x509_set,x509cset,x509rset,x509_err,"+ -
 	"x509name,x509_v3,x509_ext,x509_att,"+ -
 	"x509type,x509_lu,x_all,x509_txt,"+ -
-	"x509_trs,by_file,by_dir"
+	"x509_trs,by_file,by_dir,x509_vpm"
 $ LIB_X509V3 = "v3_bcons,v3_bitst,v3_conf,v3_extku,v3_ia5,v3_lib,"+ -
 	"v3_prn,v3_utl,v3err,v3_genn,v3_alt,v3_skey,v3_akey,v3_pku,"+ -
 	"v3_int,v3_enum,v3_sxnet,v3_cpols,v3_crld,v3_purp,v3_info,"+ -
-	"v3_ocsp,v3_akeya,v3_pmaps,v3_pcons,v3_ncons,pcy_cache,pcy_node,"+ -
-	"pcy_data,pcy_map,pcy_tree,pcy_lib"
+	"v3_ocsp,v3_akeya,v3_pmaps,v3_pcons,v3_ncons,v3_pcia,v3_pci,"+ -
+	"pcy_cache,pcy_node,pcy_data,pcy_map,pcy_tree,pcy_lib"
 $ LIB_CONF = "conf_err,conf_lib,conf_api,conf_def,conf_mod,conf_mall,conf_sap"
 $ LIB_TXT_DB = "txt_db"
 $ LIB_PKCS7 = "pk7_asn1,pk7_lib,pkcs7err,pk7_doit,pk7_smime,pk7_attr,"+ -
@@ -789,8 +789,8 @@ $     WRITE SYS$OUTPUT ""
 $     WRITE SYS$OUTPUT "The Option ",P1," Is Invalid.  The Valid Options Are:"
 $     WRITE SYS$OUTPUT ""
 $     WRITE SYS$OUTPUT "    ALL      :  Just Build Everything."
-$     WRITE SYS$OUTPUT "    LIBRARY  :  To Compile Just The [.xxx.EXE.SSL]LIBCRYPTO.OLB Library."
-$     WRITE SYS$OUTPUT "    APPS     :  To Compile Just The [.xxx.EXE.SSL]*.EXE Programs."
+$     WRITE SYS$OUTPUT "    LIBRARY  :  To Compile Just The [.xxx.EXE.CRYPTO]LIBCRYPTO.OLB Library."
+$     WRITE SYS$OUTPUT "    APPS     :  To Compile Just The [.xxx.EXE.CRYPTO]*.EXE Programs."
 $     WRITE SYS$OUTPUT ""
 $     WRITE SYS$OUTPUT " Where 'xxx' Stands For:"
 $     WRITE SYS$OUTPUT ""

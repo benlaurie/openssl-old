@@ -280,6 +280,7 @@ struct x509_st
 	CRYPTO_EX_DATA ex_data;
 	/* These contain copies of various extension values */
 	long ex_pathlen;
+	long ex_pcpathlen;
 	unsigned long ex_flags;
 	unsigned long ex_kusage;
 	unsigned long ex_xkusage;
@@ -435,6 +436,7 @@ typedef struct X509_crl_info_st
 	ASN1_TIME *nextUpdate;
 	STACK_OF(X509_REVOKED) *revoked;
 	STACK_OF(X509_EXTENSION) /* [0] */ *extensions;
+	ASN1_ENCODING enc;
 	} X509_CRL_INFO;
 
 struct X509_crl_st

@@ -92,7 +92,7 @@ sub get_mem
 		$reg2=&conv($1);
 		$addr="_$2";
 		}
-	elsif ($addr =~ /^[_a-zA-Z]/)
+	elsif ($addr =~ /^[_a-z][_a-z0-9]*$/i)
 		{
 		$addr="_$addr";
 		}
@@ -133,6 +133,7 @@ sub main'xorb	{ &out2("xor",@_); }
 sub main'add	{ &out2("add",@_); }
 sub main'adc	{ &out2("adc",@_); }
 sub main'sub	{ &out2("sub",@_); }
+sub main'sbb	{ &out2("sbb",@_); }
 sub main'rotl	{ &out2("rol",@_); }
 sub main'rotr	{ &out2("ror",@_); }
 sub main'exch	{ &out2("xchg",@_); }
@@ -160,6 +161,8 @@ sub main'jne	{ &out1("jne",@_); }
 sub main'jno	{ &out1("jno",@_); }
 sub main'push	{ &out1("push",@_); $stack+=4; }
 sub main'pop	{ &out1("pop",@_); $stack-=4; }
+sub main'pushf	{ &out0("pushfd"); $stack+=4; }
+sub main'popf	{ &out0("popfd"); $stack-=4; }
 sub main'bswap	{ &out1("bswap",@_); &using486(); }
 sub main'not	{ &out1("not",@_); }
 sub main'call	{ &out1("call",($_[0]=~/^\$L/?'':'_').$_[0]); }
@@ -168,6 +171,11 @@ sub main'nop	{ &out0("nop"); }
 sub main'test	{ &out2("test",@_); }
 sub main'bt	{ &out2("bt",@_); }
 sub main'leave	{ &out0("leave"); }
+sub main'cpuid  { &out0("DW\t0A20Fh"); }
+sub main'rdtsc  { &out0("DW\t0310Fh"); }
+sub main'halt	{ &out0("hlt"); }
+sub main'movz	{ &out2("movzx",@_); }
+sub main'neg	{ &out1("neg",@_); }
 
 # SSE2
 sub main'emms	{ &out0("emms"); }
@@ -249,7 +257,7 @@ sub main'function_begin
 	push(@labels,$func);
 
 	local($tmp)=<<"EOF";
-_TEXT	SEGMENT
+_TEXT\$	SEGMENT PARA
 PUBLIC	_$func
 $extra
 _$func PROC NEAR
@@ -267,7 +275,7 @@ sub main'function_begin_B
 	local($func,$extra)=@_;
 
 	local($tmp)=<<"EOF";
-_TEXT	SEGMENT
+_TEXT\$	SEGMENT	PARA
 PUBLIC	_$func
 $extra
 _$func PROC NEAR
@@ -287,7 +295,7 @@ sub main'function_end
 	pop	ebp
 	ret
 _$func ENDP
-_TEXT	ENDS
+_TEXT\$	ENDS
 EOF
 	push(@out,$tmp);
 	$stack=0;
@@ -300,7 +308,7 @@ sub main'function_end_B
 
 	local($tmp)=<<"EOF";
 _$func ENDP
-_TEXT	ENDS
+_TEXT\$	ENDS
 EOF
 	push(@out,$tmp);
 	$stack=0;
@@ -325,7 +333,7 @@ sub main'file_end
 	{
 	# try to detect if SSE2 or MMX extensions were used...
 	if (grep {/xmm[0-7]\s*,/i} @out) {
-		grep {s/\.[3-7]86/\.786\n\t\.XMM/} @out;
+		grep {s/\.[3-7]86/\.686\n\t\.XMM/} @out;
 		}
 	elsif (grep {/mm[0-7]\s*,/i} @out) {
 		grep {s/\.[3-7]86/\.686\n\t\.MMX/} @out;
@@ -361,6 +369,12 @@ sub main'comment
 		}
 	}
 
+sub main'public_label
+	{
+	$label{$_[0]}="_$_[0]"	if (!defined($label{$_[0]}));
+	push(@out,"PUBLIC\t$label{$_[0]}\n");
+	}
+
 sub main'label
 	{
 	if (!defined($label{$_[0]}))
@@ -378,9 +392,17 @@ sub main'set_label
 		$label{$_[0]}="\$${label}${_[0]}";
 		$label++;
 		}
+	if ($_[1]!=0 && $_[1]>1)
+		{
+		main'align($_[1]);
+		}
 	if((defined $_[2]) && ($_[2] == 1))
 		{
 		push(@out,"$label{$_[0]}::\n");
+		}
+	elsif ($label{$_[0]} !~ /^\$/)
+		{
+		push(@out,"$label{$_[0]}\tLABEL PTR\n");
 		}
 	else
 		{
@@ -413,3 +435,18 @@ sub main'picmeup
 	}
 
 sub main'blindpop { &out1("pop",@_); }
+
+sub main'initseg 
+	{
+	local($f)=@_;
+	local($tmp)=<<___;
+OPTION	DOTNAME
+.CRT\$XIU	SEGMENT DWORD PUBLIC 'DATA'
+EXTRN	_$f:NEAR
+DD	_$f
+.CRT\$XIU	ENDS
+___
+	push(@out,$tmp);
+	}
+
+1;

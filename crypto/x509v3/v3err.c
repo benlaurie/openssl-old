@@ -1,6 +1,6 @@
 /* crypto/x509v3/v3err.c */
 /* ====================================================================
- * Copyright (c) 1999-2003 The OpenSSL Project.  All rights reserved.
+ * Copyright (c) 1999-2005 The OpenSSL Project.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -74,12 +74,14 @@ static ERR_STRING_DATA X509V3_str_functs[]=
 {ERR_PACK(0,X509V3_F_DO_I2V_NAME_CONSTRAINTS,0),	"DO_I2V_NAME_CONSTRAINTS"},
 {ERR_PACK(0,X509V3_F_HEX_TO_STRING,0),	"hex_to_string"},
 {ERR_PACK(0,X509V3_F_I2S_ASN1_ENUMERATED,0),	"i2s_ASN1_ENUMERATED"},
+{ERR_PACK(0,X509V3_F_I2S_ASN1_IA5STRING,0),	"I2S_ASN1_IA5STRING"},
 {ERR_PACK(0,X509V3_F_I2S_ASN1_INTEGER,0),	"i2s_ASN1_INTEGER"},
 {ERR_PACK(0,X509V3_F_I2V_AUTHORITY_INFO_ACCESS,0),	"I2V_AUTHORITY_INFO_ACCESS"},
 {ERR_PACK(0,X509V3_F_NOTICE_SECTION,0),	"NOTICE_SECTION"},
 {ERR_PACK(0,X509V3_F_NREF_NOS,0),	"NREF_NOS"},
 {ERR_PACK(0,X509V3_F_POLICY_SECTION,0),	"POLICY_SECTION"},
 {ERR_PACK(0,X509V3_F_R2I_CERTPOL,0),	"R2I_CERTPOL"},
+{ERR_PACK(0,X509V3_F_R2I_PCI,0),	"R2I_PCI"},
 {ERR_PACK(0,X509V3_F_S2I_ASN1_IA5STRING,0),	"S2I_ASN1_IA5STRING"},
 {ERR_PACK(0,X509V3_F_S2I_ASN1_INTEGER,0),	"s2i_ASN1_INTEGER"},
 {ERR_PACK(0,X509V3_F_S2I_ASN1_OCTET_STRING,0),	"s2i_ASN1_OCTET_STRING"},
@@ -92,7 +94,7 @@ static ERR_STRING_DATA X509V3_str_functs[]=
 {ERR_PACK(0,X509V3_F_SXNET_GET_ID_ASC,0),	"SXNET_get_id_asc"},
 {ERR_PACK(0,X509V3_F_SXNET_GET_ID_ULONG,0),	"SXNET_get_id_ulong"},
 {ERR_PACK(0,X509V3_F_V2I_ACCESS_DESCRIPTION,0),	"V2I_ACCESS_DESCRIPTION"},
-{ERR_PACK(0,X509V3_F_V2I_ASN1_BIT_STRING,0),	"V2I_ASN1_BIT_STRING"},
+{ERR_PACK(0,X509V3_F_V2I_ASN1_BIT_STRING,0),	"v2i_ASN1_BIT_STRING"},
 {ERR_PACK(0,X509V3_F_V2I_AUTHORITY_KEYID,0),	"V2I_AUTHORITY_KEYID"},
 {ERR_PACK(0,X509V3_F_V2I_BASIC_CONSTRAINTS,0),	"V2I_BASIC_CONSTRAINTS"},
 {ERR_PACK(0,X509V3_F_V2I_CRLD,0),	"V2I_CRLD"},
@@ -137,6 +139,7 @@ static ERR_STRING_DATA X509V3_str_reasons[]=
 {X509V3_R_EXTENSION_VALUE_ERROR          ,"extension value error"},
 {X509V3_R_ILLEGAL_EMPTY_EXTENSION        ,"illegal empty extension"},
 {X509V3_R_ILLEGAL_HEX_DIGIT              ,"illegal hex digit"},
+{X509V3_R_INCORRECT_POLICY_SYNTAX_TAG    ,"incorrect policy syntax tag"},
 {X509V3_R_INVALID_BOOLEAN_STRING         ,"invalid boolean string"},
 {X509V3_R_INVALID_EXTENSION_STRING       ,"invalid extension string"},
 {X509V3_R_INVALID_NAME                   ,"invalid name"},
@@ -148,6 +151,7 @@ static ERR_STRING_DATA X509V3_str_reasons[]=
 {X509V3_R_INVALID_OBJECT_IDENTIFIER      ,"invalid object identifier"},
 {X509V3_R_INVALID_OPTION                 ,"invalid option"},
 {X509V3_R_INVALID_POLICY_IDENTIFIER      ,"invalid policy identifier"},
+{X509V3_R_INVALID_PROXY_POLICY_SETTING   ,"invalid proxy policy setting"},
 {X509V3_R_INVALID_PURPOSE                ,"invalid purpose"},
 {X509V3_R_INVALID_SECTION                ,"invalid section"},
 {X509V3_R_INVALID_SYNTAX                 ,"invalid syntax"},
@@ -158,11 +162,17 @@ static ERR_STRING_DATA X509V3_str_reasons[]=
 {X509V3_R_NO_ISSUER_CERTIFICATE          ,"no issuer certificate"},
 {X509V3_R_NO_ISSUER_DETAILS              ,"no issuer details"},
 {X509V3_R_NO_POLICY_IDENTIFIER           ,"no policy identifier"},
+{X509V3_R_NO_PROXY_CERT_POLICY_LANGUAGE_DEFINED,"no proxy cert policy language defined"},
 {X509V3_R_NO_PUBLIC_KEY                  ,"no public key"},
 {X509V3_R_NO_SUBJECT_DETAILS             ,"no subject details"},
 {X509V3_R_ODD_NUMBER_OF_DIGITS           ,"odd number of digits"},
 {X509V3_R_OPERATION_NOT_DEFINED          ,"operation not defined"},
 {X509V3_R_OTHERNAME_ERROR                ,"othername error"},
+{X509V3_R_POLICY_LANGUAGE_ALREADTY_DEFINED,"policy language alreadty defined"},
+{X509V3_R_POLICY_PATH_LENGTH             ,"policy path length"},
+{X509V3_R_POLICY_PATH_LENGTH_ALREADTY_DEFINED,"policy path length alreadty defined"},
+{X509V3_R_POLICY_SYNTAX_NOT_CURRENTLY_SUPPORTED,"policy syntax not currently supported"},
+{X509V3_R_POLICY_WHEN_PROXY_LANGUAGE_REQUIRES_NO_POLICY,"policy when proxy language requires no policy"},
 {X509V3_R_SECTION_NOT_FOUND              ,"section not found"},
 {X509V3_R_UNABLE_TO_GET_ISSUER_DETAILS   ,"unable to get issuer details"},
 {X509V3_R_UNABLE_TO_GET_ISSUER_KEYID     ,"unable to get issuer keyid"},

@@ -154,13 +154,14 @@ int MS_CALLBACK verify_callback(int ok, X509_STORE_CTX *ctx);
 #endif
 #ifdef HEADER_SSL_H
 int set_cert_stuff(SSL_CTX *ctx, char *cert_file, char *key_file);
+int set_cert_key_stuff(SSL_CTX *ctx, X509 *cert, EVP_PKEY *key);
 #endif
 int init_client(int *sock, char *server, int port);
 int should_retry(int i);
 int extract_port(char *str, short *port_ptr);
 int extract_host_port(char *str,char **host_ptr,unsigned char *ip,short *p);
 
-long MS_CALLBACK bio_dump_cb(BIO *bio, int cmd, const char *argp,
+long MS_CALLBACK bio_dump_callback(BIO *bio, int cmd, const char *argp,
 	int argi, long argl, long ret);
 
 #ifdef HEADER_SSL_H

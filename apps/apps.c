@@ -539,7 +539,7 @@ int password_callback(char *buf, int bufsiz, int verify,
 		char *prompt = NULL;
 
 		prompt = UI_construct_prompt(ui, "pass phrase",
-			cb_data->prompt_info);
+			prompt_info);
 
 		ui_flags |= UI_INPUT_FLAG_DEFAULT_PWD;
 		UI_ctrl(ui, UI_CTRL_PRINT_ERRORS, 1, 0, 0);
@@ -688,6 +688,51 @@ int add_oid_section(BIO *err, CONF *conf)
 	return 1;
 }
 
+static int load_pkcs12(BIO *err, BIO *in, const char *desc,
+		pem_password_cb *pem_cb,  void *cb_data,
+		EVP_PKEY **pkey, X509 **cert, STACK_OF(X509) **ca)
+	{
+ 	const char *pass;
+	char tpass[PEM_BUFSIZE];
+	int len, ret = 0;
+	PKCS12 *p12;
+	p12 = d2i_PKCS12_bio(in, NULL);
+	if (p12 == NULL)
+		{
+		BIO_printf(err, "Error loading PKCS12 file for %s\n", desc);	
+		goto die;
+		}
+	/* See if an empty password will do */
+	if (PKCS12_verify_mac(p12, "", 0) || PKCS12_verify_mac(p12, NULL, 0))
+		pass = "";
+	else
+		{
+		if (!pem_cb)
+			pem_cb = (pem_password_cb *)password_callback;
+		len = pem_cb(tpass, PEM_BUFSIZE, 0, cb_data);
+		if (len < 0) 
+			{
+			BIO_printf(err, "Passpharse callback error for %s\n",
+					desc);
+			goto die;
+			}
+		if (len < PEM_BUFSIZE)
+			tpass[len] = 0;
+		if (!PKCS12_verify_mac(p12, tpass, len))
+			{
+			BIO_printf(err,
+	"Mac verify error (wrong password?) in PKCS12 file for %s\n", desc);	
+			goto die;
+			}
+		pass = tpass;
+		}
+	ret = PKCS12_parse(p12, pass, pkey, cert, ca);
+	die:
+	if (p12)
+		PKCS12_free(p12);
+	return ret;
+	}
+
 X509 *load_cert(BIO *err, const char *file, int format,
 	const char *pass, ENGINE *e, const char *cert_descrip)
 	{
@@ -768,11 +813,9 @@ X509 *load_cert(BIO *err, const char *file, int format,
 			(pem_password_cb *)password_callback, NULL);
 	else if (format == FORMAT_PKCS12)
 		{
-		PKCS12 *p12 = d2i_PKCS12_bio(cert, NULL);
-
-		PKCS12_parse(p12, NULL, NULL, &x, NULL);
-		PKCS12_free(p12);
-		p12 = NULL;
+		if (!load_pkcs12(err, cert,cert_descrip, NULL, NULL,
+					NULL, &x, NULL))
+			goto end;
 		}
 	else	{
 		BIO_printf(err,"bad input format specified for %s\n",
@@ -851,11 +894,10 @@ EVP_PKEY *load_key(BIO *err, const char *file, int format, int maybe_stdin,
 #endif
 	else if (format == FORMAT_PKCS12)
 		{
-		PKCS12 *p12 = d2i_PKCS12_bio(key, NULL);
-
-		PKCS12_parse(p12, pass, &pkey, NULL, NULL);
-		PKCS12_free(p12);
-		p12 = NULL;
+		if (!load_pkcs12(err, key, key_descrip,
+				(pem_password_cb *)password_callback, &cb_data,
+				&pkey, NULL, NULL))
+			goto end;
 		}
 	else
 		{
@@ -2140,3 +2182,141 @@ int WIN32_rename(char *from, char *to)
 #endif
 	}
 #endif
+
+int args_verify(char ***pargs, int *pargc,
+			int *badarg, BIO *err, X509_VERIFY_PARAM **pm)
+	{
+	ASN1_OBJECT *otmp = NULL;
+	unsigned long flags = 0;
+	int i;
+	int purpose = 0;
+	char **oldargs = *pargs;
+	char *arg = **pargs, *argn = (*pargs)[1];
+	if (!strcmp(arg, "-policy"))
+		{
+		if (!argn)
+			*badarg = 1;
+		else
+			{
+			otmp = OBJ_txt2obj(argn, 0);
+			if (!otmp)
+				{
+				BIO_printf(err, "Invalid Policy \"%s\"\n",
+									argn);
+				*badarg = 1;
+				}
+			}
+		(*pargs)++;
+		}
+	else if (strcmp(arg,"-purpose") == 0)
+		{
+		X509_PURPOSE *xptmp;
+		if (!argn)
+			*badarg = 1;
+		else
+			{
+			i = X509_PURPOSE_get_by_sname(argn);
+			if(i < 0)
+				{
+				BIO_printf(err, "unrecognized purpose\n");
+				*badarg = 1;
+				}
+			else
+				{
+				xptmp = X509_PURPOSE_get0(i);
+				purpose = X509_PURPOSE_get_id(xptmp);
+				}
+			}
+		(*pargs)++;
+		}
+	else if (!strcmp(arg, "-ignore_critical"))
+		flags |= X509_V_FLAG_IGNORE_CRITICAL;
+	else if (!strcmp(arg, "-issuer_checks"))
+		flags |= X509_V_FLAG_CB_ISSUER_CHECK;
+	else if (!strcmp(arg, "-crl_check"))
+		flags |=  X509_V_FLAG_CRL_CHECK;
+	else if (!strcmp(arg, "-crl_check_all"))
+		flags |= X509_V_FLAG_CRL_CHECK|X509_V_FLAG_CRL_CHECK_ALL;
+	else if (!strcmp(arg, "-policy_check"))
+		flags |= X509_V_FLAG_POLICY_CHECK;
+	else if (!strcmp(arg, "-explicit_policy"))
+		flags |= X509_V_FLAG_EXPLICIT_POLICY;
+	else if (!strcmp(arg, "-x509_strict"))
+		flags |= X509_V_FLAG_X509_STRICT;
+	else if (!strcmp(arg, "-policy_print"))
+		flags |= X509_V_FLAG_NOTIFY_POLICY;
+	else
+		return 0;
+
+	if (*badarg)
+		{
+		if (*pm)
+			X509_VERIFY_PARAM_free(*pm);
+		*pm = NULL;
+		goto end;
+		}
+
+	if (!*pm && !(*pm = X509_VERIFY_PARAM_new()))
+		{
+		*badarg = 1;
+		goto end;
+		}
+
+	if (otmp)
+		X509_VERIFY_PARAM_add0_policy(*pm, otmp);
+	if (flags)
+		X509_VERIFY_PARAM_set_flags(*pm, flags);
+
+	if (purpose)
+		X509_VERIFY_PARAM_set_purpose(*pm, purpose);
+
+	end:
+
+	(*pargs)++;
+
+	if (pargc)
+		*pargc -= *pargs - oldargs;
+
+	return 1;
+
+	}
+
+static void nodes_print(BIO *out, char *name, STACK_OF(X509_POLICY_NODE) *nodes)
+	{
+	X509_POLICY_NODE *node;
+	int i;
+	BIO_printf(out, "%s Policies:", name);
+	if (nodes)
+		{
+		BIO_puts(out, "\n");
+		for (i = 0; i < sk_X509_POLICY_NODE_num(nodes); i++)
+			{
+			node = sk_X509_POLICY_NODE_value(nodes, i);
+			X509_POLICY_NODE_print(out, node, 2);
+			}
+		}
+	else
+		BIO_puts(out, " <empty>\n");
+	}
+
+void policies_print(BIO *out, X509_STORE_CTX *ctx)
+	{
+	X509_POLICY_TREE *tree;
+	int explicit_policy;
+	int free_out = 0;
+	if (out == NULL)
+		{
+		out = BIO_new_fp(stderr, BIO_NOCLOSE);
+		free_out = 1;
+		}
+	tree = X509_STORE_CTX_get0_policy_tree(ctx);
+	explicit_policy = X509_STORE_CTX_get_explicit_policy(ctx);
+
+	BIO_printf(out, "Require explicit Policy: %s\n",
+				explicit_policy ? "True" : "False");
+
+	nodes_print(out, "Authority", X509_policy_tree_get0_policies(tree));
+	nodes_print(out, "User", X509_policy_tree_get0_user_policies(tree));
+	if (free_out)
+		BIO_free(out);
+	}

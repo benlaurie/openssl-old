@@ -38,7 +38,7 @@ LIBSSL=-L.. -lssl
 
 PROGRAM= openssl
 
-SCRIPTS=CA.sh CA.pl der_chop
+SCRIPTS=CA.sh CA.pl
 
 EXE= $(PROGRAM)$(EXE_EXT)
 
@@ -62,14 +62,16 @@ E_OBJ=	verify.o asn1pars.o req.o dgst.o dh.o dhparam.o enc.o passwd.o gendh.o er
 	rsa.o rsautl.o dsa.o dsaparam.o ec.o ecparam.o \
 	x509.o genrsa.o gendsa.o s_server.o s_client.o speed.o \
 	s_time.o $(A_OBJ) $(S_OBJ) $(RAND_OBJ) version.o sess_id.o \
-	ciphers.o nseq.o pkcs12.o pkcs8.o spkac.o smime.o rand.o engine.o ocsp.o
+	ciphers.o nseq.o pkcs12.o pkcs8.o spkac.o smime.o rand.o engine.o \
+	ocsp.o 
 
 E_SRC=	verify.c asn1pars.c req.c dgst.c dh.c enc.c passwd.c gendh.c errstr.c ca.c \
 	pkcs7.c crl2p7.c crl.c \
 	rsa.c rsautl.c dsa.c dsaparam.c ec.c ecparam.c \
 	x509.c genrsa.c gendsa.c s_server.c s_client.c speed.c \
 	s_time.c $(A_SRC) $(S_SRC) $(RAND_SRC) version.c sess_id.c \
-	ciphers.c nseq.c pkcs12.c pkcs8.c spkac.c smime.c rand.c engine.c ocsp.c
+	ciphers.c nseq.c pkcs12.c pkcs8.c spkac.c smime.c rand.c engine.c \
+	ocsp.c
 
 SRC=$(E_SRC)
 
@@ -92,7 +94,8 @@ req: sreq.o $(A_OBJ) $(DLIBCRYPTO)
 		shlib_target="$(SHLIB_TARGET)"; \
 	fi; \
 	$(NEWMAKE) -f $(TOP)/Makefile.shared \
-		APPNAME=req LDFLAGS="$(CFLAG)" \
+		APPNAME=req CC="$(CC)" CFLAGS="$(CFLAGS)" \
+		LDFLAGS="$(LDFLAG)" SHARED_LDFLAGS="$(SHARED_LDFLAGS)" \
 		OBJECTS="sreq.o $(A_OBJ) $(RAND_OBJ)" \
 		LIBDEPS="$(PEX_LIBS) $(LIBCRYPTO) $(EX_LIBS)" \
 		LIBRPATH=$(INSTALLTOP)/lib \
@@ -162,19 +165,16 @@ $(EXE): progs.h $(E_OBJ) $(PROGRAM).o $(DLIBCRYPTO) $(DLIBSSL)
 	  LIBRARIES="$(LIBSSL) $(LIBKRB5) $(LIBCRYPTO)" ; \
 	fi; \
 	$(NEWMAKE) -f $(TOP)/Makefile.shared \
-		APPNAME=$(EXE) LDFLAGS="$(CFLAG)" \
+		APPNAME=$(EXE) CC="$(CC)" CFLAGS="$(CFLAG)" \
+		LDFLAGS="$(LDFLAGS)" SHARED_LDFLAGS="$(SHARED_LDFLAGS)" \
 		OBJECTS="$(PROGRAM).o $(E_OBJ)" \
 		LIBDEPS="$(PEX_LIBS) $$LIBRARIES $(EX_LIBS)" \
 		LIBRPATH=$(INSTALLTOP)/lib \
 		link_app.$${shlib_target}
-	-(cd ..; OPENSSL="`pwd`/apps/$(EXE)"; export OPENSSL; \
-		LD_LIBRARY_PATH="`pwd`:$$LD_LIBRARY_PATH"; \
-		DYLD_LIBRARY_PATH="`pwd`:$$DYLD_LIBRARY_PATH"; \
-		SHLIB_PATH="`pwd`:$$SHLIB_PATH"; \
-		LIBPATH="`pwd`:$$LIBPATH"; \
-		if [ "$(PLATFORM)" = "Cygwin" ]; then PATH="`pwd`:$$PATH"; fi; \
-		export LD_LIBRARY_PATH DYLD_LIBRARY_PATH SHLIB_PATH LIBPATH PATH; \
-		$(PERL) tools/c_rehash certs)
+	@case "../*.dll" in *\**) ;; *) cp -p ../*.dll .;; esac
+	-(cd ..; \
+	  OPENSSL="`pwd`/util/opensslwrap.sh"; export OPENSSL; \
+	  $(PERL) tools/c_rehash certs)
 
 progs.h: progs.pl
 	$(PERL) progs.pl $(E_EXE) >progs.h
@@ -787,7 +787,8 @@ smime.o: ../include/openssl/pem.h ../include/openssl/pem2.h
 smime.o: ../include/openssl/pkcs7.h ../include/openssl/safestack.h
 smime.o: ../include/openssl/sha.h ../include/openssl/stack.h
 smime.o: ../include/openssl/symhacks.h ../include/openssl/txt_db.h
-smime.o: ../include/openssl/x509.h ../include/openssl/x509_vfy.h apps.h smime.c
+smime.o: ../include/openssl/x509.h ../include/openssl/x509_vfy.h
+smime.o: ../include/openssl/x509v3.h apps.h smime.c
 speed.o: ../e_os.h ../include/openssl/aes.h ../include/openssl/asn1.h
 speed.o: ../include/openssl/bio.h ../include/openssl/blowfish.h
 speed.o: ../include/openssl/bn.h ../include/openssl/buffer.h

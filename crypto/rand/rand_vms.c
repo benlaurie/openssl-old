@@ -171,7 +171,8 @@ int RAND_poll(void)
 	pitem = item;
 
 	/* Setup */
-	while (pitems_data->length)
+	while (pitems_data->length
+		&& (total_length + pitems_data->length <= 256))
 		{
 #if __INITIAL_POINTER_SIZE == 64
 
@@ -179,14 +180,14 @@ int RAND_poll(void)
 		pitem->ileb_64$w_code = pitems_data->code;
 		pitem->ileb_64$l_mbmo = -1;
                 pitem->ileb_64$q_length = pitems_data->length;
-                pitem->ileb_64$pq_bufaddr = &data_buffer[total_length];
+                pitem->ileb_64$pq_bufaddr = (long *)&data_buffer[total_length];
                 pitem->ileb_64$pq_retlen_addr = 0;
 		
                 total_length += pitems_data->length/4;
 #else
-                pitem->ile3$w_length = (short)pitems_data->length;
-                pitem->ile3$w_code = (short)pitems_data->code;
-                pitem->ile3$ps_bufaddr = &data_buffer[total_length];
+                pitem->ile3$w_length = pitems_data->length;
+                pitem->ile3$w_code = pitems_data->code;
+                pitem->ile3$ps_bufaddr = (long *)&data_buffer[total_length];
                 pitem->ile3$ps_retlen_addr = 0;
                
 		total_length += pitems_data->length/4;

@@ -23,6 +23,7 @@ BN_ASM=		bn_asm.o
 
 CFLAGS= $(INCLUDES) $(CFLAG)
 ASFLAGS= $(INCLUDES) $(ASFLAG)
+AFLAGS= $(ASFLAGS)
 
 GENERAL=Makefile
 TEST=bntest.c exptest.c
@@ -67,74 +68,44 @@ lib:	$(LIBOBJ)
 	$(RANLIB) $(LIB) || echo Never mind.
 	@touch lib
 
-# elf
-asm/bn86-elf.s:	asm/bn-586.pl ../perlasm/x86asm.pl
-	(cd asm; $(PERL) bn-586.pl elf $(CFLAGS) > bn86-elf.s)
-
-asm/co86-elf.s:	asm/co-586.pl ../perlasm/x86asm.pl
-	(cd asm; $(PERL) co-586.pl elf $(CFLAGS) > co86-elf.s)
-
+# ELF
+bn86-elf.s:	asm/bn-586.pl ../perlasm/x86asm.pl
+	(cd asm; $(PERL) bn-586.pl elf $(CFLAGS) > ../$@)
+co86-elf.s:	asm/co-586.pl ../perlasm/x86asm.pl
+	(cd asm; $(PERL) co-586.pl elf $(CFLAGS) > ../$@)
+# COFF
+bn86-cof.s: asm/bn-586.pl ../perlasm/x86asm.pl
+	(cd asm; $(PERL) bn-586.pl coff $(CFLAGS) > ../$@)
+co86-cof.s: asm/co-586.pl ../perlasm/x86asm.pl
+	(cd asm; $(PERL) co-586.pl coff $(CFLAGS) > ../$@)
 # a.out
-asm/bn86-out.o: asm/bn86unix.cpp
-	$(CPP) -DOUT asm/bn86unix.cpp | as -o asm/bn86-out.o
+bn86-out.s: asm/bn-586.pl ../perlasm/x86asm.pl
+	(cd asm; $(PERL) bn-586.pl a.out $(CFLAGS) > ../$@)
+co86-out.s: asm/co-586.pl ../perlasm/x86asm.pl
+	(cd asm; $(PERL) co-586.pl a.out $(CFLAGS) > ../$@)
 
-asm/co86-out.o: asm/co86unix.cpp
-	$(CPP) -DOUT asm/co86unix.cpp | as -o asm/co86-out.o
+sparcv8.o:	asm/sparcv8.S
+sparcv8plus.o:	asm/sparcv8plus.S
+mips3.o:	asm/mips3.s
 
-# bsdi
-asm/bn86bsdi.o: asm/bn86unix.cpp
-	$(CPP) -DBSDI asm/bn86unix.cpp | sed 's/ :/:/' | as -o asm/bn86bsdi.o
+x86_64-gcc.o:	asm/x86_64-gcc.c
 
-asm/co86bsdi.o: asm/co86unix.cpp
-	$(CPP) -DBSDI asm/co86unix.cpp | sed 's/ :/:/' | as -o asm/co86bsdi.o
-
-asm/bn86unix.cpp: asm/bn-586.pl ../perlasm/x86asm.pl
-	(cd asm; $(PERL) bn-586.pl cpp >bn86unix.cpp )
-
-asm/co86unix.cpp: asm/co-586.pl ../perlasm/x86asm.pl
-	(cd asm; $(PERL) co-586.pl cpp >co86unix.cpp )
-
-asm/sparcv8.o: asm/sparcv8.S
-
-asm/sparcv8plus.o: asm/sparcv8plus.S
-
-# Old GNU assembler doesn't understand V9 instructions, so we
-# hire /usr/ccs/bin/as to do the job. Note that option is called
-# *-gcc27, but even gcc 2>=8 users may experience similar problem
-# if they didn't bother to upgrade GNU assembler. Such users should
-# not choose this option, but be adviced to *remove* GNU assembler
-# or upgrade it.
-asm/sparcv8plus-gcc27.o: asm/sparcv8plus.S
-	$(CC) $(ASFLAGS) -E asm/sparcv8plus.S | \
-		/usr/ccs/bin/as -xarch=v8plus - -o asm/sparcv8plus-gcc27.o
-
-
-asm/ia64.o:	asm/ia64.S
-
-# Some compiler drivers (most notably HP-UX and Intel C++) don't
-# understand .S extension:-( I wish I could pipe output from cc -E,
-# but it's too compiler driver/ABI dependent to cover with a single
-# rule...	<appro@fy.chalmers.se>
-asm/ia64-cpp.o:	asm/ia64.S
-	$(CC) $(ASFLAGS) -E asm/ia64.S > /tmp/ia64.$$$$.s &&	\
-	$(CC) $(ASFLAGS) -c -o asm/ia64-cpp.o /tmp/ia64.$$$$.s;	\
-	rm -f /tmp/ia64.$$$$.s
-
-asm/x86_64-gcc.o: asm/x86_64-gcc.c
+bn-ia64.s:	asm/ia64.S
+	$(CC) $(CFLAGS) -E asm/ia64.S > $@
 
 # GNU assembler fails to compile PA-RISC2 modules, insist on calling
 # vendor assembler...
-asm/pa-risc2W.o: asm/pa-risc2W.s
-	/usr/ccs/bin/as -o asm/pa-risc2W.o asm/pa-risc2W.s
-asm/pa-risc2.o: asm/pa-risc2.s
-	/usr/ccs/bin/as -o asm/pa-risc2.o asm/pa-risc2.s
+pa-risc2W.o: asm/pa-risc2W.s
+	/usr/ccs/bin/as -o pa-risc2W.o asm/pa-risc2W.s
+pa-risc2.o: asm/pa-risc2.s
+	/usr/ccs/bin/as -o pa-risc2.o asm/pa-risc2.s
 
 # ppc - AIX, Linux, MacOS X...
-asm/linux_ppc32.s: asm/ppc.pl;	$(PERL) $< $@
-asm/linux_ppc64.s: asm/ppc.pl;	$(PERL) $< $@
-asm/aix_ppc32.s: asm/ppc.pl;	$(PERL) $< $@
-asm/aix_ppc64.s: asm/ppc.pl;	$(PERL) $< $@
-asm/osx_ppc32.s: asm/ppc.pl;	$(PERL) $< $@
+linux_ppc32.s: asm/ppc.pl;	$(PERL) $< $@
+linux_ppc64.s: asm/ppc.pl;	$(PERL) $< $@
+aix_ppc32.s: asm/ppc.pl;	$(PERL) asm/ppc.pl $@
+aix_ppc64.s: asm/ppc.pl;	$(PERL) asm/ppc.pl $@
+osx_ppc32.s: asm/ppc.pl;	$(PERL) $< $@
 
 files:
 	$(PERL) $(TOP)/util/files.pl Makefile.ssl >> $(TOP)/MINFO
@@ -146,7 +117,7 @@ links:
 	@$(PERL) $(TOP)/util/mklink.pl ../../apps $(APPS)
 
 install:
-	@for i in $(EXHEADER) ; \
+	@headerlist="$(EXHEADER)"; for i in $$headerlist ; \
 	do  \
 	(cp $$i $(INSTALL_PREFIX)$(INSTALLTOP)/include/openssl/$$i; \
 	chmod 644 $(INSTALL_PREFIX)$(INSTALLTOP)/include/openssl/$$i ); \
@@ -176,7 +147,7 @@ dclean:
 	mv -f Makefile.new $(MAKEFILE)
 
 clean:
-	rm -f asm/co86unix.cpp asm/bn86unix.cpp asm/*-elf.* *.o */*.o *.obj lib tags core .pure .nfs* *.old *.bak fluff bn_asm.s
+	rm -f *.s *.o *.obj lib tags core .pure .nfs* *.old *.bak fluff
 
 # DO NOT DELETE THIS LINE -- make depend depends on it.
 

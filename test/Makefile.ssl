@@ -131,14 +131,6 @@ tests:	exe apps $(TESTS)
 apps:
 	@(cd ..; $(MAKE) DIRS=apps all)
 
-SET_SO_PATHS=OSSL_LIBPATH="`cd ..; pwd`"; \
-		LD_LIBRARY_PATH="$$OSSL_LIBPATH:$$LD_LIBRARY_PATH"; \
-		DYLD_LIBRARY_PATH="$$OSSL_LIBPATH:$$DYLD_LIBRARY_PATH"; \
-		SHLIB_PATH="$$OSSL_LIBPATH:$$SHLIB_PATH"; \
-		LIBPATH="$$OSSL_LIBPATH:$$LIBPATH"; \
-		if [ "$(PLATFORM)" = "Cygwin" ]; then PATH="$${LIBPATH}:$$PATH"; fi; \
-		export LD_LIBRARY_PATH DYLD_LIBRARY_PATH SHLIB_PATH LIBPATH PATH
-
 alltests: \
 	test_des test_idea test_sha test_md4 test_md5 test_hmac \
 	test_md2 test_mdc2 \
@@ -149,138 +141,144 @@ alltests: \
 	test_ss test_ca test_engine test_evp test_ssl
 
 test_evp:
-	$(SET_SO_PATHS); ./$(EVPTEST) evptests.txt
+	../util/shlib_wrap.sh ./$(EVPTEST) evptests.txt
 
 test_des:
-	$(SET_SO_PATHS); ./$(DESTEST)
+	../util/shlib_wrap.sh ./$(DESTEST)
 
 test_idea:
-	$(SET_SO_PATHS); ./$(IDEATEST)
+	../util/shlib_wrap.sh ./$(IDEATEST)
 
 test_sha:
-	$(SET_SO_PATHS); ./$(SHATEST)
-	$(SET_SO_PATHS); ./$(SHA1TEST)
-	$(SET_SO_PATHS); ./$(SHA256TEST)
-	$(SET_SO_PATHS); ./$(SHA512TEST)
+	../util/shlib_wrap.sh ./$(SHATEST)
+	../util/shlib_wrap.sh ./$(SHA1TEST)
+	../util/shlib_wrap.sh ./$(SHA256TEST)
+	../util/shlib_wrap.sh ./$(SHA512TEST)
 
 test_mdc2:
-	$(SET_SO_PATHS); ./$(MDC2TEST)
+	../util/shlib_wrap.sh ./$(MDC2TEST)
 
 test_md5:
-	$(SET_SO_PATHS); ./$(MD5TEST)
+	../util/shlib_wrap.sh ./$(MD5TEST)
 
 test_md4:
-	$(SET_SO_PATHS); ./$(MD4TEST)
+	../util/shlib_wrap.sh ./$(MD4TEST)
 
 test_hmac:
-	$(SET_SO_PATHS); ./$(HMACTEST)
+	../util/shlib_wrap.sh ./$(HMACTEST)
 
 test_md2:
-	$(SET_SO_PATHS); ./$(MD2TEST)
+	../util/shlib_wrap.sh ./$(MD2TEST)
 
 test_rmd:
-	$(SET_SO_PATHS); ./$(RMDTEST)
+	../util/shlib_wrap.sh ./$(RMDTEST)
 
 test_bf:
-	$(SET_SO_PATHS); ./$(BFTEST)
+	../util/shlib_wrap.sh ./$(BFTEST)
 
 test_cast:
-	$(SET_SO_PATHS); ./$(CASTTEST)
+	../util/shlib_wrap.sh ./$(CASTTEST)
 
 test_rc2:
-	$(SET_SO_PATHS); ./$(RC2TEST)
+	../util/shlib_wrap.sh ./$(RC2TEST)
 
 test_rc4:
-	$(SET_SO_PATHS); ./$(RC4TEST)
+	../util/shlib_wrap.sh ./$(RC4TEST)
 
 test_rc5:
-	$(SET_SO_PATHS); ./$(RC5TEST)
+	../util/shlib_wrap.sh ./$(RC5TEST)
 
 test_rand:
-	$(SET_SO_PATHS); ./$(RANDTEST)
+	../util/shlib_wrap.sh ./$(RANDTEST)
 
 test_enc:
-	@$(SET_SO_PATHS); sh ./testenc
+	@sh ./testenc
 
 test_x509:
 	echo test normal x509v1 certificate
-	$(SET_SO_PATHS); sh ./tx509 2>/dev/null
+	sh ./tx509 2>/dev/null
 	echo test first x509v3 certificate
-	$(SET_SO_PATHS); sh ./tx509 v3-cert1.pem 2>/dev/null
+	sh ./tx509 v3-cert1.pem 2>/dev/null
 	echo test second x509v3 certificate
-	$(SET_SO_PATHS); sh ./tx509 v3-cert2.pem 2>/dev/null
+	sh ./tx509 v3-cert2.pem 2>/dev/null
 
 test_rsa:
-	@$(SET_SO_PATHS); sh ./trsa 2>/dev/null
-	$(SET_SO_PATHS); ./$(RSATEST)
+	@sh ./trsa 2>/dev/null
+	../util/shlib_wrap.sh ./$(RSATEST)
 
 test_crl:
-	@$(SET_SO_PATHS); sh ./tcrl 2>/dev/null
+	@sh ./tcrl 2>/dev/null
 
 test_sid:
-	@$(SET_SO_PATHS); sh ./tsid 2>/dev/null
+	@sh ./tsid 2>/dev/null
 
 test_req:
-	@$(SET_SO_PATHS); sh ./treq 2>/dev/null
-	@$(SET_SO_PATHS); sh ./treq testreq2.pem 2>/dev/null
+	@sh ./treq 2>/dev/null
+	@sh ./treq testreq2.pem 2>/dev/null
 
 test_pkcs7:
-	@$(SET_SO_PATHS); sh ./tpkcs7 2>/dev/null
-	@$(SET_SO_PATHS); sh ./tpkcs7d 2>/dev/null
+	@sh ./tpkcs7 2>/dev/null
+	@sh ./tpkcs7d 2>/dev/null
 
 test_bn:
 	@echo starting big number library test, could take a while...
-	@$(SET_SO_PATHS); ./$(BNTEST) >tmp.bntest
+	@../util/shlib_wrap.sh ./$(BNTEST) >tmp.bntest
 	@echo quit >>tmp.bntest
 	@echo "running bc"
 	@<tmp.bntest sh -c "`sh ./bctest ignore`" | $(PERL) -e '$$i=0; while (<STDIN>) {if (/^test (.*)/) {print STDERR "\nverify $$1";} elsif (!/^0$$/) {die "\nFailed! bc: $$_";} else {print STDERR "."; $$i++;}} print STDERR "\n$$i tests passed\n"'
 	@echo 'test a^b%c implementations'
-	$(SET_SO_PATHS); ./$(EXPTEST)
+	../util/shlib_wrap.sh ./$(EXPTEST)
 
 test_ec:
 	@echo 'test elliptic curves'
-	$(SET_SO_PATHS); ./$(ECTEST)
+	../util/shlib_wrap.sh ./$(ECTEST)
 
 test_ecdsa:
 	@echo 'test ecdsa'
-	$(SET_SO_PATHS); ./$(ECDSATEST)
+	../util/shlib_wrap.sh ./$(ECDSATEST)
 
 test_ecdh:
 	@echo 'test ecdh'
-	$(SET_SO_PATHS); ./$(ECDHTEST)
+	../util/shlib_wrap.sh ./$(ECDHTEST)
 
 test_verify:
 	@echo "The following command should have some OK's and some failures"
 	@echo "There are definitly a few expired certificates"
-	$(SET_SO_PATHS); ../apps/openssl verify -CApath ../certs ../certs/*.pem
+	../util/shlib_wrap.sh ../apps/openssl verify -CApath ../certs ../certs/*.pem
 
 test_dh:
 	@echo "Generate a set of DH parameters"
-	$(SET_SO_PATHS); ./$(DHTEST)
+	../util/shlib_wrap.sh ./$(DHTEST)
 
 test_dsa:
 	@echo "Generate a set of DSA parameters"
-	$(SET_SO_PATHS); ./$(DSATEST)
-	$(SET_SO_PATHS); ./$(DSATEST) -app2_1
+	../util/shlib_wrap.sh ./$(DSATEST)
+	../util/shlib_wrap.sh ./$(DSATEST) -app2_1
 
 test_gen:
 	@echo "Generate and verify a certificate request"
-	@$(SET_SO_PATHS); sh ./testgen
+	@sh ./testgen
 
-test_ss keyU.ss certU.ss certCA.ss: testss
+test_ss keyU.ss certU.ss certCA.ss certP1.ss keyP1.ss certP2.ss keyP2.ss \
+		intP1.ss intP2.ss: testss
 	@echo "Generate and certify a test certificate"
-	@$(SET_SO_PATHS); sh ./testss
+	@sh ./testss
+	@cat certCA.ss certU.ss > intP1.ss
+	@cat certCA.ss certU.ss certP1.ss > intP2.ss
 
 test_engine: 
 	@echo "Manipulate the ENGINE structures"
-	$(SET_SO_PATHS); ./$(ENGINETEST)
+	../util/shlib_wrap.sh ./$(ENGINETEST)
 
-test_ssl: keyU.ss certU.ss certCA.ss
+test_ssl: keyU.ss certU.ss certCA.ss certP1.ss keyP1.ss certP2.ss keyP2.ss \
+		intP1.ss intP2.ss
 	@echo "test SSL protocol"
-	@$(SET_SO_PATHS); sh ./testssl keyU.ss certU.ss certCA.ss
+	@sh ./testssl keyU.ss certU.ss certCA.ss
+	@sh ./testsslproxy keyP1.ss certP1.ss intP1.ss
+	@sh ./testsslproxy keyP2.ss certP2.ss intP2.ss
 
 test_ca:
-	@$(SET_SO_PATHS); if ../apps/openssl no-rsa; then \
+	@if ../util/shlib_wrap.sh ../apps/openssl no-rsa; then \
 	  echo "skipping CA.sh test -- requires RSA"; \
 	else \
 	  echo "Generate and certify a test certificate via the 'ca' program"; \
@@ -289,7 +287,7 @@ test_ca:
 
 test_aes: #$(AESTEST)
 #	@echo "test Rijndael"
-#	$(SET_SO_PATHS); ./$(AESTEST)
+#	../util/shlib_wrap.sh ./$(AESTEST)
 
 lint:
 	lint -DLINT $(INCLUDES) $(SRC)>fluff
@@ -320,7 +318,8 @@ $(RSATEST)$(EXE_EXT): $(RSATEST).o $(DLIBCRYPTO)
 	  LIBRARIES="$(LIBCRYPTO)"; \
 	fi; \
 	$(NEWMAKE) -f $(TOP)/Makefile.shared \
-		APPNAME=$(RSATEST)$(EXE_EXT) LDFLAGS="$(CFLAGS)" \
+		APPNAME=$(RSATEST)$(EXE_EXT) CC="$(CC)" CFLAGS="$(CFLAGS)" \
+		LDFLAGS="$(LDFLAGS)" SHARED_LDFLAGS="$(SHARED_LDFLAGS)" \
 		OBJECTS="$(RSATEST).o" \
 		LIBDEPS="$(PEX_LIBS) $$LIBRARIES $(EX_LIBS)" \
 		LIBRPATH=$(INSTALLTOP)/lib \
@@ -336,7 +335,8 @@ $(BNTEST)$(EXE_EXT): $(BNTEST).o $(DLIBCRYPTO)
 	  LIBRARIES="$(LIBCRYPTO)"; \
 	fi; \
 	$(NEWMAKE) -f $(TOP)/Makefile.shared \
-		APPNAME=$(BNTEST)$(EXE_EXT) LDFLAGS="$(CFLAGS)" \
+		APPNAME=$(BNTEST)$(EXE_EXT) CC="$(CC)" CFLAGS="$(CFLAGS)" \
+		LDFLAGS="$(LDFLAGS)" SHARED_LDFLAGS="$(SHARED_LDFLAGS)" \
 		OBJECTS="$(BNTEST).o" \
 		LIBDEPS="$(PEX_LIBS) $$LIBRARIES $(EX_LIBS)" \
 		LIBRPATH=$(INSTALLTOP)/lib \
@@ -352,7 +352,8 @@ $(ECTEST)$(EXE_EXT): $(ECTEST).o $(DLIBCRYPTO)
 	  LIBRARIES="$(LIBCRYPTO)"; \
 	fi; \
 	$(NEWMAKE) -f $(TOP)/Makefile.shared \
-		APPNAME=$(ECTEST)$(EXE_EXT) LDFLAGS="$(CFLAGS)" \
+		APPNAME=$(ECTEST)$(EXE_EXT) CC="$(CC)" CFLAGS="$(CFLAGS)" \
+		LDFLAGS="$(LDFLAGS)" SHARED_LDFLAGS="$(SHARED_LDFLAGS)" \
 		OBJECTS="$(ECTEST).o" \
 		LIBDEPS="$(PEX_LIBS) $$LIBRARIES $(EX_LIBS)" \
 		LIBRPATH=$(INSTALLTOP)/lib \
@@ -368,7 +369,8 @@ $(EXPTEST)$(EXE_EXT): $(EXPTEST).o $(DLIBCRYPTO)
 	  LIBRARIES="$(LIBCRYPTO)"; \
 	fi; \
 	$(NEWMAKE) -f $(TOP)/Makefile.shared \
-		APPNAME=$(EXPTEST)$(EXE_EXT) LDFLAGS="$(CFLAGS)" \
+		APPNAME=$(EXPTEST)$(EXE_EXT) CC="$(CC)" CFLAGS="$(CFLAGS)" \
+		LDFLAGS="$(LDFLAGS)" SHARED_LDFLAGS="$(SHARED_LDFLAGS)" \
 		OBJECTS="$(EXPTEST).o" \
 		LIBDEPS="$(PEX_LIBS) $$LIBRARIES $(EX_LIBS)" \
 		LIBRPATH=$(INSTALLTOP)/lib \
@@ -384,7 +386,8 @@ $(IDEATEST)$(EXE_EXT): $(IDEATEST).o $(DLIBCRYPTO)
 	  LIBRARIES="$(LIBCRYPTO)"; \
 	fi; \
 	$(NEWMAKE) -f $(TOP)/Makefile.shared \
-		APPNAME=$(IDEATEST)$(EXE_EXT) LDFLAGS="$(CFLAGS)" \
+		APPNAME=$(IDEATEST)$(EXE_EXT) CC="$(CC)" CFLAGS="$(CFLAGS)" \
+		LDFLAGS="$(LDFLAGS)" SHARED_LDFLAGS="$(SHARED_LDFLAGS)" \
 		OBJECTS="$(IDEATEST).o" \
 		LIBDEPS="$(PEX_LIBS) $$LIBRARIES $(EX_LIBS)" \
 		LIBRPATH=$(INSTALLTOP)/lib \
@@ -400,7 +403,8 @@ $(MD2TEST)$(EXE_EXT): $(MD2TEST).o $(DLIBCRYPTO)
 	  LIBRARIES="$(LIBCRYPTO)"; \
 	fi; \
 	$(NEWMAKE) -f $(TOP)/Makefile.shared \
-		APPNAME=$(MD2TEST)$(EXE_EXT) LDFLAGS="$(CFLAGS)" \
+		APPNAME=$(MD2TEST)$(EXE_EXT) CC="$(CC)" CFLAGS="$(CFLAGS)" \
+		LDFLAGS="$(LDFLAGS)" SHARED_LDFLAGS="$(SHARED_LDFLAGS)" \
 		OBJECTS="$(MD2TEST).o" \
 		LIBDEPS="$(PEX_LIBS) $$LIBRARIES $(EX_LIBS)" \
 		LIBRPATH=$(INSTALLTOP)/lib \
@@ -416,7 +420,8 @@ $(SHATEST)$(EXE_EXT): $(SHATEST).o $(DLIBCRYPTO)
 	  LIBRARIES="$(LIBCRYPTO)"; \
 	fi; \
 	$(NEWMAKE) -f $(TOP)/Makefile.shared \
-		APPNAME=$(SHATEST)$(EXE_EXT) LDFLAGS="$(CFLAGS)" \
+		APPNAME=$(SHATEST)$(EXE_EXT) CC="$(CC)" CFLAGS="$(CFLAGS)" \
+		LDFLAGS="$(LDFLAGS)" SHARED_LDFLAGS="$(SHARED_LDFLAGS)" \
 		OBJECTS="$(SHATEST).o" \
 		LIBDEPS="$(PEX_LIBS) $$LIBRARIES $(EX_LIBS)" \
 		LIBRPATH=$(INSTALLTOP)/lib \
@@ -432,7 +437,8 @@ $(SHA1TEST)$(EXE_EXT): $(SHA1TEST).o $(DLIBCRYPTO)
 	  LIBRARIES="$(LIBCRYPTO)"; \
 	fi; \
 	$(NEWMAKE) -f $(TOP)/Makefile.shared \
-		APPNAME=$(SHA1TEST)$(EXE_EXT) LDFLAGS="$(CFLAGS)" \
+		APPNAME=$(SHA1TEST)$(EXE_EXT) CC="$(CC)" CFLAGS="$(CFLAGS)" \
+		LDFLAGS="$(LDFLAGS)" SHARED_LDFLAGS="$(SHARED_LDFLAGS)" \
 		OBJECTS="$(SHA1TEST).o" \
 		LIBDEPS="$(PEX_LIBS) $$LIBRARIES $(EX_LIBS)" \
 		LIBRPATH=$(INSTALLTOP)/lib \
@@ -448,7 +454,8 @@ $(SHA256TEST)$(EXE_EXT): $(SHA256TEST).o $(DLIBCRYPTO)
 	  LIBRARIES="$(LIBCRYPTO)"; \
 	fi; \
 	$(NEWMAKE) -f $(TOP)/Makefile.shared \
-		APPNAME=$(SHA256TEST)$(EXE_EXT) LDFLAGS="$(CFLAGS)" \
+		APPNAME=$(SHA256TEST)$(EXE_EXT) CC="$(CC)" CFLAGS="$(CFLAGS)" \
+		LDFLAGS="$(LDFLAGS)" SHARED_LDFLAGS="$(SHARED_LDFLAGS)" \
 		OBJECTS="$(SHA256TEST).o" \
 		LIBDEPS="$(PEX_LIBS) $$LIBRARIES $(EX_LIBS)" \
 		LIBRPATH=$(INSTALLTOP)/lib \
@@ -464,7 +471,8 @@ $(SHA512TEST)$(EXE_EXT): $(SHA512TEST).o $(DLIBCRYPTO)
 	  LIBRARIES="$(LIBCRYPTO)"; \
 	fi; \
 	$(NEWMAKE) -f $(TOP)/Makefile.shared \
-		APPNAME=$(SHA512TEST)$(EXE_EXT) LDFLAGS="$(CFLAGS)" \
+		APPNAME=$(SHA512TEST)$(EXE_EXT) CC="$(CC)" CFLAGS="$(CFLAGS)" \
+		LDFLAGS="$(LDFLAGS)" SHARED_LDFLAGS="$(SHARED_LDFLAGS)" \
 		OBJECTS="$(SHA512TEST).o" \
 		LIBDEPS="$(PEX_LIBS) $$LIBRARIES $(EX_LIBS)" \
 		LIBRPATH=$(INSTALLTOP)/lib \
@@ -480,7 +488,8 @@ $(RMDTEST)$(EXE_EXT): $(RMDTEST).o $(DLIBCRYPTO)
 	  LIBRARIES="$(LIBCRYPTO)"; \
 	fi; \
 	$(NEWMAKE) -f $(TOP)/Makefile.shared \
-		APPNAME=$(RMDTEST)$(EXE_EXT) LDFLAGS="$(CFLAGS)" \
+		APPNAME=$(RMDTEST)$(EXE_EXT) CC="$(CC)" CFLAGS="$(CFLAGS)" \
+		LDFLAGS="$(LDFLAGS)" SHARED_LDFLAGS="$(SHARED_LDFLAGS)" \
 		OBJECTS="$(RMDTEST).o" \
 		LIBDEPS="$(PEX_LIBS) $$LIBRARIES $(EX_LIBS)" \
 		LIBRPATH=$(INSTALLTOP)/lib \
@@ -496,7 +505,8 @@ $(MDC2TEST)$(EXE_EXT): $(MDC2TEST).o $(DLIBCRYPTO)
 	  LIBRARIES="$(LIBCRYPTO)"; \
 	fi; \
 	$(NEWMAKE) -f $(TOP)/Makefile.shared \
-		APPNAME=$(MDC2TEST)$(EXE_EXT) LDFLAGS="$(CFLAGS)" \
+		APPNAME=$(MDC2TEST)$(EXE_EXT) CC="$(CC)" CFLAGS="$(CFLAGS)" \
+		LDFLAGS="$(LDFLAGS)" SHARED_LDFLAGS="$(SHARED_LDFLAGS)" \
 		OBJECTS="$(MDC2TEST).o" \
 		LIBDEPS="$(PEX_LIBS) $$LIBRARIES $(EX_LIBS)" \
 		LIBRPATH=$(INSTALLTOP)/lib \
@@ -512,7 +522,8 @@ $(MD4TEST)$(EXE_EXT): $(MD4TEST).o $(DLIBCRYPTO)
 	  LIBRARIES="$(LIBCRYPTO)"; \
 	fi; \
 	$(NEWMAKE) -f $(TOP)/Makefile.shared \
-		APPNAME=$(MD4TEST)$(EXE_EXT) LDFLAGS="$(CFLAGS)" \
+		APPNAME=$(MD4TEST)$(EXE_EXT) CC="$(CC)" CFLAGS="$(CFLAGS)" \
+		LDFLAGS="$(LDFLAGS)" SHARED_LDFLAGS="$(SHARED_LDFLAGS)" \
 		OBJECTS="$(MD4TEST).o" \
 		LIBDEPS="$(PEX_LIBS) $$LIBRARIES $(EX_LIBS)" \
 		LIBRPATH=$(INSTALLTOP)/lib \
@@ -528,7 +539,8 @@ $(MD5TEST)$(EXE_EXT): $(MD5TEST).o $(DLIBCRYPTO)
 	  LIBRARIES="$(LIBCRYPTO)"; \
 	fi; \
 	$(NEWMAKE) -f $(TOP)/Makefile.shared \
-		APPNAME=$(MD5TEST)$(EXE_EXT) LDFLAGS="$(CFLAGS)" \
+		APPNAME=$(MD5TEST)$(EXE_EXT) CC="$(CC)" CFLAGS="$(CFLAGS)" \
+		LDFLAGS="$(LDFLAGS)" SHARED_LDFLAGS="$(SHARED_LDFLAGS)" \
 		OBJECTS="$(MD5TEST).o" \
 		LIBDEPS="$(PEX_LIBS) $$LIBRARIES $(EX_LIBS)" \
 		LIBRPATH=$(INSTALLTOP)/lib \
@@ -544,7 +556,8 @@ $(HMACTEST)$(EXE_EXT): $(HMACTEST).o $(DLIBCRYPTO)
 	  LIBRARIES="$(LIBCRYPTO)"; \
 	fi; \
 	$(NEWMAKE) -f $(TOP)/Makefile.shared \
-		APPNAME=$(HMACTEST)$(EXE_EXT) LDFLAGS="$(CFLAGS)" \
+		APPNAME=$(HMACTEST)$(EXE_EXT) CC="$(CC)" CFLAGS="$(CFLAGS)" \
+		LDFLAGS="$(LDFLAGS)" SHARED_LDFLAGS="$(SHARED_LDFLAGS)" \
 		OBJECTS="$(HMACTEST).o" \
 		LIBDEPS="$(PEX_LIBS) $$LIBRARIES $(EX_LIBS)" \
 		LIBRPATH=$(INSTALLTOP)/lib \
@@ -560,7 +573,8 @@ $(RC2TEST)$(EXE_EXT): $(RC2TEST).o $(DLIBCRYPTO)
 	  LIBRARIES="$(LIBCRYPTO)"; \
 	fi; \
 	$(NEWMAKE) -f $(TOP)/Makefile.shared \
-		APPNAME=$(RC2TEST)$(EXE_EXT) LDFLAGS="$(CFLAGS)" \
+		APPNAME=$(RC2TEST)$(EXE_EXT) CC="$(CC)" CFLAGS="$(CFLAGS)" \
+		LDFLAGS="$(LDFLAGS)" SHARED_LDFLAGS="$(SHARED_LDFLAGS)" \
 		OBJECTS="$(RC2TEST).o" \
 		LIBDEPS="$(PEX_LIBS) $$LIBRARIES $(EX_LIBS)" \
 		LIBRPATH=$(INSTALLTOP)/lib \
@@ -576,7 +590,8 @@ $(BFTEST)$(EXE_EXT): $(BFTEST).o $(DLIBCRYPTO)
 	  LIBRARIES="$(LIBCRYPTO)"; \
 	fi; \
 	$(NEWMAKE) -f $(TOP)/Makefile.shared \
-		APPNAME=$(BFTEST)$(EXE_EXT) LDFLAGS="$(CFLAGS)" \
+		APPNAME=$(BFTEST)$(EXE_EXT) CC="$(CC)" CFLAGS="$(CFLAGS)" \
+		LDFLAGS="$(LDFLAGS)" SHARED_LDFLAGS="$(SHARED_LDFLAGS)" \
 		OBJECTS="$(BFTEST).o" \
 		LIBDEPS="$(PEX_LIBS) $$LIBRARIES $(EX_LIBS)" \
 		LIBRPATH=$(INSTALLTOP)/lib \
@@ -592,7 +607,8 @@ $(CASTTEST)$(EXE_EXT): $(CASTTEST).o $(DLIBCRYPTO)
 	  LIBRARIES="$(LIBCRYPTO)"; \
 	fi; \
 	$(NEWMAKE) -f $(TOP)/Makefile.shared \
-		APPNAME=$(CASTTEST)$(EXE_EXT) LDFLAGS="$(CFLAGS)" \
+		APPNAME=$(CASTTEST)$(EXE_EXT) CC="$(CC)" CFLAGS="$(CFLAGS)" \
+		LDFLAGS="$(LDFLAGS)" SHARED_LDFLAGS="$(SHARED_LDFLAGS)" \
 		OBJECTS="$(CASTTEST).o" \
 		LIBDEPS="$(PEX_LIBS) $$LIBRARIES $(EX_LIBS)" \
 		LIBRPATH=$(INSTALLTOP)/lib \
@@ -608,7 +624,8 @@ $(RC4TEST)$(EXE_EXT): $(RC4TEST).o $(DLIBCRYPTO)
 	  LIBRARIES="$(LIBCRYPTO)"; \
 	fi; \
 	$(NEWMAKE) -f $(TOP)/Makefile.shared \
-		APPNAME=$(RC4TEST)$(EXE_EXT) LDFLAGS="$(CFLAGS)" \
+		APPNAME=$(RC4TEST)$(EXE_EXT) CC="$(CC)" CFLAGS="$(CFLAGS)" \
+		LDFLAGS="$(LDFLAGS)" SHARED_LDFLAGS="$(SHARED_LDFLAGS)" \
 		OBJECTS="$(RC4TEST).o" \
 		LIBDEPS="$(PEX_LIBS) $$LIBRARIES $(EX_LIBS)" \
 		LIBRPATH=$(INSTALLTOP)/lib \
@@ -624,7 +641,8 @@ $(RC5TEST)$(EXE_EXT): $(RC5TEST).o $(DLIBCRYPTO)
 	  LIBRARIES="$(LIBCRYPTO)"; \
 	fi; \
 	$(NEWMAKE) -f $(TOP)/Makefile.shared \
-		APPNAME=$(RC5TEST)$(EXE_EXT) LDFLAGS="$(CFLAGS)" \
+		APPNAME=$(RC5TEST)$(EXE_EXT) CC="$(CC)" CFLAGS="$(CFLAGS)" \
+		LDFLAGS="$(LDFLAGS)" SHARED_LDFLAGS="$(SHARED_LDFLAGS)" \
 		OBJECTS="$(RC5TEST).o" \
 		LIBDEPS="$(PEX_LIBS) $$LIBRARIES $(EX_LIBS)" \
 		LIBRPATH=$(INSTALLTOP)/lib \
@@ -640,7 +658,8 @@ $(DESTEST)$(EXE_EXT): $(DESTEST).o $(DLIBCRYPTO)
 	  LIBRARIES="$(LIBCRYPTO)"; \
 	fi; \
 	$(NEWMAKE) -f $(TOP)/Makefile.shared \
-		APPNAME=$(DESTEST)$(EXE_EXT) LDFLAGS="$(CFLAGS)" \
+		APPNAME=$(DESTEST)$(EXE_EXT) CC="$(CC)" CFLAGS="$(CFLAGS)" \
+		LDFLAGS="$(LDFLAGS)" SHARED_LDFLAGS="$(SHARED_LDFLAGS)" \
 		OBJECTS="$(DESTEST).o" \
 		LIBDEPS="$(PEX_LIBS) $$LIBRARIES $(EX_LIBS)" \
 		LIBRPATH=$(INSTALLTOP)/lib \
@@ -656,7 +675,8 @@ $(RANDTEST)$(EXE_EXT): $(RANDTEST).o $(DLIBCRYPTO)
 	  LIBRARIES="$(LIBCRYPTO)"; \
 	fi; \
 	$(NEWMAKE) -f $(TOP)/Makefile.shared \
-		APPNAME=$(RANDTEST)$(EXE_EXT) LDFLAGS="$(CFLAGS)" \
+		APPNAME=$(RANDTEST)$(EXE_EXT) CC="$(CC)" CFLAGS="$(CFLAGS)" \
+		LDFLAGS="$(LDFLAGS)" SHARED_LDFLAGS="$(SHARED_LDFLAGS)" \
 		OBJECTS="$(RANDTEST).o" \
 		LIBDEPS="$(PEX_LIBS) $$LIBRARIES $(EX_LIBS)" \
 		LIBRPATH=$(INSTALLTOP)/lib \
@@ -672,7 +692,8 @@ $(DHTEST)$(EXE_EXT): $(DHTEST).o $(DLIBCRYPTO)
 	  LIBRARIES="$(LIBCRYPTO)"; \
 	fi; \
 	$(NEWMAKE) -f $(TOP)/Makefile.shared \
-		APPNAME=$(DHTEST)$(EXE_EXT) LDFLAGS="$(CFLAGS)" \
+		APPNAME=$(DHTEST)$(EXE_EXT) CC="$(CC)" CFLAGS="$(CFLAGS)" \
+		LDFLAGS="$(LDFLAGS)" SHARED_LDFLAGS="$(SHARED_LDFLAGS)" \
 		OBJECTS="$(DHTEST).o" \
 		LIBDEPS="$(PEX_LIBS) $$LIBRARIES $(EX_LIBS)" \
 		LIBRPATH=$(INSTALLTOP)/lib \
@@ -688,7 +709,8 @@ $(DSATEST)$(EXE_EXT): $(DSATEST).o $(DLIBCRYPTO)
 	  LIBRARIES="$(LIBCRYPTO)"; \
 	fi; \
 	$(NEWMAKE) -f $(TOP)/Makefile.shared \
-		APPNAME=$(DSATEST)$(EXE_EXT) LDFLAGS="$(CFLAGS)" \
+		APPNAME=$(DSATEST)$(EXE_EXT) CC="$(CC)" CFLAGS="$(CFLAGS)" \
+		LDFLAGS="$(LDFLAGS)" SHARED_LDFLAGS="$(SHARED_LDFLAGS)" \
 		OBJECTS="$(DSATEST).o" \
 		LIBDEPS="$(PEX_LIBS) $$LIBRARIES $(EX_LIBS)" \
 		LIBRPATH=$(INSTALLTOP)/lib \
@@ -704,7 +726,8 @@ $(METHTEST)$(EXE_EXT): $(METHTEST).o $(DLIBCRYPTO)
 	  LIBRARIES="$(LIBCRYPTO)"; \
 	fi; \
 	$(NEWMAKE) -f $(TOP)/Makefile.shared \
-		APPNAME=$(METHTEST)$(EXE_EXT) LDFLAGS="$(CFLAGS)" \
+		APPNAME=$(METHTEST)$(EXE_EXT) CC="$(CC)" CFLAGS="$(CFLAGS)" \
+		LDFLAGS="$(LDFLAGS)" SHARED_LDFLAGS="$(SHARED_LDFLAGS)" \
 		OBJECTS="$(METHTEST).o" \
 		LIBDEPS="$(PEX_LIBS) $$LIBRARIES $(EX_LIBS)" \
 		LIBRPATH=$(INSTALLTOP)/lib \
@@ -720,7 +743,8 @@ $(SSLTEST)$(EXE_EXT): $(SSLTEST).o $(DLIBSSL) $(DLIBCRYPTO)
 	  LIBRARIES="$(LIBSSL) $(LIBKRB5) $(LIBCRYPTO)"; \
 	fi; \
 	$(NEWMAKE) -f $(TOP)/Makefile.shared \
-		APPNAME=$(SSLTEST)$(EXE_EXT) LDFLAGS="$(CFLAGS)" \
+		APPNAME=$(SSLTEST)$(EXE_EXT) CC="$(CC)" CFLAGS="$(CFLAGS)" \
+		LDFLAGS="$(LDFLAGS)" SHARED_LDFLAGS="$(SHARED_LDFLAGS)" \
 		OBJECTS="$(SSLTEST).o" \
 		LIBDEPS="$(PEX_LIBS) $$LIBRARIES $(EX_LIBS)" \
 		LIBRPATH=$(INSTALLTOP)/lib \
@@ -736,7 +760,8 @@ $(ENGINETEST)$(EXE_EXT): $(ENGINETEST).o $(DLIBCRYPTO)
 	  LIBRARIES="$(LIBCRYPTO)"; \
 	fi; \
 	$(NEWMAKE) -f $(TOP)/Makefile.shared \
-		APPNAME=$(ENGINETEST)$(EXE_EXT) LDFLAGS="$(CFLAGS)" \
+		APPNAME=$(ENGINETEST)$(EXE_EXT) CC="$(CC)" CFLAGS="$(CFLAGS)" \
+		LDFLAGS="$(LDFLAGS)" SHARED_LDFLAGS="$(SHARED_LDFLAGS)" \
 		OBJECTS="$(ENGINETEST).o" \
 		LIBDEPS="$(PEX_LIBS) $$LIBRARIES $(EX_LIBS)" \
 		LIBRPATH=$(INSTALLTOP)/lib \
@@ -752,7 +777,8 @@ $(EVPTEST)$(EXE_EXT): $(EVPTEST).o $(DLIBCRYPTO)
 	  LIBRARIES="$(LIBCRYPTO)"; \
 	fi; \
 	$(NEWMAKE) -f $(TOP)/Makefile.shared \
-		APPNAME=$(EVPTEST)$(EXE_EXT) LDFLAGS="$(CFLAGS)" \
+		APPNAME=$(EVPTEST)$(EXE_EXT) CC="$(CC)" CFLAGS="$(CFLAGS)" \
+		LDFLAGS="$(LDFLAGS)" SHARED_LDFLAGS="$(SHARED_LDFLAGS)" \
 		OBJECTS="$(EVPTEST).o" \
 		LIBDEPS="$(PEX_LIBS) $$LIBRARIES $(EX_LIBS)" \
 		LIBRPATH=$(INSTALLTOP)/lib \
@@ -768,7 +794,8 @@ $(ECDSATEST)$(EXE_EXT): $(ECDSATEST).o $(DLIBCRYPTO)
 	  LIBRARIES="$(LIBCRYPTO)"; \
 	fi; \
 	$(NEWMAKE) -f $(TOP)/Makefile.shared \
-		APPNAME=$(ECDSATEST)$(EXE_EXT) LDFLAGS="$(CFLAGS)" \
+		APPNAME=$(ECDSATEST)$(EXE_EXT) CC="$(CC)" CFLAGS="$(CFLAGS)" \
+		LDFLAGS="$(LDFLAGS)" SHARED_LDFLAGS="$(SHARED_LDFLAGS)" \
 		OBJECTS="$(ECDSATEST).o" \
 		LIBDEPS="$(PEX_LIBS) $$LIBRARIES $(EX_LIBS)" \
 		LIBRPATH=$(INSTALLTOP)/lib \
@@ -784,7 +811,8 @@ $(ECDHTEST)$(EXE_EXT): $(ECDHTEST).o $(DLIBCRYPTO)
 	  LIBRARIES="$(LIBCRYPTO)"; \
 	fi; \
 	$(NEWMAKE) -f $(TOP)/Makefile.shared \
-		APPNAME=$(ECDHTEST)$(EXE_EXT) LDFLAGS="$(CFLAGS)" \
+		APPNAME=$(ECDHTEST)$(EXE_EXT) CC="$(CC)" CFLAGS="$(CFLAGS)" \
+		LDFLAGS="$(LDFLAGS)" SHARED_LDFLAGS="$(SHARED_LDFLAGS)" \
 		OBJECTS="$(ECDHTEST).o" \
 		LIBDEPS="$(PEX_LIBS) $$LIBRARIES $(EX_LIBS)" \
 		LIBRPATH=$(INSTALLTOP)/lib \
@@ -810,11 +838,13 @@ dummytest$(EXE_EXT): dummytest.o $(DLIBCRYPTO)
 	  LIBRARIES="$(LIBCRYPTO)"; \
 	fi; \
 	$(NEWMAKE) -f $(TOP)/Makefile.shared \
-		APPNAME=dummytest$(EXE_EXT) LDFLAGS="$(CFLAGS)" \
+		APPNAME=dummytest$(EXE_EXT) CC="$(CC)" CFLAGS="$(CFLAGS)" \
+		LDFLAGS="$(LDFLAGS)" SHARED_LDFLAGS="$(SHARED_LDFLAGS)" \
 		OBJECTS="dummytest.o" \
 		LIBDEPS="$(PEX_LIBS) $$LIBRARIES $(EX_LIBS)" \
 		LIBRPATH=$(INSTALLTOP)/lib \
 		link_app.$${shlib_target}
+	@case "../*.dll" in *\**) ;; *) cp -p ../*.dll .;; esac
 
 # DO NOT DELETE THIS LINE -- make depend depends on it.
 
@@ -960,7 +990,8 @@ randtest.o: ../include/openssl/rand.h randtest.c
 rc2test.o: ../e_os.h ../include/openssl/e_os2.h
 rc2test.o: ../include/openssl/opensslconf.h ../include/openssl/rc2.h rc2test.c
 rc4test.o: ../e_os.h ../include/openssl/e_os2.h
-rc4test.o: ../include/openssl/opensslconf.h ../include/openssl/rc4.h rc4test.c
+rc4test.o: ../include/openssl/opensslconf.h ../include/openssl/rc4.h
+rc4test.o: ../include/openssl/sha.h rc4test.c
 rc5test.o: ../e_os.h ../include/openssl/e_os2.h
 rc5test.o: ../include/openssl/opensslconf.h ../include/openssl/rc5.h rc5test.c
 rmdtest.o: ../e_os.h ../include/openssl/asn1.h ../include/openssl/bio.h
@@ -994,20 +1025,21 @@ shatest.o: ../include/openssl/safestack.h ../include/openssl/sha.h
 shatest.o: ../include/openssl/stack.h ../include/openssl/symhacks.h shatest.c
 ssltest.o: ../e_os.h ../include/openssl/asn1.h ../include/openssl/bio.h
 ssltest.o: ../include/openssl/bn.h ../include/openssl/buffer.h
-ssltest.o: ../include/openssl/comp.h ../include/openssl/crypto.h
-ssltest.o: ../include/openssl/dh.h ../include/openssl/dsa.h
-ssltest.o: ../include/openssl/e_os2.h ../include/openssl/ec.h
-ssltest.o: ../include/openssl/ecdh.h ../include/openssl/ecdsa.h
-ssltest.o: ../include/openssl/engine.h ../include/openssl/err.h
-ssltest.o: ../include/openssl/evp.h ../include/openssl/kssl.h
-ssltest.o: ../include/openssl/lhash.h ../include/openssl/obj_mac.h
-ssltest.o: ../include/openssl/objects.h ../include/openssl/opensslconf.h
-ssltest.o: ../include/openssl/opensslv.h ../include/openssl/ossl_typ.h
-ssltest.o: ../include/openssl/pem.h ../include/openssl/pem2.h
-ssltest.o: ../include/openssl/pkcs7.h ../include/openssl/rand.h
-ssltest.o: ../include/openssl/rsa.h ../include/openssl/safestack.h
-ssltest.o: ../include/openssl/sha.h ../include/openssl/ssl.h
-ssltest.o: ../include/openssl/ssl2.h ../include/openssl/ssl23.h
-ssltest.o: ../include/openssl/ssl3.h ../include/openssl/stack.h
-ssltest.o: ../include/openssl/symhacks.h ../include/openssl/tls1.h
-ssltest.o: ../include/openssl/x509.h ../include/openssl/x509_vfy.h ssltest.c
+ssltest.o: ../include/openssl/comp.h ../include/openssl/conf.h
+ssltest.o: ../include/openssl/crypto.h ../include/openssl/dh.h
+ssltest.o: ../include/openssl/dsa.h ../include/openssl/e_os2.h
+ssltest.o: ../include/openssl/ec.h ../include/openssl/ecdh.h
+ssltest.o: ../include/openssl/ecdsa.h ../include/openssl/engine.h
+ssltest.o: ../include/openssl/err.h ../include/openssl/evp.h
+ssltest.o: ../include/openssl/kssl.h ../include/openssl/lhash.h
+ssltest.o: ../include/openssl/obj_mac.h ../include/openssl/objects.h
+ssltest.o: ../include/openssl/opensslconf.h ../include/openssl/opensslv.h
+ssltest.o: ../include/openssl/ossl_typ.h ../include/openssl/pem.h
+ssltest.o: ../include/openssl/pem2.h ../include/openssl/pkcs7.h
+ssltest.o: ../include/openssl/rand.h ../include/openssl/rsa.h
+ssltest.o: ../include/openssl/safestack.h ../include/openssl/sha.h
+ssltest.o: ../include/openssl/ssl.h ../include/openssl/ssl2.h
+ssltest.o: ../include/openssl/ssl23.h ../include/openssl/ssl3.h
+ssltest.o: ../include/openssl/stack.h ../include/openssl/symhacks.h
+ssltest.o: ../include/openssl/tls1.h ../include/openssl/x509.h
+ssltest.o: ../include/openssl/x509_vfy.h ../include/openssl/x509v3.h ssltest.c

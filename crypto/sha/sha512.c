@@ -4,6 +4,7 @@
  * according to the OpenSSL license [found in ../../LICENSE].
  * ====================================================================
  */
+#if !defined(OPENSSL_NO_SHA) && !defined(OPENSSL_NO_SHA512)
 /*
  * IMPLEMENTATION NOTES.
  *
@@ -47,6 +48,8 @@
 #include <openssl/sha.h>
 #include <openssl/opensslv.h>
 
+#include "cryptlib.h"
+
 const char *SHA512_version="SHA-512" OPENSSL_VERSION_PTEXT;
 
 #if defined(_M_IX86) || defined(_M_AMD64) || defined(__i386) || defined(__x86_64)
@@ -83,7 +86,10 @@ int SHA512_Init (SHA512_CTX *c)
         return 1;
 	}
 
-static void sha512_block (SHA512_CTX *ctx, const void *in, size_t num);
+#ifndef SHA512_ASM
+static
+#endif
+void sha512_block (SHA512_CTX *ctx, const void *in, size_t num);
 
 int SHA512_Final (unsigned char *md, SHA512_CTX *c)
 	{
@@ -101,22 +107,22 @@ int SHA512_Final (unsigned char *md, SHA512_CTX *c)
 	c->u.d[SHA_LBLOCK-2] = c->Nh;
 	c->u.d[SHA_LBLOCK-1] = c->Nl;
 #else
-	p[sizeof(c->u)-1]  = (c->Nl)&0xFF;
-	p[sizeof(c->u)-2]  = (c->Nl>>8)&0xFF;
-	p[sizeof(c->u)-3]  = (c->Nl>>16)&0xFF;
-	p[sizeof(c->u)-4]  = (c->Nl>>24)&0xFF;
-	p[sizeof(c->u)-5]  = (c->Nl>>32)&0xFF;
-	p[sizeof(c->u)-6]  = (c->Nl>>40)&0xFF;
-	p[sizeof(c->u)-7]  = (c->Nl>>48)&0xFF;
-	p[sizeof(c->u)-8]  = (c->Nl>>56)&0xFF;
-	p[sizeof(c->u)-9]  = (c->Nh)&0xFF;
-	p[sizeof(c->u)-10] = (c->Nh>>8)&0xFF;
-	p[sizeof(c->u)-11] = (c->Nh>>16)&0xFF;
-	p[sizeof(c->u)-12] = (c->Nh>>24)&0xFF;
-	p[sizeof(c->u)-13] = (c->Nh>>32)&0xFF;
-	p[sizeof(c->u)-14] = (c->Nh>>40)&0xFF;
-	p[sizeof(c->u)-15] = (c->Nh>>48)&0xFF;
-	p[sizeof(c->u)-16] = (c->Nh>>56)&0xFF;
+	p[sizeof(c->u)-1]  = (unsigned char)(c->Nl);
+	p[sizeof(c->u)-2]  = (unsigned char)(c->Nl>>8);
+	p[sizeof(c->u)-3]  = (unsigned char)(c->Nl>>16);
+	p[sizeof(c->u)-4]  = (unsigned char)(c->Nl>>24);
+	p[sizeof(c->u)-5]  = (unsigned char)(c->Nl>>32);
+	p[sizeof(c->u)-6]  = (unsigned char)(c->Nl>>40);
+	p[sizeof(c->u)-7]  = (unsigned char)(c->Nl>>48);
+	p[sizeof(c->u)-8]  = (unsigned char)(c->Nl>>56);
+	p[sizeof(c->u)-9]  = (unsigned char)(c->Nh);
+	p[sizeof(c->u)-10] = (unsigned char)(c->Nh>>8);
+	p[sizeof(c->u)-11] = (unsigned char)(c->Nh>>16);
+	p[sizeof(c->u)-12] = (unsigned char)(c->Nh>>24);
+	p[sizeof(c->u)-13] = (unsigned char)(c->Nh>>32);
+	p[sizeof(c->u)-14] = (unsigned char)(c->Nh>>40);
+	p[sizeof(c->u)-15] = (unsigned char)(c->Nh>>48);
+	p[sizeof(c->u)-16] = (unsigned char)(c->Nh>>56);
 #endif
 
 	sha512_block (c,p,1);
@@ -131,10 +137,14 @@ int SHA512_Final (unsigned char *md, SHA512_CTX *c)
 				{
 				SHA_LONG64 t = c->h[n];
 
-				*(md++)	= (t>>56)&0xFF;	*(md++)	= (t>>48)&0xFF;
-				*(md++)	= (t>>40)&0xFF;	*(md++)	= (t>>32)&0xFF;
-				*(md++)	= (t>>24)&0xFF;	*(md++)	= (t>>16)&0xFF;
-				*(md++)	= (t>>8)&0xFF;	*(md++)	= (t)&0xFF;
+				*(md++)	= (unsigned char)(t>>56);
+				*(md++)	= (unsigned char)(t>>48);
+				*(md++)	= (unsigned char)(t>>40);
+				*(md++)	= (unsigned char)(t>>32);
+				*(md++)	= (unsigned char)(t>>24);
+				*(md++)	= (unsigned char)(t>>16);
+				*(md++)	= (unsigned char)(t>>8);
+				*(md++)	= (unsigned char)(t);
 				}
 			break;
 		case SHA512_DIGEST_LENGTH:
@@ -142,10 +152,14 @@ int SHA512_Final (unsigned char *md, SHA512_CTX *c)
 				{
 				SHA_LONG64 t = c->h[n];
 
-				*(md++)	= (t>>56)&0xFF;	*(md++)	= (t>>48)&0xFF;
-				*(md++)	= (t>>40)&0xFF;	*(md++)	= (t>>32)&0xFF;
-				*(md++)	= (t>>24)&0xFF;	*(md++)	= (t>>16)&0xFF;
-				*(md++)	= (t>>8)&0xFF;	*(md++)	= (t)&0xFF;
+				*(md++)	= (unsigned char)(t>>56);
+				*(md++)	= (unsigned char)(t>>48);
+				*(md++)	= (unsigned char)(t>>40);
+				*(md++)	= (unsigned char)(t>>32);
+				*(md++)	= (unsigned char)(t>>24);
+				*(md++)	= (unsigned char)(t>>16);
+				*(md++)	= (unsigned char)(t>>8);
+				*(md++)	= (unsigned char)(t);
 				}
 			break;
 		/* ... as well as make sure md_len is not abused. */
@@ -241,6 +255,7 @@ unsigned char *SHA512(const unsigned char *d, size_t n, unsigned char *md)
 	return(md);
 	}
 
+#ifndef SHA512_ASM
 static const SHA_LONG64 K512[80] = {
         U64(0x428a2f98d728ae22),U64(0x7137449123ef65cd),
         U64(0xb5c0fbcfec4d3b2f),U64(0xe9b5dba58189dbbc),
@@ -332,11 +347,10 @@ static const SHA_LONG64 K512[80] = {
 #define Ch(x,y,z)	(((x) & (y)) ^ ((~(x)) & (z)))
 #define Maj(x,y,z)	(((x) & (y)) ^ ((x) & (z)) ^ ((y) & (z)))
 
-#if defined(OPENSSL_IA32_SSE2) && !defined(OPENSSL_NO_ASM)
+#if defined(OPENSSL_IA32_SSE2) && !defined(OPENSSL_NO_ASM) && !defined(I386_ONLY)
 #define	GO_FOR_SSE2(ctx,in,num)		do {		\
-	extern int	OPENSSL_ia32cap;		\
-	void		sha512_block_sse2(void *,const void *,size_t);	\
-	if (!(OPENSSL_ia32cap & (1<<26))) break;	\
+	void	sha512_block_sse2(void *,const void *,size_t);	\
+	if (!(OPENSSL_ia32cap_P & (1<<26))) break;	\
 	sha512_block_sse2(ctx->h,in,num); return;	\
 					} while (0)
 #endif
@@ -476,3 +490,7 @@ static void sha512_block (SHA512_CTX *ctx, const void *in, size_t num)
 	}
 
 #endif
+
+#endif /* SHA512_ASM */
+
+#endif /* OPENSSL_NO_SHA512 */

@@ -539,18 +539,56 @@ const char *CRYPTO_get_lock_name(int type)
 		return(sk_value(app_locks,type-CRYPTO_NUM_LOCKS));
 	}
 
-#ifdef _DLL
-#ifdef OPENSSL_SYS_WIN32
+#if	defined(__i386)   || defined(__i386__)   || defined(_M_IX86) || \
+	defined(__INTEL__) || \
+	defined(__x86_64) || defined(__x86_64__) || defined(_M_AMD64)
+
+unsigned long  OPENSSL_ia32cap_P=0;
+unsigned long *OPENSSL_ia32cap_loc(void) { return &OPENSSL_ia32cap_P; }
+
+#if defined(OPENSSL_CPUID_OBJ) && !defined(OPENSSL_NO_ASM) && !defined(I386_ONLY)
+#define OPENSSL_CPUID_SETUP
+void OPENSSL_cpuid_setup(void)
+{ static int trigger=0;
+  unsigned long OPENSSL_ia32_cpuid(void);
+  char *env;
+
+    if (trigger)	return;
+
+    trigger=1;
+    if ((env=getenv("OPENSSL_ia32cap")))
+	OPENSSL_ia32cap_P = strtoul(env,NULL,0)|(1<<10);
+    else
+	OPENSSL_ia32cap_P = OPENSSL_ia32_cpuid()|(1<<10);
+    /*
+     * |(1<<10) sets a reserved bit to signal that variable
+     * was initialized already... This is to avoid interference
+     * with cpuid snippets in ELF .init segment.
+     */
+}
+#endif
+
+#endif
+#if !defined(OPENSSL_CPUID_SETUP)
+void OPENSSL_cpuid_setup(void) {}
+#endif
+
+#if (defined(_WIN32) || defined(__CYGWIN__)) && defined(_DLL)
+#ifdef __CYGWIN__
+/* pick DLL_[PROCESS|THREAD]_[ATTACH|DETACH] definitions */
+#include <windows.h>
+#endif
 
 /* All we really need to do is remove the 'error' state when a thread
  * detaches */
 
-BOOL WINAPI DLLEntryPoint(HINSTANCE hinstDLL, DWORD fdwReason,
+BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason,
 	     LPVOID lpvReserved)
 	{
 	switch(fdwReason)
 		{
 	case DLL_PROCESS_ATTACH:
+		OPENSSL_cpuid_setup();
 		break;
 	case DLL_THREAD_ATTACH:
 		break;
@@ -562,8 +600,6 @@ BOOL WINAPI DLLEntryPoint(HINSTANCE hinstDLL, DWORD fdwReason,
 		}
 	return(TRUE);
 	}
-#endif
-
 #endif
 
 void OpenSSLDie(const char *file,int line,const char *assertion)

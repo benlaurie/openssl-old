@@ -4,6 +4,8 @@
  * according to the OpenSSL license [found in ../../LICENSE].
  * ====================================================================
  */
+#if !defined(OPENSSL_NO_SHA) && !defined(OPENSSL_NO_SHA256)
+
 #include <stdlib.h>
 #include <string.h>
 
@@ -117,6 +119,9 @@ void sha256_block_data_order (SHA256_CTX *ctx, const void *in, size_t num);
 
 #include "md32_common.h"
 
+#ifdef SHA256_ASM
+void sha256_block (SHA256_CTX *ctx, const void *in, size_t num, int host);
+#else
 static const SHA_LONG K256[64] = {
 	0x428a2f98UL,0x71374491UL,0xb5c0fbcfUL,0xe9b5dba5UL,
 	0x3956c25bUL,0x59f111f1UL,0x923f82a4UL,0xab1c5ed5UL,
@@ -174,6 +179,8 @@ static void sha256_block (SHA256_CTX *ctx, const void *in, size_t num, int host)
 			h = g;	g = f;	f = e;	e = d + T1;
 			d = c;	c = b;	b = a;	a = T1 + T2;
 			}
+
+		data += SHA256_CBLOCK;
 		}
 	else
 		{
@@ -204,7 +211,6 @@ static void sha256_block (SHA256_CTX *ctx, const void *in, size_t num, int host)
 	ctx->h[0] += a;	ctx->h[1] += b;	ctx->h[2] += c;	ctx->h[3] += d;
 	ctx->h[4] += e;	ctx->h[5] += f;	ctx->h[6] += g;	ctx->h[7] += h;
 
-			data += SHA256_CBLOCK;
 			}
 }
 
@@ -253,6 +259,8 @@ static void sha256_block (SHA256_CTX *ctx, const void *in, size_t num, int host)
 		T1 = X[13] = W[13];	ROUND_00_15(13,d,e,f,g,h,a,b,c);
 		T1 = X[14] = W[14];	ROUND_00_15(14,c,d,e,f,g,h,a,b);
 		T1 = X[15] = W[15];	ROUND_00_15(15,b,c,d,e,f,g,h,a);
+
+		data += SHA256_CBLOCK;
 		}
 	else
 		{
@@ -291,11 +299,11 @@ static void sha256_block (SHA256_CTX *ctx, const void *in, size_t num, int host)
 	ctx->h[0] += a;	ctx->h[1] += b;	ctx->h[2] += c;	ctx->h[3] += d;
 	ctx->h[4] += e;	ctx->h[5] += f;	ctx->h[6] += g;	ctx->h[7] += h;
 
-			data += SHA256_CBLOCK;
 			}
 	}
 
 #endif
+#endif /* SHA256_ASM */
 
 /*
  * Idea is to trade couple of cycles for some space. On IA-32 we save
@@ -307,3 +315,5 @@ void HASH_BLOCK_HOST_ORDER (SHA256_CTX *ctx, const void *in, size_t num)
 
 void HASH_BLOCK_DATA_ORDER (SHA256_CTX *ctx, const void *in, size_t num)
 {   sha256_block (ctx,in,num,0);   }
+
+#endif /* OPENSSL_NO_SHA256 */

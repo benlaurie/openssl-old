@@ -230,13 +230,9 @@ int	RSA_print(BIO *bp, RSA *r,int offset);
 
 int i2d_RSA_NET(RSA *a, unsigned char **pp, int (*cb)(), int sgckey);
 RSA *d2i_RSA_NET(RSA **a, unsigned char **pp, long length, int (*cb)(), int sgckey);
-RSA *d2i_RSA_NET_2(RSA **a, unsigned char **pp, long length, int (*cb)(), int sgckey);
 
 int i2d_Netscape_RSA(RSA *a, unsigned char **pp, int (*cb)());
 RSA *d2i_Netscape_RSA(RSA **a, unsigned char **pp, long length, int (*cb)());
-/* Naughty internal function required elsewhere, to handle a MS structure
- * that is the same as the netscape one :-) */
-RSA *d2i_Netscape_RSA_2(RSA **a, unsigned char **pp, long length, int (*cb)());
 
 /* The following 2 functions sign and verify a X509_SIG ASN1 object
  * inside PKCS#1 padded RSA encryption */

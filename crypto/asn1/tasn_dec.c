@@ -119,6 +119,7 @@ int ASN1_item_ex_d2i(ASN1_VALUE **pval, unsigned char **in, long len, const ASN1
 	ASN1_aux_cb *asn1_cb;
 	unsigned char *p, *q, imphack = 0, oclass;
 	char seq_eoc, seq_nolen, cst, isopt;
+	long tmplen;
 	int i;
 	int otag;
 	int ret = 0;
@@ -257,6 +258,8 @@ int ASN1_item_ex_d2i(ASN1_VALUE **pval, unsigned char **in, long len, const ASN1
 
 		case ASN1_ITYPE_SEQUENCE:
 		p = *in;
+		tmplen = len;
+
 		/* If no IMPLICIT tagging set to SEQUENCE, UNIVERSAL */
 		if(tag == -1) {
 			tag = V_ASN1_SEQUENCE;
@@ -268,7 +271,10 @@ int ASN1_item_ex_d2i(ASN1_VALUE **pval, unsigned char **in, long len, const ASN1
 			ASN1err(ASN1_F_ASN1_ITEM_EX_D2I, ERR_R_NESTED_ASN1_ERROR);
 			goto err;
 		} else if(ret == -1) return -1;
-		seq_nolen = seq_eoc;	/* If indefinite we don't do a length check */
+		if(aux && (aux->flags & ASN1_AFLG_BROKEN)) {
+			len = tmplen - (p - *in);
+			seq_nolen = 1;
+		} else seq_nolen = seq_eoc;	/* If indefinite we don't do a length check */
 		if(!cst) {
 			ASN1err(ASN1_F_ASN1_ITEM_EX_D2I, ASN1_R_SEQUENCE_NOT_CONSTRUCTED);
 			goto err;
@@ -860,6 +866,14 @@ static int asn1_check_tlen(long *olen, int *otag, unsigned char *oclass, char *i
 			ctx->hdrlen = p - q;
 			ctx->valid = 1;
 		}
+		/* If definite length, length + header can't exceed total
+		 * amount of data available.
+		 */
+		if(!(i & 1) && (plen + ctx->hdrlen) > len) {
+			ASN1err(ASN1_F_ASN1_CHECK_TLEN, ASN1_R_TOO_LONG);
+			asn1_tlc_clear(ctx);
+			return 0;
+		}
 	}
 		
 	if(i & 0x80) {
@@ -880,9 +894,10 @@ static int asn1_check_tlen(long *olen, int *otag, unsigned char *oclass, char *i
 		/* We have a tag and class match, so assume we are going to do something with it */
 		asn1_tlc_clear(ctx);
 	}
-	if(i & 1) plen = len - (p - q);
-
-	if(inf) *inf = i & 1;
+	if(i & 1) {
+		plen = len - (p - q);
+		if(inf) *inf = 1;
+	}
 
 	if(cst) *cst = i & V_ASN1_CONSTRUCTED;
 

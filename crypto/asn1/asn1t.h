@@ -128,6 +128,10 @@ extern "C" {
 	const static ASN1_AUX tname##_aux = {NULL, 0, 0, 0, cb, 0}; \
 	ASN1_SEQUENCE(tname)
 
+#define ASN1_BROKEN_SEQUENCE(tname) \
+	const static ASN1_AUX tname##_aux = {NULL, ASN1_AFLG_BROKEN, 0, 0, 0, 0}; \
+	ASN1_SEQUENCE(tname)
+
 #define ASN1_SEQUENCE_ref(tname, cb, lck) \
 	const static ASN1_AUX tname##_aux = {NULL, ASN1_AFLG_REFCOUNT, offsetof(tname, references), lck, cb, 0}; \
 	ASN1_SEQUENCE(tname)
@@ -135,6 +139,8 @@ extern "C" {
 #define ASN1_SEQUENCE_enc(tname, enc, cb) \
 	const static ASN1_AUX tname##_aux = {NULL, ASN1_AFLG_ENCODING, 0, 0, cb, offsetof(tname, enc)}; \
 	ASN1_SEQUENCE(tname)
+
+#define ASN1_BROKEN_SEQUENCE_END(stname) ASN1_SEQUENCE_END_ref(stname, stname)
 
 #define ASN1_SEQUENCE_END_enc(stname, tname) ASN1_SEQUENCE_END_ref(stname, tname)
 
@@ -585,6 +591,8 @@ typedef struct ASN1_AUX_st {
 #define ASN1_AFLG_REFCOUNT	1
 /* Save the encoding of structure (useful for signatures) */
 #define ASN1_AFLG_ENCODING	2
+/* The Sequence length is invalid */
+#define ASN1_AFLG_BROKEN	4
 
 /* operation values for asn1_cb */
 

@@ -118,7 +118,7 @@ int ASN1_item_ex_d2i(ASN1_VALUE **pval, unsigned char **in, long len, const ASN1
 	const ASN1_AUX *aux = it->funcs;
 	ASN1_aux_cb *asn1_cb;
 	unsigned char *p, *q, imphack = 0, oclass;
-	char seq_eoc, cst, isopt;
+	char seq_eoc, seq_nolen, cst, isopt;
 	int i;
 	int otag;
 	int ret = 0;
@@ -269,6 +269,7 @@ int ASN1_item_ex_d2i(ASN1_VALUE **pval, unsigned char **in, long len, const ASN1
 			ASN1err(ASN1_F_ASN1_ITEM_EX_D2I, ERR_R_NESTED_ASN1_ERROR);
 			goto err;
 		} else if(ret == -1) return -1;
+		seq_nolen = seq_eoc;	/* If indefinite we don't do a length check */
 		if(!cst) {
 			ASN1err(ASN1_F_ASN1_ITEM_EX_D2I, ASN1_R_SEQUENCE_NOT_CONSTRUCTED);
 			goto err;
@@ -334,12 +335,12 @@ int ASN1_item_ex_d2i(ASN1_VALUE **pval, unsigned char **in, long len, const ASN1
 			len -= p - q;
 		}
 		/* Check for EOC if expecting one */
-		if(seq_eoc) {
+		if(seq_eoc && !asn1_check_eoc(&p, len)) {
 			ASN1err(ASN1_F_ASN1_ITEM_EX_D2I, ASN1_R_MISSING_EOC);
 			goto err;
 		}
 		/* Check all data read */
-		if(len) {
+		if(!seq_nolen && len) {
 			ASN1err(ASN1_F_ASN1_ITEM_EX_D2I, ASN1_R_SEQUENCE_LENGTH_MISMATCH);
 			goto err;
 		}
@@ -474,7 +475,8 @@ static int asn1_template_noexp_d2i(ASN1_VALUE **val, unsigned char **in, long le
 			ASN1err(ASN1_F_ASN1_TEMPLATE_EX_D2I, ERR_R_NESTED_ASN1_ERROR);
 			return 0;
 		} else if(ret == -1) return -1;
-		if(!(*val = (ASN1_VALUE *)sk_new_null())) {
+		if(!*val) *val = (ASN1_VALUE *)sk_new_null();
+		if(!*val) {
 			ASN1err(ASN1_F_ASN1_TEMPLATE_EX_D2I, ERR_R_MALLOC_FAILURE);
 			goto err;
 		}

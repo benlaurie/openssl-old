@@ -132,3 +132,7 @@ to the behaviour of CHOICE in the new code this has been changed to a field
 called 'single' which is 0 for a SET OF and 1 for single. The old field has
 been deleted to deliberately break source compatibility. Since this structure
 is normally accessed via higher level functions this shouldn't break too much.
+
+The top level 'detached' field in the PKCS7 structure is no longer set when
+a PKCS#7 structure is read in. PKCS7_is_detached() should be called instead.
+The behaviour of PKCS7_get_detached() is unaffected.

@@ -284,19 +284,22 @@ extern "C" {
 #define ASN1_ADB(name) \
 	const static ASN1_ADB_TABLE name##_adbtbl[] 
 
-#define ASN1_ADB_END(name, flags, field, app, def, none) \
+#define ASN1_ADB_END(name, flags, field, app_table, def, none) \
 	;\
 	const static ASN1_ADB name##_adb = {\
 		flags,\
 		offsetof(name, field),\
-		app,\
-		&name##_adbtbl,\
+		app_table,\
+		name##_adbtbl,\
 		sizeof(name##_adbtbl) / sizeof(ASN1_ADB_TABLE),\
 		def,\
 		none\
 	}
 
-#define ADB_ENTRY(val, template) {val, template##_tt}
+#define ADB_ENTRY(val, template) {val, template}
+
+#define ASN1_ADB_TEMPLATE(name) \
+	const static ASN1_TEMPLATE name##_tt 
 
 /* This is the ASN1 template structure that defines
  * a wrapper round the actual type. It determines the
@@ -330,7 +333,7 @@ struct ASN1_ADB_st {
 
 struct ASN1_ADB_TABLE_st {
 	long value;		/* NID for an object or value for an int */
-	const ASN1_TEMPLATE *tt;		/* item for this value */
+	const ASN1_TEMPLATE tt;		/* item for this value */
 };
 
 /* template flags */

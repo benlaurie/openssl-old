@@ -119,7 +119,13 @@ static void asn1_item_combine_free(ASN1_VALUE *val, const ASN1_ITEM *it, int com
 		case ASN1_ITYPE_SEQUENCE:
 		if(asn1_do_lock(val, -1, it) > 0) return;
 		if(asn1_cb) asn1_cb(ASN1_OP_FREE_PRE, &val, it);
-		for(i = 0, tt = it->templates; i < it->tcount; tt++, i++) {
+		/* If we free up as normal we will free and zero any
+		 * ANY DEFINED BY field and we wont be able to 
+		 * determine the type of the field it defines. So
+		 * free up in reverse order.
+		 */
+		tt = it->templates + it->tcount - 1;
+		for(i = 0; i < it->tcount; tt--, i++) {
 			ASN1_VALUE *seqval;
 			seqtt = asn1_do_adb(val, tt, 0);
 			if(!seqtt) continue;
@@ -154,15 +160,13 @@ void ASN1_primitive_free(ASN1_VALUE *val, long utype)
 		break;
 
 		case V_ASN1_NULL:
+		case V_ASN1_BOOLEAN:
 		break;
 
 		case V_ASN1_ANY:
 		typ = (ASN1_TYPE *)val;
 		ASN1_primitive_free((ASN1_VALUE *)typ->value.ptr, typ->type);
 		OPENSSL_free(typ);
-		break;
-
-		case V_ASN1_BOOLEAN:
 		break;
 
 		default:

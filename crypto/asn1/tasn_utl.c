@@ -167,7 +167,7 @@ const ASN1_TEMPLATE *asn1_do_adb(ASN1_VALUE *val, const ASN1_TEMPLATE *tt, int n
 	const ASN1_ADB *adb;
 	const ASN1_ADB_TABLE *atbl;
 	long selector;
-	ASN1_VALUE *sfld;
+	ASN1_VALUE **sfld;
 	int i;
 	if(!(tt->flags & ASN1_TFLG_ADB_MASK)) return tt;
 
@@ -188,9 +188,9 @@ const ASN1_TEMPLATE *asn1_do_adb(ASN1_VALUE *val, const ASN1_TEMPLATE *tt, int n
 	 * might be a legitimate value in the table
 	 */
 	if(tt->flags & ASN1_TFLG_ADB_OID) 
-		selector = OBJ_obj2nid((ASN1_OBJECT *)sfld);
+		selector = OBJ_obj2nid((ASN1_OBJECT *)*sfld);
 	else 
-		selector = ASN1_INTEGER_get((ASN1_INTEGER *)sfld);
+		selector = ASN1_INTEGER_get((ASN1_INTEGER *)*sfld);
 
 	/* Try to find matching entry in table
 	 * Maybe should check application types first to
@@ -201,7 +201,7 @@ const ASN1_TEMPLATE *asn1_do_adb(ASN1_VALUE *val, const ASN1_TEMPLATE *tt, int n
 	 */
 
 	for(atbl = adb->tbl, i = 0; i < adb->tblcount; i++, atbl++)
-		if(atbl->value == selector) return atbl->tt;
+		if(atbl->value == selector) return &atbl->tt;
 
 	/* FIXME: need to search application table too */
 

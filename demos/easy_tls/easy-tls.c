@@ -362,7 +362,7 @@ tls_openssl_errors(const char *app_prefix_1, const char *app_prefix_2, const cha
     assert(app_prefix_2 != NULL);
 
     if (default_text == NULL)
-	default_text = "???";
+	default_text = "?""?""?";
     
     while ((err = ERR_get_error_line_data(&file,&line,&data,&flags)) != 0) {
 	if (reasons_i < sizeof reasons) {

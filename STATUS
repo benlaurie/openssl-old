@@ -16,6 +16,7 @@
 			solaris-sparcv9-cc		- passed
                        0.9.5a-beta2 is available.
                         linux-elf                       - passed
+                        linux-ppc (egcs 2.91.66)        - passed
                         OpenBSD-elf                     - passed
                         FreeBSD-elf (i586-pc-freebsd3.2)- passed
                         solaris-sparcv9-cc              - passed

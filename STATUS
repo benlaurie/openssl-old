@@ -62,12 +62,6 @@
 
   NEEDS PATCH
 
-    o  inappropriate AlgorithmIdentifier used in S/MIME signatures
-       (key type instead of signature algorithm)
-
-    o  AES ciphersuites are not (yet) official and should not be enabled
-       unless explicitly requested
-
     o  apps/ca.c: "Sign the certificate?" - "n" creates empty certificate file
 
     o  "OpenSSL STATUS" is never up-to-date.

@@ -269,11 +269,13 @@ typedef struct ASN1_TLC_st ASN1_TLC;
 typedef struct ASN1_VALUE_st ASN1_VALUE;
 
 /* Declare ASN1 functions: the implement macro in in asn1t.h */
-#define DECLARE_ASN1_FUNCTIONS(type) \
-	type *type##_new(void); \
-	void type##_free(type *a); \
-	type *d2i_##type(type **a, unsigned char **in, long len); \
-	int i2d_##type(type *a, unsigned char **out)
+#define DECLARE_ASN1_FUNCTIONS(type) DECLARE_ASN1_FUNCTIONS_name(type, type)
+#define DECLARE_ASN1_FUNCTIONS_name(type, name) \
+	type *name##_new(void); \
+	void name##_free(type *a); \
+	type *d2i_##name(type **a, unsigned char **in, long len); \
+	int i2d_##name(type *a, unsigned char **out); \
+	extern const ASN1_ITEM name##_it;
 
 /* Parameters used by ASN1_STRING_print_ex() */
 
@@ -455,12 +457,7 @@ typedef struct BIT_STRING_BITNAME_st {
 		i2d_ASN1_bytes((ASN1_STRING *)a,pp,V_ASN1_OCTET_STRING,\
 		V_ASN1_UNIVERSAL)
 
-#define M_ASN1_PRINTABLE_new()	ASN1_STRING_type_new(V_ASN1_T61STRING)
-#define M_ASN1_PRINTABLE_free(a)	ASN1_STRING_free((ASN1_STRING *)a)
-#define M_i2d_ASN1_PRINTABLE(a,pp) i2d_ASN1_bytes((ASN1_STRING *)a,\
-		pp,a->type,V_ASN1_UNIVERSAL)
-#define M_d2i_ASN1_PRINTABLE(a,pp,l) \
-		d2i_ASN1_type_bytes((ASN1_STRING **)a,pp,l, \
+#define B_ASN1_PRINTABLE \
 			B_ASN1_PRINTABLESTRING| \
 			B_ASN1_T61STRING| \
 			B_ASN1_IA5STRING| \
@@ -468,7 +465,22 @@ typedef struct BIT_STRING_BITNAME_st {
 			B_ASN1_UNIVERSALSTRING|\
 			B_ASN1_BMPSTRING|\
 			B_ASN1_UTF8STRING|\
-			B_ASN1_UNKNOWN)
+			B_ASN1_UNKNOWN
+
+#define B_ASN1_DIRECTORYSTRING \
+			B_ASN1_PRINTABLESTRING| \
+			B_ASN1_TELETEXSTRING|\
+			B_ASN1_BMPSTRING|\
+			B_ASN1_UNIVERSALSTRING|\
+			B_ASN1_UTF8STRING
+
+#define M_ASN1_PRINTABLE_new()	ASN1_STRING_type_new(V_ASN1_T61STRING)
+#define M_ASN1_PRINTABLE_free(a)	ASN1_STRING_free((ASN1_STRING *)a)
+#define M_i2d_ASN1_PRINTABLE(a,pp) i2d_ASN1_bytes((ASN1_STRING *)a,\
+		pp,a->type,V_ASN1_UNIVERSAL)
+#define M_d2i_ASN1_PRINTABLE(a,pp,l) \
+		d2i_ASN1_type_bytes((ASN1_STRING **)a,pp,l, \
+			B_ASN1_PRINTABLE)
 
 #define M_DIRECTORYSTRING_new() ASN1_STRING_type_new(V_ASN1_PRINTABLESTRING)
 #define M_DIRECTORYSTRING_free(a)	ASN1_STRING_free((ASN1_STRING *)a)
@@ -476,11 +488,7 @@ typedef struct BIT_STRING_BITNAME_st {
 						pp,a->type,V_ASN1_UNIVERSAL)
 #define M_d2i_DIRECTORYSTRING(a,pp,l) \
 		d2i_ASN1_type_bytes((ASN1_STRING **)a,pp,l, \
-			B_ASN1_PRINTABLESTRING| \
-			B_ASN1_TELETEXSTRING|\
-			B_ASN1_BMPSTRING|\
-			B_ASN1_UNIVERSALSTRING|\
-			B_ASN1_UTF8STRING)
+			B_ASN1_DIRECTORYSTRING)
 
 #define M_DISPLAYTEXT_new() ASN1_STRING_type_new(V_ASN1_VISIBLESTRING)
 #define M_DISPLAYTEXT_free(a) ASN1_STRING_free((ASN1_STRING *)a)
@@ -716,9 +724,7 @@ ASN1_BMPSTRING *d2i_ASN1_BMPSTRING(ASN1_BMPSTRING **a, unsigned char **pp,
 int UTF8_getc(const unsigned char *str, int len, unsigned long *val);
 int UTF8_putc(unsigned char *str, int len, unsigned long value);
 
-int i2d_ASN1_PRINTABLE(ASN1_STRING *a,unsigned char **pp);
-ASN1_STRING *d2i_ASN1_PRINTABLE(ASN1_STRING **a,
-	unsigned char **pp, long l);
+DECLARE_ASN1_FUNCTIONS_name(ASN1_STRING, ASN1_PRINTABLE)
 
 ASN1_PRINTABLESTRING *	ASN1_PRINTABLESTRING_new(void);
 void		ASN1_PRINTABLESTRING_free(ASN1_PRINTABLESTRING *a);

@@ -58,6 +58,7 @@
 #ifndef HEADER_ASN1T_H
 #define HEADER_ASN1T_H
 
+#include <stddef.h>
 #include <openssl/asn1.h>
 
 /* ASN1 template defines, structures and functions */
@@ -442,11 +443,12 @@ typedef struct ASN1_EXTERN_FUNCS_st {
 } ASN1_EXTERN_FUNCS;
 
 /* Macro to implement a primitive type */
-#define IMPLEMENT_ASN1_TYPE(type) const ASN1_ITEM type##_it = \
-				{ ASN1_ITYPE_PRIMITIVE, V_##type, NULL, 0, NULL, sizeof(type)}
+#define IMPLEMENT_ASN1_TYPE(stname) IMPLEMENT_ASN1_TYPE_name(stname, stname)
+#define IMPLEMENT_ASN1_TYPE_name(stname, itname) const ASN1_ITEM itname##_it = \
+				{ ASN1_ITYPE_PRIMITIVE, V_##itname, NULL, 0, NULL, sizeof(stname), #itname};
 /* Macro to implement a multi string type */
-#define IMPLEMENT_ASN1_MSTRING(type, mask) const ASN1_ITEM type##_it = \
-				{ ASN1_ITYPE_MSTRING, mask, NULL, 0, NULL, sizeof(ASN1_STRING)}
+#define IMPLEMENT_ASN1_MSTRING(itname, mask) const ASN1_ITEM itname##_it = \
+				{ ASN1_ITYPE_MSTRING, mask, NULL, 0, NULL, sizeof(ASN1_STRING), #itname};
 
 /* Macro to implement an ASN1_ITEM in terms of old style funcs */
 
@@ -471,22 +473,26 @@ typedef struct ASN1_EXTERN_FUNCS_st {
 
 /* Macro to implement standard functions in terms of ASN1_ITEM structures */
 
-#define IMPLEMENT_ASN1_FUNCTIONS(type) \
-	type *type##_new(void) \
+#define IMPLEMENT_ASN1_FUNCTIONS(stname) IMPLEMENT_ASN1_FUNCTIONS_fname(stname, stname, stname)
+
+#define IMPLEMENT_ASN1_FUNCTIONS_name(stname, itname) IMPLEMENT_ASN1_FUNCTIONS_fname(stname, itname, itname)
+
+#define IMPLEMENT_ASN1_FUNCTIONS_fname(stname, itname, fname) \
+	stname *fname##_new(void) \
 	{ \
-		return (type *)ASN1_item_new(&type##_it); \
+		return (stname *)ASN1_item_new(&itname##_it); \
 	} \
-	void type##_free(type *a) \
+	void fname##_free(stname *a) \
 	{ \
-		ASN1_item_free((ASN1_VALUE *)a, &type##_it); \
+		ASN1_item_free((ASN1_VALUE *)a, &itname##_it); \
 	} \
-	type *d2i_##type(type **a, unsigned char **in, long len) \
+	stname *d2i_##fname(stname **a, unsigned char **in, long len) \
 	{ \
-		return (type *)ASN1_item_d2i((ASN1_VALUE **)a, in, len, &type##_it);\
+		return (stname *)ASN1_item_d2i((ASN1_VALUE **)a, in, len, &itname##_it);\
 	} \
-	int i2d_##type(type *a, unsigned char **out) \
+	int i2d_##fname(stname *a, unsigned char **out) \
 	{ \
-		return ASN1_item_i2d((ASN1_VALUE *)a, out, &type##_it);\
+		return ASN1_item_i2d((ASN1_VALUE *)a, out, &itname##_it);\
 	} 
 
 /* external definitions for primitive types */

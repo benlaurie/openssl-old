@@ -147,7 +147,7 @@ int ASN1_item_ex_d2i(ASN1_VALUE **pval, unsigned char **in, long len, const ASN1
 			goto err;
 		} 
 		/* Check tag matches bit map */
-		if(ASN1_tag2bit(otag) & it->utype) {
+		if(!(ASN1_tag2bit(otag) & it->utype)) {
 			/* If OPTIONAL, assume this is OK */
 			if(opt) return -1;
 			ASN1err(ASN1_F_ASN1_ITEM_EX_D2I, ASN1_R_MSTRING_WRONG_TAG);
@@ -355,8 +355,8 @@ int ASN1_item_ex_d2i(ASN1_VALUE **pval, unsigned char **in, long len, const ASN1
 	err:
 	ASN1_item_free(*pval, it);
 	*pval = NULL;
-	if(errtt) ERR_add_error_data(4, "Field=", errtt->field_name, ", Structure=", it->sname);
-	else ERR_add_error_data(2, "Structure=", it->sname);
+	if(errtt) ERR_add_error_data(4, "Field=", errtt->field_name, ", Type=", it->sname);
+	else ERR_add_error_data(2, "Type=", it->sname);
 	return 0;
 }
 
@@ -672,7 +672,10 @@ static int asn1_d2i_ex_primitive(ASN1_VALUE **pval, unsigned char **in, long inl
 				goto err;
 			}
 			*pval = (ASN1_VALUE *)stmp;
-		} else stmp = (ASN1_STRING *)*pval;
+		} else {
+			stmp = (ASN1_STRING *)*pval;
+			stmp->type = utype;
+		}
 		/* If we've already allocated a buffer use it */
 		if(cst) {
 			if(stmp->data) OPENSSL_free(stmp->data);

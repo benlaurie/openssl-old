@@ -18,7 +18,8 @@
 
   RELEASE SHOWSTOPPERS
 
-    o BIGNUM library failures on 64-bit platforms (0.9.7-dev)
+    o BIGNUM library failures on 64-bit platforms (0.9.7-dev):
+      - BN_mod_mul verificiation (bc) fails for solaris64-sparcv9-cc
 
   AVAILABLE PATCHES
 

@@ -227,7 +227,7 @@ int RAND_poll(void)
 				srand(sys_time[0]*data_buffer[0]*data_buffer[1]+i);
 				if(i==(total_length-1)) /* for JPI$_FINALEXC */
 					{
-					long int *ptr = (long *)data_buffer[i];
+					long int *ptr = (long *)&data_buffer[i];
 					int j;
 
 					tmp_length = 0;

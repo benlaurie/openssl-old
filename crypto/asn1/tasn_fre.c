@@ -62,16 +62,16 @@
 #include <openssl/asn1t.h>
 #include <openssl/objects.h>
 
-static void asn1_item_combine_free(ASN1_VALUE *val, const ASN1_ITEM *it, int combine);
+static void asn1_item_combine_free(ASN1_VALUE **pval, const ASN1_ITEM *it, int combine);
 
 /* Free up an ASN1 structure */
 
 void ASN1_item_free(ASN1_VALUE *val, const ASN1_ITEM *it)
 {
-	asn1_item_combine_free(val, it, 0);
+	asn1_item_combine_free(&val, it, 0);
 }
 
-static void asn1_item_combine_free(ASN1_VALUE *val, const ASN1_ITEM *it, int combine)
+static void asn1_item_combine_free(ASN1_VALUE **pval, const ASN1_ITEM *it, int combine)
 {
 	const ASN1_TEMPLATE *tt = NULL, *seqtt;
 	const ASN1_EXTERN_FUNCS *ef;
@@ -79,47 +79,47 @@ static void asn1_item_combine_free(ASN1_VALUE *val, const ASN1_ITEM *it, int com
 	const ASN1_AUX *aux = it->funcs;
 	ASN1_aux_cb *asn1_cb;
 	int i;
-	if(!val) return;
+	if(!pval || !*pval) return;
 	if(aux && aux->asn1_cb) asn1_cb = aux->asn1_cb;
 	else asn1_cb = 0;
 
 	switch(it->itype) {
 
 		case ASN1_ITYPE_PRIMITIVE:
-		if(it->templates) ASN1_template_free(val, it->templates);
-		else ASN1_primitive_free(val, it->utype);
+		if(it->templates) ASN1_template_free(pval, it->templates);
+		else ASN1_primitive_free(pval, it->utype);
 		break;
 
 		case ASN1_ITYPE_MSTRING:
-		ASN1_primitive_free(val, -1);
+		ASN1_primitive_free(pval, -1);
 		break;
 
 		case ASN1_ITYPE_CHOICE:
-		i = asn1_get_choice_selector(val, it);
-		if(asn1_cb) asn1_cb(ASN1_OP_FREE_PRE, &val, it);
+		i = asn1_get_choice_selector(pval, it);
+		if(asn1_cb) asn1_cb(ASN1_OP_FREE_PRE, pval, it);
 		if((i >= 0) && (i < it->tcount)) {
-			ASN1_VALUE *chval;
+			ASN1_VALUE **pchval;
 			tt = it->templates + i;
-			chval = asn1_get_field(val, tt);
-			ASN1_template_free(chval, tt);
+			pchval = asn1_get_field_ptr(pval, tt);
+			ASN1_template_free(pchval, tt);
 		}
-		if(asn1_cb) asn1_cb(ASN1_OP_FREE_POST, &val, it);
-		if(!combine) OPENSSL_free(val);
+		if(asn1_cb) asn1_cb(ASN1_OP_FREE_POST, pval, it);
+		if(!combine) OPENSSL_free(*pval);
 		break;
 
 		case ASN1_ITYPE_COMPAT:
 		cf = it->funcs;
-		if(cf && cf->asn1_free) cf->asn1_free(val);
+		if(cf && cf->asn1_free) cf->asn1_free(*pval);
 		break;
 
 		case ASN1_ITYPE_EXTERN:
 		ef = it->funcs;
-		if(ef && ef->asn1_ex_free) ef->asn1_ex_free(val, it);
+		if(ef && ef->asn1_ex_free) ef->asn1_ex_free(pval, it);
 		break;
 
 		case ASN1_ITYPE_SEQUENCE:
-		if(asn1_do_lock(val, -1, it) > 0) return;
-		if(asn1_cb) asn1_cb(ASN1_OP_FREE_PRE, &val, it);
+		if(asn1_do_lock(pval, -1, it) > 0) return;
+		if(asn1_cb) asn1_cb(ASN1_OP_FREE_PRE, pval, it);
 		/* If we free up as normal we will invalidate any
 		 * ANY DEFINED BY field and we wont be able to 
 		 * determine the type of the field it defines. So
@@ -127,37 +127,39 @@ static void asn1_item_combine_free(ASN1_VALUE *val, const ASN1_ITEM *it, int com
 		 */
 		tt = it->templates + it->tcount - 1;
 		for(i = 0; i < it->tcount; tt--, i++) {
-			ASN1_VALUE *seqval;
-			seqtt = asn1_do_adb(val, tt, 0);
+			ASN1_VALUE **pseqval;
+			seqtt = asn1_do_adb(pval, tt, 0);
 			if(!seqtt) continue;
-			seqval = asn1_get_field(val, seqtt);
-			ASN1_template_free(seqval, seqtt);
+			pseqval = asn1_get_field_ptr(pval, seqtt);
+			ASN1_template_free(pseqval, seqtt);
 		}
-		if(asn1_cb) asn1_cb(ASN1_OP_FREE_POST, &val, it);
-		if(!combine) OPENSSL_free(val);
+		if(asn1_cb) asn1_cb(ASN1_OP_FREE_POST, pval, it);
+		if(!combine) OPENSSL_free(*pval);
 		break;
 	}
 }
 
-void ASN1_template_free(ASN1_VALUE *val, const ASN1_TEMPLATE *tt)
+void ASN1_template_free(ASN1_VALUE **pval, const ASN1_TEMPLATE *tt)
 {
 	int i;
 	if(tt->flags & ASN1_TFLG_SK_MASK) {
-		STACK *sk = (STACK *)val;
+		STACK *sk = (STACK *)*pval;
 		for(i = 0; i < sk_num(sk); i++) {
-			ASN1_item_free((ASN1_VALUE *)sk_value(sk, i), tt->item);
+			ASN1_VALUE *vtmp;
+			vtmp = (ASN1_VALUE *)sk_value(sk, i);
+			asn1_item_combine_free(&vtmp, tt->item, 0);
 		}
 		sk_free(sk);
-	} else asn1_item_combine_free(val, tt->item, tt->flags & ASN1_TFLG_COMBINE);
+	} else asn1_item_combine_free(pval, tt->item, tt->flags & ASN1_TFLG_COMBINE);
 }
 
-void ASN1_primitive_free(ASN1_VALUE *val, long utype)
+void ASN1_primitive_free(ASN1_VALUE **pval, long utype)
 {
 	ASN1_TYPE *typ;
-	if(!val) return;
+	if(!*pval) return;
 	switch(utype) {
 		case V_ASN1_OBJECT:
-		ASN1_OBJECT_free((ASN1_OBJECT *)val);
+		ASN1_OBJECT_free((ASN1_OBJECT *)*pval);
 		break;
 
 		case V_ASN1_NULL:
@@ -165,13 +167,13 @@ void ASN1_primitive_free(ASN1_VALUE *val, long utype)
 		break;
 
 		case V_ASN1_ANY:
-		typ = (ASN1_TYPE *)val;
-		ASN1_primitive_free((ASN1_VALUE *)typ->value.ptr, typ->type);
+		typ = (ASN1_TYPE *)*pval;
+		ASN1_primitive_free((ASN1_VALUE **)&typ->value.ptr, typ->type);
 		OPENSSL_free(typ);
 		break;
 
 		default:
-		ASN1_STRING_free((ASN1_STRING*)val);
+		ASN1_STRING_free((ASN1_STRING*)*pval);
 		break;
 	}
 }

@@ -65,9 +65,9 @@
 static int x509_name_ex_d2i(ASN1_VALUE **val, unsigned char **in, long len, const ASN1_ITEM *it,
 					int tag, int aclass, char opt, ASN1_TLC *ctx);
 
-static int x509_name_ex_i2d(ASN1_VALUE *val, unsigned char **out, const ASN1_ITEM *it, int tag, int aclass);
+static int x509_name_ex_i2d(ASN1_VALUE **val, unsigned char **out, const ASN1_ITEM *it, int tag, int aclass);
 static int x509_name_ex_new(ASN1_VALUE **val, const ASN1_ITEM *it);
-static void x509_name_ex_free(ASN1_VALUE *val, const ASN1_ITEM *it);
+static void x509_name_ex_free(ASN1_VALUE **val, const ASN1_ITEM *it);
 
 static int x509_name_encode(X509_NAME *a);
 
@@ -124,11 +124,12 @@ static int x509_name_ex_new(ASN1_VALUE **val, const ASN1_ITEM *it)
 	return 0;
 }
 
-static void x509_name_ex_free(ASN1_VALUE *val, const ASN1_ITEM *it)
+static void x509_name_ex_free(ASN1_VALUE **pval, const ASN1_ITEM *it)
 {
-	X509_NAME *a = (X509_NAME *)val;
-	if(val == NULL)
+	X509_NAME *a;
+	if(!pval || !*pval)
 	    return;
+	a = (X509_NAME *)*pval;
 
 	BUF_MEM_free(a->bytes);
 	sk_X509_NAME_ENTRY_pop_free(a->entries,X509_NAME_ENTRY_free);
@@ -162,7 +163,7 @@ static int x509_name_ex_d2i(ASN1_VALUE **val, unsigned char **in, long len, cons
 	
 	if(ret <= 0) return ret;
 
-	if(*val) x509_name_ex_free(*val, NULL);
+	if(*val) x509_name_ex_free(val, NULL);
 	if(!x509_name_ex_new((ASN1_VALUE **)&nm, NULL)) goto err;
 	/* We've decoded it: now cache encoding */
 	if(!BUF_MEM_grow(nm->bytes, p - q)) goto err;
@@ -189,10 +190,10 @@ static int x509_name_ex_d2i(ASN1_VALUE **val, unsigned char **in, long len, cons
 	return 0;
 }
 
-static int x509_name_ex_i2d(ASN1_VALUE *val, unsigned char **out, const ASN1_ITEM *it, int tag, int aclass)
+static int x509_name_ex_i2d(ASN1_VALUE **val, unsigned char **out, const ASN1_ITEM *it, int tag, int aclass)
 {
 	int ret;
-	X509_NAME *a = (X509_NAME *)val;
+	X509_NAME *a = (X509_NAME *)*val;
 	if(a->modified) {
 		ret = x509_name_encode((X509_NAME *)a);
 		if(ret < 0) return ret;
@@ -225,10 +226,10 @@ static int x509_name_encode(X509_NAME *a)
 		}
 		if(!sk_X509_NAME_ENTRY_push(entries, entry)) goto memerr;
 	}
-	len = ASN1_item_ex_i2d((ASN1_VALUE *)intname, NULL, &X509_NAME_INTERNAL_it, -1, -1);
+	len = ASN1_item_ex_i2d((ASN1_VALUE **)&intname, NULL, &X509_NAME_INTERNAL_it, -1, -1);
 	if (!BUF_MEM_grow(a->bytes,len)) goto memerr;
 	p=(unsigned char *)a->bytes->data;
-	ASN1_item_ex_i2d((ASN1_VALUE *)intname, &p, &X509_NAME_INTERNAL_it, -1, -1);
+	ASN1_item_ex_i2d((ASN1_VALUE **)&intname, &p, &X509_NAME_INTERNAL_it, -1, -1);
 	sk_pop_free(intname, sk_internal_free);
 	a->modified = 0;
 	return len;

@@ -288,7 +288,7 @@ int ASN1_item_ex_d2i(ASN1_VALUE **pval, unsigned char **in, long len, const ASN1
 		for(i = 0, tt = it->templates; i < it->tcount; i++, tt++) {
 			const ASN1_TEMPLATE *seqtt;
 			ASN1_VALUE **pseqval;
-			seqtt = asn1_do_adb(*pval, tt, 1);
+			seqtt = asn1_do_adb(pval, tt, 1);
 			if(!seqtt) goto err;
 			pseqval = asn1_get_field_ptr(pval, seqtt);
 			/* Have we ran out of data? */
@@ -326,7 +326,7 @@ int ASN1_item_ex_d2i(ASN1_VALUE **pval, unsigned char **in, long len, const ASN1
 				if(asn1_template_is_bool(seqtt))
 					*(ASN1_BOOLEAN *)pseqval = -1;
 				else if(*pseqval) {
-					ASN1_template_free(*pseqval, seqtt);
+					ASN1_template_free(pseqval, seqtt);
 					*pseqval = NULL;
 				}
 				continue;
@@ -351,7 +351,7 @@ int ASN1_item_ex_d2i(ASN1_VALUE **pval, unsigned char **in, long len, const ASN1
 		 */
 		for(; i < it->tcount; tt++, i++) {
 			const ASN1_TEMPLATE *seqtt;
-			seqtt = asn1_do_adb(*pval, tt, 1);
+			seqtt = asn1_do_adb(pval, tt, 1);
 			if(!seqtt) goto err;
 			if(!(seqtt->flags & ASN1_TFLG_OPTIONAL)) {
 				errtt = seqtt;
@@ -439,7 +439,7 @@ int asn1_template_ex_d2i(ASN1_VALUE **val, unsigned char **in, long inlen, const
 	return 1;
 
 	err:
-	ASN1_template_free(*val, tt);
+	ASN1_template_free(val, tt);
 	*val = NULL;
 	return 0;
 }
@@ -529,7 +529,7 @@ static int asn1_template_noexp_d2i(ASN1_VALUE **val, unsigned char **in, long le
 	return 1;
 
 	err:
-	ASN1_template_free(*val, tt);
+	ASN1_template_free(val, tt);
 	*val = NULL;
 	return 0;
 }

@@ -72,9 +72,9 @@
  * the selector value
  */
 
-int asn1_get_choice_selector(ASN1_VALUE *val, const ASN1_ITEM *it)
+int asn1_get_choice_selector(ASN1_VALUE **pval, const ASN1_ITEM *it)
 {
-	int *sel = offset2ptr(val, it->utype);
+	int *sel = offset2ptr(*pval, it->utype);
 	return *sel;
 }
 
@@ -97,14 +97,14 @@ int asn1_set_choice_selector(ASN1_VALUE **pval, int value, const ASN1_ITEM *it)
  * is the current refrence count or 0 if no reference count exists.
  */
 
-int asn1_do_lock(ASN1_VALUE *pval, int op, const ASN1_ITEM *it)
+int asn1_do_lock(ASN1_VALUE **pval, int op, const ASN1_ITEM *it)
 {
 	const ASN1_AUX *aux;
 	int *lck, ret;
 	if(it->itype != ASN1_ITYPE_SEQUENCE) return 0;
 	aux = it->funcs;
 	if(!aux || !(aux->flags & ASN1_AFLG_REFCOUNT)) return 0;
-	lck = offset2ptr(pval, aux->ref_offset);
+	lck = offset2ptr(*pval, aux->ref_offset);
 	if(op == 0) {
 		*lck = 1;
 		return 1;
@@ -118,31 +118,6 @@ int asn1_do_lock(ASN1_VALUE *pval, int op, const ASN1_ITEM *it)
 		fprintf(stderr, "%s, bad reference count\n", it->sname);
 #endif
 	return ret;
-}
-	
-	
-
-/* Given an ASN1_TEMPLATE get a field */
-
-ASN1_VALUE *asn1_get_field(ASN1_VALUE *val, const ASN1_TEMPLATE *tt)
-{
-	ASN1_VALUE **ptr;
-	if(tt->flags & ASN1_TFLG_COMBINE) return val;
-	ptr = offset2ptr(val, tt->offset);
-	/* NOTE for BOOLEAN types the field is just a plain
- 	 * int so we don't dereference it. This means that
-	 * BOOLEAN is an (int *).
-	 */
-	if(asn1_template_is_bool(tt)) {
-		ASN1_BOOLEAN *bool = (ASN1_BOOLEAN *)ptr;
-		/* If BOOLEAN is -1 it is absent so return
-		 * NULL for compatibility with other types
-		 */
-		if(*bool == -1)
-			return NULL;
-		return (ASN1_VALUE *)ptr;
-	}
-	return *ptr;
 }
 
 /* Given an ASN1_TEMPLATE get a pointer to a field */
@@ -162,7 +137,7 @@ ASN1_VALUE ** asn1_get_field_ptr(ASN1_VALUE **pval, const ASN1_TEMPLATE *tt)
  * the relevant ASN1_TEMPLATE in the table and return it.
  */
 
-const ASN1_TEMPLATE *asn1_do_adb(ASN1_VALUE *val, const ASN1_TEMPLATE *tt, int nullerr)
+const ASN1_TEMPLATE *asn1_do_adb(ASN1_VALUE **pval, const ASN1_TEMPLATE *tt, int nullerr)
 {
 	const ASN1_ADB *adb;
 	const ASN1_ADB_TABLE *atbl;
@@ -175,7 +150,7 @@ const ASN1_TEMPLATE *asn1_do_adb(ASN1_VALUE *val, const ASN1_TEMPLATE *tt, int n
 	adb = tt->item;
 
 	/* Get the selector field */
-	sfld = offset2ptr(val, adb->offset);
+	sfld = offset2ptr(*pval, adb->offset);
 
 	/* Check if NULL */
 	if(!sfld) {

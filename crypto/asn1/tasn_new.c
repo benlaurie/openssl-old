@@ -142,7 +142,7 @@ static int asn1_item_ex_combine_new(ASN1_VALUE **pval, const ASN1_ITEM *it, int 
 			*pval = OPENSSL_malloc(it->size);
 			if(!*pval) goto memerr;
 			memset(*pval, 0, it->size);
-			asn1_do_lock(*pval, 0, it);
+			asn1_do_lock(pval, 0, it);
 		}
 		if(asn1_cb && !asn1_cb(ASN1_OP_NEW_PRE, pval, it))
 				goto auxerr;

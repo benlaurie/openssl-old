@@ -22,6 +22,7 @@
   IN PROGRESS
 
     o Steve is currently working on (in no particular order):
+        ASN1 code redesign, butchery, replacement.
         EVP cipher enhancement.
         Proper (or at least usable) certificate chain verification.
 	Private key, certificate and CRL API and implementation.

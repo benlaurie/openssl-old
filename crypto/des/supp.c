@@ -98,7 +98,7 @@ void des_cblock_print_file(cb, fp)
 	FILE *fp;
 {
 	int i;
-	unsigned int *p = (unsigned int *)cb;
+	const unsigned int *p = (const unsigned int *)cb;
 
 	fprintf(fp, " 0x { ");
 	for (i = 0; i < 8; i++) {

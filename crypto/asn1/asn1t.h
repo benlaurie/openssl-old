@@ -178,6 +178,10 @@ extern "C" {
 #define ASN1_CHOICE(tname) \
 	const static ASN1_TEMPLATE tname##_ch_tt[] 
 
+#define ASN1_CHOICE_cb(tname, cb) \
+	const static ASN1_AUX tname##_aux = {NULL, 0, 0, 0, cb, 0}; \
+	ASN1_CHOICE(tname)
+
 #define ASN1_CHOICE_END(stname) ASN1_CHOICE_END_name(stname, stname)
 
 #define ASN1_CHOICE_END_name(stname, tname) ASN1_CHOICE_END_selector(stname, tname, type)
@@ -190,6 +194,18 @@ extern "C" {
 		tname##_ch_tt,\
 		sizeof(tname##_ch_tt) / sizeof(ASN1_TEMPLATE),\
 		NULL,\
+		sizeof(stname),\
+		#stname \
+	}
+
+#define ASN1_CHOICE_END_cb(stname, tname, selname) \
+	;\
+	const ASN1_ITEM tname##_it = { \
+		ASN1_ITYPE_CHOICE,\
+		offsetof(stname,selname) ,\
+		tname##_ch_tt,\
+		sizeof(tname##_ch_tt) / sizeof(ASN1_TEMPLATE),\
+		&tname##_aux,\
 		sizeof(stname),\
 		#stname \
 	}
@@ -663,6 +679,7 @@ extern const ASN1_ITEM ASN1_SEQUENCE_it;
 extern const ASN1_ITEM CBIGNUM_it;
 extern const ASN1_ITEM BIGNUM_it;
 extern const ASN1_ITEM LONG_it;
+extern const ASN1_ITEM ZLONG_it;
 
 /* Functions used internally by the ASN1 code */
 

@@ -25,7 +25,7 @@ they hadn't.
 2. Partly because of 1. the code is bloated and takes up a disproportionate
 amount of space. The SEQUENCE encoder is particularly bad: it essentially
 contains two copies of the same operation, one to compute the SEQUENCE length
-and the other two encode it.
+and the other to encode it.
 
 3. The code is memory based: that is it expects to be able to read the whole
 structure from memory. This is fine for small structures but if you have a
@@ -67,7 +67,7 @@ I decided to adopt a template based approach. I'm using the term 'template'
 in a manner similar to SNACC templates: it has nothing to do with C++
 templates.
 
-A template is a description of an ASN1 modules as several constant C structures.
+A template is a description of an ASN1 module as several constant C structures.
 It describes in a machine readable way exactly how the ASN1 structure should
 behave. If this template contains enough detail then it is possible to write
 versions of new, free, encode, decode (and possibly others operations) that

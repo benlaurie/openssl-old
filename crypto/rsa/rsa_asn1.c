@@ -56,7 +56,6 @@
  *
  */
 
-#ifndef NO_RSA
 #include <stdio.h>
 #include "cryptlib.h"
 #include <openssl/bn.h>
@@ -110,11 +109,3 @@ ASN1_SEQUENCE_cb(RSAPublicKey, rsa_cb) = {
 IMPLEMENT_ASN1_ENCODE_FUNCTIONS_fname(RSA, RSAPrivateKey, RSAPrivateKey)
 
 IMPLEMENT_ASN1_ENCODE_FUNCTIONS_fname(RSA, RSAPublicKey, RSAPublicKey)
-
-#else /* !NO_RSA */
-
-# if PEDANTIC
-static void *dummy=&dummy;
-# endif
-
-#endif

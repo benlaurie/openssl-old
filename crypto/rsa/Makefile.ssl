@@ -83,6 +83,15 @@ clean:
 
 # DO NOT DELETE THIS LINE -- make depend depends on it.
 
+rsa_asn1.o: ../../include/openssl/asn1.h ../../include/openssl/asn1t.h
+rsa_asn1.o: ../../include/openssl/bio.h ../../include/openssl/bn.h
+rsa_asn1.o: ../../include/openssl/buffer.h ../../include/openssl/crypto.h
+rsa_asn1.o: ../../include/openssl/e_os.h ../../include/openssl/e_os2.h
+rsa_asn1.o: ../../include/openssl/err.h ../../include/openssl/lhash.h
+rsa_asn1.o: ../../include/openssl/opensslconf.h
+rsa_asn1.o: ../../include/openssl/opensslv.h ../../include/openssl/rsa.h
+rsa_asn1.o: ../../include/openssl/safestack.h ../../include/openssl/stack.h
+rsa_asn1.o: ../../include/openssl/symhacks.h ../cryptlib.h
 rsa_chk.o: ../../include/openssl/bio.h ../../include/openssl/bn.h
 rsa_chk.o: ../../include/openssl/crypto.h ../../include/openssl/err.h
 rsa_chk.o: ../../include/openssl/lhash.h ../../include/openssl/opensslconf.h

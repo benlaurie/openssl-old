@@ -79,17 +79,18 @@ static ASN1_PRIMITIVE_FUNCS long_pf = {
 	long_i2c
 };
 
-const ASN1_ITEM LONG_it = { ASN1_ITYPE_PRIMITIVE, V_ASN1_INTEGER, NULL, 0, &long_pf, 0, "LONG"};
+const ASN1_ITEM LONG_it = { ASN1_ITYPE_PRIMITIVE, V_ASN1_INTEGER, NULL, 0, &long_pf, ASN1_LONG_UNDEF, "LONG"};
+const ASN1_ITEM ZLONG_it = { ASN1_ITYPE_PRIMITIVE, V_ASN1_INTEGER, NULL, 0, &long_pf, 0, "ZLONG"};
 
 static int long_new(ASN1_VALUE **pval, const ASN1_ITEM *it)
 {
-	*(long *)pval = ASN1_LONG_UNDEF;
+	*(long *)pval = it->size;
 	return 1;
 }
 
 static void long_free(ASN1_VALUE **pval, const ASN1_ITEM *it)
 {
-	*(long *)pval = ASN1_LONG_UNDEF;
+	*(long *)pval = it->size;
 }
 
 static int long_i2c(ASN1_VALUE **pval, unsigned char *cont, int *putype, const ASN1_ITEM *it)
@@ -98,7 +99,7 @@ static int long_i2c(ASN1_VALUE **pval, unsigned char *cont, int *putype, const A
 	unsigned long utmp;
 	int clen, pad, i;
 	ltmp = *(long *)pval;
-	if(ltmp == ASN1_LONG_UNDEF) return -1;
+	if(ltmp == it->size) return -1;
 	/* Convert the long to positive: we subtract one if negative so
 	 * we can cleanly handle the padding if only the MSB of the leading
 	 * octet is set. 
@@ -147,7 +148,7 @@ static int long_c2i(ASN1_VALUE **pval, unsigned char *cont, int len, int utype, 
 		ltmp++;
 		ltmp = -ltmp;
 	}
-	if(ltmp == ASN1_LONG_UNDEF) {
+	if(ltmp == it->size) {
 		ASN1err(ASN1_F_LONG_C2I, ASN1_R_INTEGER_TOO_LARGE_FOR_LONG);
 		return 0;
 	}

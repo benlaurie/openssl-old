@@ -74,9 +74,9 @@
 #include <openssl/rand.h>
 #include <openssl/bio.h>
 #include <openssl/err.h>
+#ifndef OPENSSL_NO_ENGINE
 #include <openssl/engine.h>
-#ifdef OPENSSL_SYS_WINDOWS
-#include "../bio/bss_file.c"
+#include <openssl/e_os2.h>
 #endif
 
 #ifdef OPENSSL_NO_DSA
@@ -166,7 +166,7 @@ int main(int argc, char **argv)
 		BIO_printf(bio_err,"%02X%02X%02X%02X ",
 			seed[i],seed[i+1],seed[i+2],seed[i+3]);
 		}
-	BIO_printf(bio_err,"\ncounter=%d h=%d\n",counter,h);
+	BIO_printf(bio_err,"\ncounter=%d h=%ld\n",counter,h);
 		
 	if (dsa == NULL) goto end;
 	DSA_print(bio_err,dsa,0);

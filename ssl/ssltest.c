@@ -133,7 +133,9 @@
 #include <openssl/evp.h>
 #include <openssl/x509.h>
 #include <openssl/ssl.h>
+#ifndef OPENSSL_NO_ENGINE
 #include <openssl/engine.h>
+#endif
 #include <openssl/err.h>
 #include <openssl/rand.h>
 
@@ -145,7 +147,6 @@
 
 #ifdef OPENSSL_SYS_WINDOWS
 #include <winsock.h>
-#include "../crypto/bio/bss_file.c"
 #else
 #include OPENSSL_UNISTD
 #endif
@@ -828,7 +829,9 @@ end:
 #ifndef OPENSSL_NO_RSA
 	free_tmp_rsa();
 #endif
+#ifndef OPENSSL_NO_ENGINE
 	ENGINE_cleanup();
+#endif
 	CRYPTO_cleanup_all_ex_data();
 	ERR_free_strings();
 	ERR_remove_state(0);
@@ -1594,7 +1597,7 @@ static RSA MS_CALLBACK *tmp_rsa_cb(SSL *s, int is_export, int keylength)
 		(void)BIO_flush(bio_err);
 		if(!RSA_generate_key_ex(rsa_tmp,keylength,RSA_F4,NULL))
 			{
-			BIO_printf(bio_err, "Error generating key.", keylength);
+			BIO_printf(bio_err, "Error generating key.");
 			RSA_free(rsa_tmp);
 			rsa_tmp = NULL;
 			}

@@ -529,6 +529,8 @@ typedef struct ssl_session_st
 /* Never bother the application with retries if the transport
  * is blocking: */
 #define SSL_MODE_AUTO_RETRY 0x00000004L
+/* Don't attempt to automatically build certificate chain */
+#define SSL_MODE_NO_AUTO_CHAIN 0x00000008L
 
 
 /* Note: SSL[_CTX]_set_{options,mode} use |= op on the previous value,
@@ -1241,12 +1243,10 @@ int	SSL_CTX_use_certificate_chain_file(SSL_CTX *ctx, const char *file); /* PEM t
 STACK_OF(X509_NAME) *SSL_load_client_CA_file(const char *file);
 int	SSL_add_file_cert_subjects_to_stack(STACK_OF(X509_NAME) *stackCAs,
 					    const char *file);
-#ifndef OPENSSL_SYS_WIN32
 #ifndef OPENSSL_SYS_VMS
 #ifndef OPENSSL_SYS_MACINTOSH_CLASSIC /* XXXXX: Better scheme needed! [was: #ifndef MAC_OS_pre_X] */
 int	SSL_add_dir_cert_subjects_to_stack(STACK_OF(X509_NAME) *stackCAs,
 					   const char *dir);
-#endif
 #endif
 #endif
 
@@ -1266,6 +1266,7 @@ void	SSL_copy_session_id(SSL *to,SSL *from);
 SSL_SESSION *SSL_SESSION_new(void);
 unsigned long SSL_SESSION_hash(SSL_SESSION *a);
 int	SSL_SESSION_cmp(SSL_SESSION *a,SSL_SESSION *b);
+const unsigned char *SSL_SESSION_get_id(const SSL_SESSION *s, unsigned int *len);
 #ifndef OPENSSL_NO_FP_API
 int	SSL_SESSION_print_fp(FILE *fp,SSL_SESSION *ses);
 #endif

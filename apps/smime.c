@@ -1,9 +1,9 @@
 /* smime.c */
 /* Written by Dr Stephen N Henson (shenson@bigfoot.com) for the OpenSSL
- * project 1999.
+ * project.
  */
 /* ====================================================================
- * Copyright (c) 1999 The OpenSSL Project.  All rights reserved.
+ * Copyright (c) 1999-2003 The OpenSSL Project.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -104,7 +104,9 @@ int MAIN(int argc, char **argv)
 	int need_rand = 0;
 	int informat = FORMAT_SMIME, outformat = FORMAT_SMIME;
         int keyform = FORMAT_PEM;
+#ifndef OPENSSL_NO_ENGINE
 	char *engine=NULL;
+#endif
 
 	args = argv + 1;
 	ret = 1;
@@ -176,11 +178,13 @@ int MAIN(int argc, char **argv)
 				inrand = *args;
 			} else badarg = 1;
 			need_rand = 1;
+#ifndef OPENSSL_NO_ENGINE
 		} else if (!strcmp(*args,"-engine")) {
 			if (args[1]) {
 				args++;
 				engine = *args;
 			} else badarg = 1;
+#endif
 		} else if (!strcmp(*args,"-passin")) {
 			if (args[1]) {
 				args++;
@@ -330,7 +334,9 @@ int MAIN(int argc, char **argv)
 		BIO_printf (bio_err, "-CAfile file   trusted certificates file\n");
 		BIO_printf (bio_err, "-crl_check     check revocation status of signer's certificate using CRLs\n");
 		BIO_printf (bio_err, "-crl_check_all check revocation status of signer's certificate chain using CRLs\n");
+#ifndef OPENSSL_NO_ENGINE
 		BIO_printf (bio_err, "-engine e      use engine e, possibly a hardware device.\n");
+#endif
 		BIO_printf (bio_err, "-passin arg    input file pass phrase source\n");
 		BIO_printf(bio_err,  "-rand file%cfile%c...\n", LIST_SEPARATOR_CHAR, LIST_SEPARATOR_CHAR);
 		BIO_printf(bio_err,  "               load the file (or the files in the directory) into\n");
@@ -339,7 +345,9 @@ int MAIN(int argc, char **argv)
 		goto end;
 	}
 
+#ifndef OPENSSL_NO_ENGINE
         e = setup_engine(bio_err, engine, 0);
+#endif
 
 	if(!app_passwd(bio_err, passargin, NULL, &passin, NULL)) {
 		BIO_printf(bio_err, "Error getting password\n");
@@ -470,8 +478,14 @@ int MAIN(int argc, char **argv)
 	if(operation == SMIME_ENCRYPT) {
 		p7 = PKCS7_encrypt(encerts, in, cipher, flags);
 	} else if(operation == SMIME_SIGN) {
+		/* If detached data and SMIME output enable partial
+		 * signing.
+		 */
+		if ((flags & PKCS7_DETACHED) && (outformat == FORMAT_SMIME))
+			flags |= PKCS7_STREAM;
 		p7 = PKCS7_sign(signer, key, other, in, flags);
-		if (BIO_reset(in) != 0 && (flags & PKCS7_DETACHED)) {
+		/* Don't need to rewind for partial signing */
+		if (!(flags & PKCS7_STREAM) && (BIO_reset(in) != 0)) {
 		  BIO_printf(bio_err, "Can't rewind input file\n");
 		  goto end;
 		}

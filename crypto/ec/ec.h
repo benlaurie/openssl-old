@@ -3,7 +3,7 @@
  * Originally written by Bodo Moeller for the OpenSSL project.
  */
 /* ====================================================================
- * Copyright (c) 1998-2002 The OpenSSL Project.  All rights reserved.
+ * Copyright (c) 1998-2003 The OpenSSL Project.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -72,6 +72,8 @@
 #ifndef HEADER_EC_H
 #define HEADER_EC_H
 
+#include <openssl/opensslconf.h>
+
 #ifdef OPENSSL_NO_EC
 #error EC is disabled.
 #endif
@@ -101,7 +103,7 @@ typedef struct ec_group_st
 	 -- field definition
 	 -- curve coefficients
 	 -- optional generator with associated information (order, cofactor)
-	 -- optional extra data (TODO: precomputed table for fast computation of multiples of generator)
+	 -- optional extra data (precomputed table for fast computation of multiples of generator)
 	 -- ASN1 stuff
 	*/
 	EC_GROUP;
@@ -241,7 +243,11 @@ int EC_POINTs_make_affine(const EC_GROUP *, size_t num, EC_POINT *[], BN_CTX *);
 
 int EC_POINTs_mul(const EC_GROUP *, EC_POINT *r, const BIGNUM *, size_t num, const EC_POINT *[], const BIGNUM *[], BN_CTX *);
 int EC_POINT_mul(const EC_GROUP *, EC_POINT *r, const BIGNUM *, const EC_POINT *, const BIGNUM *, BN_CTX *);
+
+/* EC_GROUP_precompute_mult() stores multiples of generator for faster point multiplication */
 int EC_GROUP_precompute_mult(EC_GROUP *, BN_CTX *);
+/* EC_GROUP_have_precompute_mult() reports whether such precomputation has been done */
+int EC_GROUP_have_precompute_mult(const EC_GROUP *);
 
 
 
@@ -315,16 +321,16 @@ int EC_KEY_generate_key(EC_KEY *);
 /* EC_KEY_check_key() */
 int EC_KEY_check_key(const EC_KEY *);
 
-/* de- and encode functions for the SEC1 ECPrivateKey */
+/* de- and encoding functions for SEC1 ECPrivateKey */
 EC_KEY *d2i_ECPrivateKey(EC_KEY **a, const unsigned char **in, long len);
 int i2d_ECPrivateKey(EC_KEY *a, unsigned char **out);
-/* de- and encode functions for the elliptic curve parameters */
+/* de- and encoding functions for EC parameters */
 EC_KEY *d2i_ECParameters(EC_KEY **a, const unsigned char **in, long len);
 int i2d_ECParameters(EC_KEY *a, unsigned char **out);
-
-EC_KEY *ECPublicKey_set_octet_string(EC_KEY **a, const unsigned char **in, 
-					long len);
-int ECPublicKey_get_octet_string(EC_KEY *a, unsigned char **out);
+/* de- and encoding functions for EC public key
+ * (octet string, not DER -- hence 'o2i' and 'i2o') */
+EC_KEY *o2i_ECPublicKey(EC_KEY **a, const unsigned char **in, long len);
+int i2o_ECPublicKey(EC_KEY *a, unsigned char **out);
 
 #ifndef OPENSSL_NO_BIO
 int	ECParameters_print(BIO *bp, const EC_KEY *x);
@@ -355,8 +361,6 @@ void ERR_load_EC_strings(void);
 #define EC_F_ECPARAMETERS_PRINT_FP			 148
 #define EC_F_ECPKPARAMETERS_PRINT			 149
 #define EC_F_ECPKPARAMETERS_PRINT_FP			 150
-#define EC_F_ECPUBLICKEY_GET_OCTET			 151
-#define EC_F_ECPUBLICKEY_SET_OCTET			 152
 #define EC_F_ECP_NIST_MOD_192				 203
 #define EC_F_ECP_NIST_MOD_224				 204
 #define EC_F_ECP_NIST_MOD_256				 205
@@ -403,7 +407,6 @@ void ERR_load_EC_strings(void);
 #define EC_F_EC_GROUP_GET_CURVE_GF2M			 172
 #define EC_F_EC_GROUP_GET_CURVE_GFP			 130
 #define EC_F_EC_GROUP_GET_DEGREE			 173
-#define EC_F_EC_GROUP_GET_EXTRA_DATA			 107
 #define EC_F_EC_GROUP_GET_ORDER				 141
 #define EC_F_EC_GROUP_GET_PENTANOMIAL_BASIS		 193
 #define EC_F_EC_GROUP_GET_TRINOMIAL_BASIS		 194
@@ -444,6 +447,7 @@ void ERR_load_EC_strings(void);
 #define EC_F_EC_POINT_SET_COMPRESSED_COORDINATES_GFP	 125
 #define EC_F_EC_POINT_SET_JPROJECTIVE_COORDINATES_GFP	 126
 #define EC_F_EC_POINT_SET_TO_INFINITY			 127
+#define EC_F_EC_PRE_COMP_DUP				 207
 #define EC_F_EC_WNAF_MUL				 187
 #define EC_F_EC_WNAF_PRECOMPUTE_MULT			 188
 #define EC_F_GFP_MONT_GROUP_SET_CURVE			 189
@@ -451,6 +455,8 @@ void ERR_load_EC_strings(void);
 #define EC_F_I2D_ECPARAMETERS				 190
 #define EC_F_I2D_ECPKPARAMETERS				 191
 #define EC_F_I2D_ECPRIVATEKEY				 192
+#define EC_F_I2O_ECPUBLICKEY				 151
+#define EC_F_O2I_ECPUBLICKEY				 152
 
 /* Reason codes. */
 #define EC_R_ASN1_ERROR					 115
@@ -462,7 +468,6 @@ void ERR_load_EC_strings(void);
 #define EC_R_GROUP2PKPARAMETERS_FAILURE			 120
 #define EC_R_I2D_ECPKPARAMETERS_FAILURE			 121
 #define EC_R_INCOMPATIBLE_OBJECTS			 101
-#define EC_R_INTERNAL_ERROR				 132
 #define EC_R_INVALID_ARGUMENT				 112
 #define EC_R_INVALID_COMPRESSED_POINT			 110
 #define EC_R_INVALID_COMPRESSION_BIT			 109
@@ -473,12 +478,11 @@ void ERR_load_EC_strings(void);
 #define EC_R_INVALID_PRIVATE_KEY			 123
 #define EC_R_MISSING_PARAMETERS				 124
 #define EC_R_MISSING_PRIVATE_KEY			 125
-#define EC_R_NOT_A_NIST_PRIME			         135
-#define EC_R_NOT_A_SUPPORTED_NIST_PRIME	                 136
+#define EC_R_NOT_A_NIST_PRIME				 135
+#define EC_R_NOT_A_SUPPORTED_NIST_PRIME			 136
 #define EC_R_NOT_IMPLEMENTED				 126
 #define EC_R_NOT_INITIALIZED				 111
 #define EC_R_NO_FIELD_MOD				 133
-#define EC_R_NO_SUCH_EXTRA_DATA				 105
 #define EC_R_PASSED_NULL_PARAMETER			 134
 #define EC_R_PKPARAMETERS2GROUP_FAILURE			 127
 #define EC_R_POINT_AT_INFINITY				 106

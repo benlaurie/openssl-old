@@ -2031,6 +2031,11 @@
 #define NID_delta_crl		140
 #define OBJ_delta_crl		OBJ_id_ce,27L
 
+#define SN_name_constraints		"nameConstraints"
+#define LN_name_constraints		"X509v3 Name Constraints"
+#define NID_name_constraints		720
+#define OBJ_name_constraints		OBJ_id_ce,30L
+
 #define SN_crl_distribution_points		"crlDistributionPoints"
 #define LN_crl_distribution_points		"X509v3 CRL Distribution Points"
 #define NID_crl_distribution_points		103
@@ -2040,6 +2045,16 @@
 #define LN_certificate_policies		"X509v3 Certificate Policies"
 #define NID_certificate_policies		89
 #define OBJ_certificate_policies		OBJ_id_ce,32L
+
+#define SN_any_policy		"anyPolicy"
+#define LN_any_policy		"X509v3 Any Policy"
+#define NID_any_policy		718
+#define OBJ_any_policy		OBJ_certificate_policies,0L
+
+#define SN_policy_mappings		"policyMappings"
+#define LN_policy_mappings		"X509v3 Policy Mappings"
+#define NID_policy_mappings		719
+#define OBJ_policy_mappings		OBJ_id_ce,33L
 
 #define SN_authority_key_identifier		"authorityKeyIdentifier"
 #define LN_authority_key_identifier		"X509v3 Authority Key Identifier"

@@ -120,7 +120,9 @@ int MAIN(int argc, char **argv)
     char *passin = NULL, *passout = NULL;
     char *inrand = NULL;
     char *CApath = NULL, *CAfile = NULL;
+#ifndef OPENSSL_NO_ENGINE
     char *engine=NULL;
+#endif
 
     apps_startup();
 
@@ -259,11 +261,13 @@ int MAIN(int argc, char **argv)
 			args++;	
 			CAfile = *args;
 		    } else badarg = 1;
+#ifndef OPENSSL_NO_ENGINE
 		} else if (!strcmp(*args,"-engine")) {
 		    if (args[1]) {
 			args++;	
 			engine = *args;
 		    } else badarg = 1;
+#endif
 		} else badarg = 1;
 
 	} else badarg = 1;
@@ -311,14 +315,18 @@ int MAIN(int argc, char **argv)
 	BIO_printf (bio_err, "-password p   set import/export password source\n");
 	BIO_printf (bio_err, "-passin p     input file pass phrase source\n");
 	BIO_printf (bio_err, "-passout p    output file pass phrase source\n");
+#ifndef OPENSSL_NO_ENGINE
 	BIO_printf (bio_err, "-engine e     use engine e, possibly a hardware device.\n");
+#endif
 	BIO_printf(bio_err,  "-rand file%cfile%c...\n", LIST_SEPARATOR_CHAR, LIST_SEPARATOR_CHAR);
 	BIO_printf(bio_err,  "              load the file (or the files in the directory) into\n");
 	BIO_printf(bio_err,  "              the random number generator\n");
     	goto end;
     }
 
+#ifndef OPENSSL_NO_ENGINE
     e = setup_engine(bio_err, engine, 0);
+#endif
 
     if(passarg) {
 	if(export_cert) passargout = passarg;
@@ -550,7 +558,7 @@ int MAIN(int argc, char **argv)
 	CRYPTO_push_info("creating PKCS#12 structure");
 #endif
 
-	p12 = PKCS12_create(pass, name, key, ucert, certs,
+	p12 = PKCS12_create(cpass, name, key, ucert, certs,
 				key_pbe, cert_pbe, iter, -1, keytype);
 
 	if (!p12)
@@ -806,8 +814,9 @@ int alg_print (BIO *x, X509_ALGOR *alg)
 	unsigned char *p;
 	p = alg->parameter->value.sequence->data;
 	pbe = d2i_PBEPARAM (NULL, &p, alg->parameter->value.sequence->length);
-	BIO_printf (bio_err, "%s, Iteration %d\n", 
-	OBJ_nid2ln(OBJ_obj2nid(alg->algorithm)), ASN1_INTEGER_get(pbe->iter));
+	BIO_printf (bio_err, "%s, Iteration %ld\n", 
+		OBJ_nid2ln(OBJ_obj2nid(alg->algorithm)),
+		ASN1_INTEGER_get(pbe->iter));
 	PBEPARAM_free (pbe);
 	return 0;
 }

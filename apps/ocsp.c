@@ -55,6 +55,7 @@
  * Hudson (tjh@cryptsoft.com).
  *
  */
+#ifndef OPENSSL_NO_OCSP
 
 #include <stdio.h>
 #include <string.h>
@@ -67,19 +68,6 @@
 /* Maximum leeway in validity period: default 5 minutes */
 #define MAX_VALIDITY_PERIOD	(5 * 60)
 
-/* CA index.txt definitions */
-#define DB_type         0
-#define DB_exp_date     1
-#define DB_rev_date     2
-#define DB_serial       3       /* index - unique */
-#define DB_file         4       
-#define DB_name         5       /* index - unique for active */
-#define DB_NUMBER       6
-
-#define DB_TYPE_REV	'R'
-#define DB_TYPE_EXP	'E'
-#define DB_TYPE_VAL	'V'
-
 static int add_ocsp_cert(OCSP_REQUEST **req, X509 *cert, X509 *issuer,
 				STACK_OF(OCSP_CERTID) *ids);
 static int add_ocsp_serial(OCSP_REQUEST **req, char *serial, X509 *issuer,
@@ -88,12 +76,12 @@ static int print_ocsp_summary(BIO *out, OCSP_BASICRESP *bs, OCSP_REQUEST *req,
 				STACK *names, STACK_OF(OCSP_CERTID) *ids,
 				long nsec, long maxage);
 
-static int make_ocsp_response(OCSP_RESPONSE **resp, OCSP_REQUEST *req, TXT_DB *db,
+static int make_ocsp_response(OCSP_RESPONSE **resp, OCSP_REQUEST *req, CA_DB *db,
 			X509 *ca, X509 *rcert, EVP_PKEY *rkey,
 			STACK_OF(X509) *rother, unsigned long flags,
 			int nmin, int ndays);
 
-static char **lookup_serial(TXT_DB *db, ASN1_INTEGER *ser);
+static char **lookup_serial(CA_DB *db, ASN1_INTEGER *ser);
 static BIO *init_responder(char *port);
 static int do_responder(OCSP_REQUEST **preq, BIO **pcbio, BIO *acbio, char *port);
 static int send_ocsp_response(BIO *cbio, OCSP_RESPONSE *resp);
@@ -141,7 +129,7 @@ int MAIN(int argc, char **argv)
 	X509 *rca_cert = NULL;
 	char *ridx_filename = NULL;
 	char *rca_filename = NULL;
-	TXT_DB *rdb = NULL;
+	CA_DB *rdb = NULL;
 	int nmin = 0, ndays = -1;
 
 	if (bio_err == NULL) bio_err = BIO_new_fp(stderr, BIO_NOCLOSE);
@@ -523,7 +511,7 @@ int MAIN(int argc, char **argv)
 		BIO_printf (bio_err, "-serial n          serial number to check\n");
 		BIO_printf (bio_err, "-signer file       certificate to sign OCSP request with\n");
 		BIO_printf (bio_err, "-signkey file      private key to sign OCSP request with\n");
-		BIO_printf (bio_err, "-sign_certs file   additional certificates to include in signed request\n");
+		BIO_printf (bio_err, "-sign_other file   additional certificates to include in signed request\n");
 		BIO_printf (bio_err, "-no_certs          don't include any certificates in signed request\n");
 		BIO_printf (bio_err, "-req_text          print text form of request\n");
 		BIO_printf (bio_err, "-resp_text         print text form of response\n");
@@ -543,10 +531,10 @@ int MAIN(int argc, char **argv)
 		BIO_printf (bio_err, "-validity_period n maximum validity discrepancy in seconds\n");
 		BIO_printf (bio_err, "-status_age n      maximum status age in seconds\n");
 		BIO_printf (bio_err, "-noverify          don't verify response at all\n");
-		BIO_printf (bio_err, "-verify_certs file additional certificates to search for signer\n");
+		BIO_printf (bio_err, "-verify_other file additional certificates to search for signer\n");
 		BIO_printf (bio_err, "-trust_other       don't verify additional certificates\n");
 		BIO_printf (bio_err, "-no_intern         don't search certificates contained in response for signer\n");
-		BIO_printf (bio_err, "-no_sig_verify     don't check signature on response\n");
+		BIO_printf (bio_err, "-no_signature_verify don't check signature on response\n");
 		BIO_printf (bio_err, "-no_cert_verify    don't check signing certificate\n");
 		BIO_printf (bio_err, "-no_chain          don't chain verify response\n");
 		BIO_printf (bio_err, "-no_cert_checks    don't do additional checks on signing certificate\n");
@@ -696,22 +684,9 @@ int MAIN(int argc, char **argv)
 
 	if (ridx_filename && !rdb)
 		{
-		BIO *db_bio = NULL;
-		db_bio = BIO_new_file(ridx_filename, "r");
-		if (!db_bio)
-			{
-			BIO_printf(bio_err, "Error opening index file %s\n", ridx_filename);
-			goto end;
-			}
-		rdb = TXT_DB_read(db_bio, DB_NUMBER);
-		BIO_free(db_bio);
-		if (!rdb)
-			{
-			BIO_printf(bio_err, "Error reading index file %s\n", ridx_filename);
-			goto end;
-			}
-		if (!make_serial_index(rdb))
-			goto end;
+		rdb = load_index(ridx_filename, NULL);
+		if (!rdb) goto end;
+		if (!index_index(rdb)) goto end;
 		}
 
 	if (rdb)
@@ -722,7 +697,12 @@ int MAIN(int argc, char **argv)
 		}
 	else if (host)
 		{
+#ifndef OPENSSL_NO_SOCK
 		cbio = BIO_new_connect(host);
+#else
+		BIO_printf(bio_err, "Error creating connect BIO - sockets not supported.\n");
+		goto end;
+#endif
 		if (!cbio)
 			{
 			BIO_printf(bio_err, "Error creating connect BIO\n");
@@ -732,7 +712,16 @@ int MAIN(int argc, char **argv)
 		if (use_ssl == 1)
 			{
 			BIO *sbio;
+#if !defined(OPENSSL_NO_SSL2) && !defined(OPENSSL_NO_SSL3)
 			ctx = SSL_CTX_new(SSLv23_client_method());
+#elif !defined(OPENSSL_NO_SSL3)
+			ctx = SSL_CTX_new(SSLv3_client_method());
+#elif !defined(OPENSSL_NO_SSL2)
+			ctx = SSL_CTX_new(SSLv2_client_method());
+#else
+			BIO_printf(bio_err, "SSL is disabled\n");
+			goto end;
+#endif
 			SSL_CTX_set_mode(ctx, SSL_MODE_AUTO_RETRY);
 			sbio = BIO_new_ssl(ctx, 1);
 			cbio = BIO_push(sbio, cbio);
@@ -792,7 +781,7 @@ int MAIN(int argc, char **argv)
 
 	if (i != OCSP_RESPONSE_STATUS_SUCCESSFUL)
 		{
-		BIO_printf(out, "Responder Error: %s (%ld)\n",
+		BIO_printf(out, "Responder Error: %s (%d)\n",
 				OCSP_response_status_str(i), i);
 		ret = 0;
 		goto end;
@@ -856,7 +845,7 @@ int MAIN(int argc, char **argv)
 
 		if(i <= 0)
 			{
-			BIO_printf(bio_err, "Response Verify Failure\n", i);
+			BIO_printf(bio_err, "Response Verify Failure\n");
 			ERR_print_errors(bio_err);
 			}
 		else
@@ -879,7 +868,7 @@ end:
 	X509_free(cert);
 	X509_free(rsigner);
 	X509_free(rca_cert);
-	TXT_DB_free(rdb);
+	free_index(rdb);
 	BIO_free_all(cbio);
 	BIO_free_all(acbio);
 	BIO_free(out);
@@ -1021,7 +1010,7 @@ static int print_ocsp_summary(BIO *out, OCSP_BASICRESP *bs, OCSP_REQUEST *req,
 	}
 
 
-static int make_ocsp_response(OCSP_RESPONSE **resp, OCSP_REQUEST *req, TXT_DB *db,
+static int make_ocsp_response(OCSP_RESPONSE **resp, OCSP_REQUEST *req, CA_DB *db,
 			X509 *ca, X509 *rcert, EVP_PKEY *rkey,
 			STACK_OF(X509) *rother, unsigned long flags,
 			int nmin, int ndays)
@@ -1113,7 +1102,7 @@ static int make_ocsp_response(OCSP_RESPONSE **resp, OCSP_REQUEST *req, TXT_DB *d
 
 	}
 
-static char **lookup_serial(TXT_DB *db, ASN1_INTEGER *ser)
+static char **lookup_serial(CA_DB *db, ASN1_INTEGER *ser)
 	{
 	int i;
 	BIGNUM *bn = NULL;
@@ -1126,7 +1115,7 @@ static char **lookup_serial(TXT_DB *db, ASN1_INTEGER *ser)
 		itmp = BN_bn2hex(bn);
 	row[DB_serial] = itmp;
 	BN_free(bn);
-	rrow=TXT_DB_get_by_index(db,DB_serial,row);
+	rrow=TXT_DB_get_by_index(db->db,DB_serial,row);
 	OPENSSL_free(itmp);
 	return rrow;
 	}
@@ -1139,7 +1128,11 @@ static BIO *init_responder(char *port)
 	bufbio = BIO_new(BIO_f_buffer());
 	if (!bufbio) 
 		goto err;
+#ifndef OPENSSL_NO_SOCK
 	acbio = BIO_new_accept(port);
+#else
+	BIO_printf(bio_err, "Error setting up accept BIO - sockets not supported.\n");
+#endif
 	if (!acbio)
 		goto err;
 	BIO_set_accept_bios(acbio, bufbio);
@@ -1226,3 +1219,4 @@ static int send_ocsp_response(BIO *cbio, OCSP_RESPONSE *resp)
 	return 1;
 	}
 
+#endif

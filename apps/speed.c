@@ -71,6 +71,8 @@
 
 /* most of this code has been pilfered from my libdes speed.c program */
 
+#ifndef OPENSSL_NO_SPEED
+
 #undef SECONDS
 #define SECONDS		3	
 #define RSA_SECONDS	10
@@ -394,11 +396,27 @@ static double Time_F(int s)
 #endif
 	}
 
+
+static const int KDF1_SHA1_len = 20;
+static void *KDF1_SHA1(void *in, size_t inlen, void *out, size_t outlen)
+	{
+#ifndef OPENSSL_NO_SHA
+	if (outlen != SHA_DIGEST_LENGTH)
+		return NULL;
+	return SHA1(in, inlen, out);
+#else
+	return NULL;
+#endif
+	}
+
+
 int MAIN(int, char **);
 
 int MAIN(int argc, char **argv)
 	{
+#ifndef OPENSSL_NO_ENGINE
 	ENGINE *e = NULL;
+#endif
 	unsigned char *buf=NULL,*buf2=NULL;
 	int mret=1;
 	long count=0,save_count=0;
@@ -731,6 +749,7 @@ int MAIN(int argc, char **argv)
 			j--;	/* Otherwise, -elapsed gets confused with
 				   an algorithm. */
 			}
+#ifndef OPENSSL_NO_ENGINE
 		else if	((argc > 0) && (strcmp(*argv,"-engine") == 0))
 			{
 			argc--;
@@ -747,6 +766,7 @@ int MAIN(int argc, char **argv)
 			   means all of them should be run) */
 			j--;
 			}
+#endif
 #ifdef HAVE_FORK
 		else if	((argc > 0) && (strcmp(*argv,"-multi") == 0))
 			{
@@ -1064,7 +1084,9 @@ int MAIN(int argc, char **argv)
 #if defined(TIMES) || defined(USE_TOD)
 			BIO_printf(bio_err,"-elapsed        measure time in real time instead of CPU user time.\n");
 #endif
+#ifndef OPENSSL_NO_ENGINE
 			BIO_printf(bio_err,"-engine e       use engine e, possibly a hardware device.\n");
+#endif
 			BIO_printf(bio_err,"-evp e          use EVP e.\n");
 			BIO_printf(bio_err,"-decrypt        time decryption instead of encryption (only EVP).\n");
 			BIO_printf(bio_err,"-mr             produce machine readable output.\n");
@@ -1927,6 +1949,9 @@ int MAIN(int argc, char **argv)
 				} 
 			else 
 				{
+#if 1
+				EC_GROUP_precompute_mult(ecdsa[j]->group, NULL);
+#endif
 				/* Perform ECDSA signature test */
 				EC_KEY_generate_key(ecdsa[j]);
 				ret = ECDSA_sign(0, buf, 20, ecdsasig, 
@@ -2042,7 +2067,7 @@ int MAIN(int argc, char **argv)
 				}
 			else
 				{
-				ecdh_b[j]->group = ecdh_a[j]->group;
+				ecdh_b[j]->group = EC_GROUP_dup(ecdh_a[j]->group);
 
 				/* generate two ECDH key pairs */
 				if (!EC_KEY_generate_key(ecdh_a[j]) ||
@@ -2054,12 +2079,12 @@ int MAIN(int argc, char **argv)
 					}
 				else
 					{
-					secret_size_a = ECDH_compute_key(secret_a, 
+					secret_size_a = ECDH_compute_key(secret_a, KDF1_SHA1_len,
 						ecdh_b[j]->pub_key,
-						ecdh_a[j]);
-					secret_size_b = ECDH_compute_key(secret_b, 
+						ecdh_a[j], KDF1_SHA1);
+					secret_size_b = ECDH_compute_key(secret_b, KDF1_SHA1_len,
 						ecdh_a[j]->pub_key,
-						ecdh_b[j]);
+						ecdh_b[j], KDF1_SHA1);
 					if (secret_size_a != secret_size_b) 
 						ecdh_checks = 0;
 					else
@@ -2088,9 +2113,9 @@ int MAIN(int argc, char **argv)
 					Time_F(START);
 					for (count=0,run=1; COND(ecdh_c[j][0]); count++)
 						{
-						ECDH_compute_key(secret_a, 
+						ECDH_compute_key(secret_a, KDF1_SHA1_len,
 						ecdh_b[j]->pub_key,
-						ecdh_a[j]);
+						ecdh_a[j], KDF1_SHA1);
 						}
 					d=Time_F(STOP);
 					BIO_printf(bio_err, mr ? "+R7:%ld:%d:%.2f\n" :"%ld %d-bit ECDH ops in %.2fs\n",
@@ -2357,8 +2382,8 @@ static void pkey_print_message(char *str, char *str2, long num, int bits,
 
 static void print_result(int alg,int run_no,int count,double time_used)
 	{
-	BIO_printf(bio_err,mr ? "+R:%ld:%s:%f\n"
-		   : "%ld %s's in %.2fs\n",count,names[alg],time_used);
+	BIO_printf(bio_err,mr ? "+R:%d:%s:%f\n"
+		   : "%d %s's in %.2fs\n",count,names[alg],time_used);
 	results[alg][run_no]=((double)count)/time_used*lengths[run_no];
 	}
 
@@ -2569,4 +2594,5 @@ static int do_multi(int multi)
 		}
 	return 1;
 	}
+#endif
 #endif

@@ -45,9 +45,6 @@
 
   OPEN ISSUES
 
-    o internal_verify doesn't know about X509.v3 (basicConstraints
-      CA flag ...)
-
     o  The Makefile hierarchy and build mechanism is still not a round thing:
 
        1. The config vs. Configure scripts

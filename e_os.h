@@ -222,7 +222,11 @@ extern "C" {
 #  include <io.h>
 #  include <fcntl.h>
 
-#  define ssize_t long
+#  ifdef _WIN64
+#    define ssize_t size_t
+#  else
+#    define ssize_t long
+#  endif
 
 #  if defined (__BORLANDC__)
 #    define _setmode setmode

@@ -102,7 +102,8 @@ err:
 /* Must 'OPENSSL_free' the returned data */
 char *BN_bn2dec(const BIGNUM *a)
 	{
-	int i=0,num;
+	int i=0;
+	size_t num;
 	char *buf=NULL;
 	char *p;
 	BIGNUM *t=NULL;
@@ -158,7 +159,8 @@ int BN_hex2bn(BIGNUM **bn, const char *a)
 	{
 	BIGNUM *ret=NULL;
 	BN_ULONG l=0;
-	int neg=0,h,m,i,j,k,c;
+	size_t i;
+	int neg=0,h,m,j,k,c;
 	int num;
 
 	if ((a == NULL) || (*a == '\0')) return(0);
@@ -224,7 +226,8 @@ int BN_dec2bn(BIGNUM **bn, const char *a)
 	{
 	BIGNUM *ret=NULL;
 	BN_ULONG l=0;
-	int neg=0,i,j;
+	unsigned int i;
+	int neg=0,j;
 	int num;
 
 	if ((a == NULL) || (*a == '\0')) return(0);

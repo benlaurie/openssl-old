@@ -115,10 +115,11 @@
 #include "bn_lcl.h"
 #include <openssl/rand.h>
 
-static int bnrand(int pseudorand, BIGNUM *rnd, int bits, int top, int bottom)
+static int bnrand(int pseudorand, BIGNUM *rnd, size_t bits, int top, int bottom)
 	{
 	unsigned char *buf=NULL;
-	int ret=0,bit,bytes,mask;
+	int ret=0,bit,mask;
+	size_t bytes;
 	time_t tim;
 
 	if (bits == 0)
@@ -140,7 +141,7 @@ static int bnrand(int pseudorand, BIGNUM *rnd, int bits, int top, int bottom)
 
 	/* make a random number and set the top and bottom bits */
 	time(&tim);
-	RAND_add(&tim,sizeof(tim),0);
+	RAND_add(&tim,sizeof(tim),0.0);
 
 	if (pseudorand)
 		{
@@ -158,7 +159,7 @@ static int bnrand(int pseudorand, BIGNUM *rnd, int bits, int top, int bottom)
 		{
 		/* generate patterns that are more likely to trigger BN
 		   library bugs */
-		int i;
+		unsigned int i;
 		unsigned char c;
 
 		for (i = 0; i < bytes; i++)
@@ -207,18 +208,18 @@ err:
 	return(ret);
 	}
 
-int     BN_rand(BIGNUM *rnd, int bits, int top, int bottom)
+int     BN_rand(BIGNUM *rnd, size_t bits, int top, int bottom)
 	{
 	return bnrand(0, rnd, bits, top, bottom);
 	}
 
-int     BN_pseudo_rand(BIGNUM *rnd, int bits, int top, int bottom)
+int     BN_pseudo_rand(BIGNUM *rnd, size_t bits, int top, int bottom)
 	{
 	return bnrand(1, rnd, bits, top, bottom);
 	}
 
 #if 1
-int     BN_bntest_rand(BIGNUM *rnd, int bits, int top, int bottom)
+int     BN_bntest_rand(BIGNUM *rnd, size_t bits, int top, int bottom)
 	{
 	return bnrand(2, rnd, bits, top, bottom);
 	}
@@ -228,8 +229,8 @@ int     BN_bntest_rand(BIGNUM *rnd, int bits, int top, int bottom)
 /* random number r:  0 <= r < range */
 static int bn_rand_range(int pseudo, BIGNUM *r, BIGNUM *range)
 	{
-	int (*bn_rand)(BIGNUM *, int, int, int) = pseudo ? BN_pseudo_rand : BN_rand;
-	int n;
+	int (*bn_rand)(BIGNUM *, size_t, int, int) = pseudo ? BN_pseudo_rand : BN_rand;
+	size_t n;
 	int count = 100;
 
 	if (range->neg || BN_is_zero(range))

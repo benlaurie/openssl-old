@@ -250,7 +250,7 @@ BIGNUM *BN_mod_inverse(BIGNUM *in,
 		 * This is faster than the general algorithm if the modulus
 		 * is sufficiently small (about 400 .. 500 bits on 32-bit
 		 * sytems, but much more on 64-bit systems) */
-		int shift;
+		size_t shift;
 		
 		while (!BN_is_zero(B))
 			{

@@ -64,7 +64,7 @@
  */
 
 void DES_ede3_cfb64_encrypt(const unsigned char *in, unsigned char *out,
-			    long length, DES_key_schedule *ks1,
+			    size_t length, DES_key_schedule *ks1,
 			    DES_key_schedule *ks2, DES_key_schedule *ks3,
 			    DES_cblock *ivec, int *num, int enc)
 	{

@@ -129,7 +129,8 @@ err:
 int BN_div_recp(BIGNUM *dv, BIGNUM *rem, const BIGNUM *m,
 	BN_RECP_CTX *recp, BN_CTX *ctx)
 	{
-	int i,j,ret=0;
+	unsigned int i;
+	int j,ret=0;
 	BIGNUM *a,*b,*d,*r;
 
 	BN_CTX_start(ctx);
@@ -211,7 +212,7 @@ err:
  * we can do faster division if the remainder is not required.
  */
 /* r := 2^len / m */
-int BN_reciprocal(BIGNUM *r, const BIGNUM *m, int len, BN_CTX *ctx)
+int BN_reciprocal(BIGNUM *r, const BIGNUM *m, size_t len, BN_CTX *ctx)
 	{
 	int ret= -1;
 	BIGNUM t;

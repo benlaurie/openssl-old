@@ -106,8 +106,8 @@ int BN_add(BIGNUM *r, const BIGNUM *a, const BIGNUM *b)
 /* unsigned add of b to a, r must be large enough */
 int BN_uadd(BIGNUM *r, const BIGNUM *a, const BIGNUM *b)
 	{
-	register int i;
-	int max,min;
+	register unsigned int i;
+	unsigned int max,min;
 	BN_ULONG *ap,*bp,*rp,carry,t1;
 	const BIGNUM *tmp;
 
@@ -167,9 +167,10 @@ int BN_uadd(BIGNUM *r, const BIGNUM *a, const BIGNUM *b)
 /* unsigned subtraction of b from a, a must be larger than b. */
 int BN_usub(BIGNUM *r, const BIGNUM *a, const BIGNUM *b)
 	{
-	int max,min;
+	unsigned int max,min;
 	register BN_ULONG t1,t2,*ap,*bp,*rp;
-	int i,carry;
+	unsigned int i;
+	int carry;
 #if defined(IRIX_CC_BUG) && !defined(LINT)
 	int dummy;
 #endif
@@ -259,7 +260,7 @@ int BN_usub(BIGNUM *r, const BIGNUM *a, const BIGNUM *b)
 
 int BN_sub(BIGNUM *r, const BIGNUM *a, const BIGNUM *b)
 	{
-	int max;
+	unsigned int max;
 	int add=0,neg=0;
 	const BIGNUM *tmp;
 

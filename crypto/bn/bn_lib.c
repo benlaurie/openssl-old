@@ -87,7 +87,7 @@ static int bn_limit_num_high=8;   /* (1<<bn_limit_bits_high) */
 static int bn_limit_bits_mont=0;
 static int bn_limit_num_mont=8;   /* (1<<bn_limit_bits_mont) */
 
-void BN_set_params(int mult, int high, int low, int mont)
+void BN_set_params(size_t mult, size_t high, size_t low, size_t mont)
 	{
 	if (mult >= 0)
 		{
@@ -131,7 +131,7 @@ int BN_get_params(int which)
 const BIGNUM *BN_value_one(void)
 	{
 	static BN_ULONG data_one=1L;
-	static BIGNUM const_one={&data_one,1,1,0};
+	static BIGNUM const_one={&data_one,1,1,0,0};
 
 	return(&const_one);
 	}
@@ -155,7 +155,7 @@ char *BN_options(void)
 	return(data);
 	}
 
-int BN_num_bits_word(BN_ULONG l)
+size_t BN_num_bits_word(BN_ULONG l)
 	{
 	static const char bits[256]={
 		0,1,2,2,3,3,3,3,4,4,4,4,4,4,4,4,
@@ -242,7 +242,7 @@ int BN_num_bits_word(BN_ULONG l)
 		}
 	}
 
-int BN_num_bits(const BIGNUM *a)
+size_t BN_num_bits(const BIGNUM *a)
 	{
 	BN_ULONG l;
 	int i;
@@ -307,7 +307,7 @@ BIGNUM *BN_new(void)
 
 /* This is used both by bn_expand2() and bn_dup_expand() */
 /* The caller MUST check that words > b->dmax before calling this */
-static BN_ULONG *bn_expand_internal(const BIGNUM *b, int words)
+static BN_ULONG *bn_expand_internal(const BIGNUM *b, size_t words)
 	{
 	BN_ULONG *A,*a = NULL;
 	const BN_ULONG *B;
@@ -382,7 +382,7 @@ static BN_ULONG *bn_expand_internal(const BIGNUM *b, int words)
  * while bn_dup_expand() makes sure allocation is made only once.
  */
 
-BIGNUM *bn_dup_expand(const BIGNUM *b, int words)
+BIGNUM *bn_dup_expand(const BIGNUM *b, size_t words)
 	{
 	BIGNUM *r = NULL;
 
@@ -429,7 +429,7 @@ BIGNUM *bn_dup_expand(const BIGNUM *b, int words)
  * It is mostly used by the various BIGNUM routines. If there is an error,
  * NULL is returned. If not, 'b' is returned. */
 
-BIGNUM *bn_expand2(BIGNUM *b, int words)
+BIGNUM *bn_expand2(BIGNUM *b, size_t words)
 	{
 	BN_ULONG *A;
 	int i;
@@ -561,7 +561,8 @@ void BN_clear(BIGNUM *a)
 
 BN_ULONG BN_get_word(const BIGNUM *a)
 	{
-	int i,n;
+	int i;
+	size_t n;
 	BN_ULONG ret=0;
 
 	n=BN_num_bytes(a);
@@ -582,7 +583,7 @@ BN_ULONG BN_get_word(const BIGNUM *a)
 
 int BN_set_word(BIGNUM *a, BN_ULONG w)
 	{
-	int i,n;
+	size_t i,n;
 	if (bn_expand(a,sizeof(BN_ULONG)*8) == NULL) return(0);
 
 	n=sizeof(BN_ULONG)/BN_BYTES;
@@ -607,7 +608,7 @@ int BN_set_word(BIGNUM *a, BN_ULONG w)
 	return(1);
 	}
 
-BIGNUM *BN_bin2bn(const unsigned char *s, int len, BIGNUM *ret)
+BIGNUM *BN_bin2bn(const unsigned char *s, size_t len, BIGNUM *ret)
 	{
 	unsigned int i,m;
 	unsigned int n;
@@ -622,7 +623,7 @@ BIGNUM *BN_bin2bn(const unsigned char *s, int len, BIGNUM *ret)
 		ret->top=0;
 		return(ret);
 		}
-	if (bn_expand(ret,(int)(n+2)*8) == NULL)
+	if (bn_expand(ret,(n+2)*8) == NULL)
 		return(NULL);
 	i=((n-1)/BN_BYTES)+1;
 	m=((n-1)%(BN_BYTES));
@@ -645,7 +646,7 @@ BIGNUM *BN_bin2bn(const unsigned char *s, int len, BIGNUM *ret)
 	}
 
 /* ignore negative */
-int BN_bn2bin(const BIGNUM *a, unsigned char *to)
+size_t BN_bn2bin(const BIGNUM *a, unsigned char *to)
 	{
 	int n,i;
 	BN_ULONG l;
@@ -722,9 +723,9 @@ int BN_cmp(const BIGNUM *a, const BIGNUM *b)
 	return(0);
 	}
 
-int BN_set_bit(BIGNUM *a, int n)
+int BN_set_bit(BIGNUM *a, unsigned int n)
 	{
-	int i,j,k;
+	size_t i,j,k;
 
 	i=n/BN_BITS2;
 	j=n%BN_BITS2;
@@ -740,9 +741,9 @@ int BN_set_bit(BIGNUM *a, int n)
 	return(1);
 	}
 
-int BN_clear_bit(BIGNUM *a, int n)
+int BN_clear_bit(BIGNUM *a, unsigned int n)
 	{
-	int i,j;
+	size_t i,j;
 
 	i=n/BN_BITS2;
 	j=n%BN_BITS2;
@@ -753,9 +754,9 @@ int BN_clear_bit(BIGNUM *a, int n)
 	return(1);
 	}
 
-int BN_is_bit_set(const BIGNUM *a, int n)
+size_t BN_is_bit_set(const BIGNUM *a, size_t n)
 	{
-	int i,j;
+	unsigned int i,j;
 
 	if (n < 0) return(0);
 	i=n/BN_BITS2;
@@ -764,9 +765,9 @@ int BN_is_bit_set(const BIGNUM *a, int n)
 	return((a->d[i]&(((BN_ULONG)1)<<j))?1:0);
 	}
 
-int BN_mask_bits(BIGNUM *a, int n)
+int BN_mask_bits(BIGNUM *a, size_t n)
 	{
-	int b,w;
+	unsigned int b,w;
 
 	w=n/BN_BITS2;
 	b=n%BN_BITS2;
@@ -782,7 +783,7 @@ int BN_mask_bits(BIGNUM *a, int n)
 	return(1);
 	}
 
-int bn_cmp_words(const BN_ULONG *a, const BN_ULONG *b, int n)
+int bn_cmp_words(const BN_ULONG *a, const BN_ULONG *b, size_t n)
 	{
 	int i;
 	BN_ULONG aa,bb;
@@ -807,9 +808,10 @@ int bn_cmp_words(const BN_ULONG *a, const BN_ULONG *b, int n)
    All lengths are the number of BN_ULONGs...  */
 
 int bn_cmp_part_words(const BN_ULONG *a, const BN_ULONG *b,
-	int cl, int dl)
+	size_t cl, ssize_t dl)
 	{
-	int n,i;
+	size_t n;
+	int i;
 	n = cl-1;
 
 	if (dl < 0)

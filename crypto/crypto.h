@@ -111,30 +111,31 @@ extern "C" {
 #define CRYPTO_LOCK_DSA			8
 #define CRYPTO_LOCK_RSA			9
 #define CRYPTO_LOCK_EVP_PKEY		10
-#define	CRYPTO_LOCK_X509_STORE		11
-#define	CRYPTO_LOCK_SSL_CTX		12
-#define	CRYPTO_LOCK_SSL_CERT		13
-#define	CRYPTO_LOCK_SSL_SESSION		14
-#define	CRYPTO_LOCK_SSL_SESS_CERT	15
-#define	CRYPTO_LOCK_SSL			16
-#define	CRYPTO_LOCK_RAND		17
-#define	CRYPTO_LOCK_RAND2		18
-#define	CRYPTO_LOCK_MALLOC		19
-#define	CRYPTO_LOCK_BIO			20
-#define	CRYPTO_LOCK_GETHOSTBYNAME	21
-#define	CRYPTO_LOCK_GETSERVBYNAME	22
-#define	CRYPTO_LOCK_READDIR		23
-#define	CRYPTO_LOCK_RSA_BLINDING	24
-#define	CRYPTO_LOCK_DH			25
-#define	CRYPTO_LOCK_MALLOC2		26
-#define	CRYPTO_LOCK_DSO			27
-#define	CRYPTO_LOCK_DYNLOCK		28
-#define	CRYPTO_LOCK_ENGINE		29
-#define	CRYPTO_LOCK_UI			30
-#define CRYPTO_LOCK_ECDSA               31
-#define CRYPTO_LOCK_EC			32
-#define CRYPTO_LOCK_ECDH			33
-#define	CRYPTO_NUM_LOCKS		34
+#define CRYPTO_LOCK_X509_STORE		11
+#define CRYPTO_LOCK_SSL_CTX		12
+#define CRYPTO_LOCK_SSL_CERT		13
+#define CRYPTO_LOCK_SSL_SESSION		14
+#define CRYPTO_LOCK_SSL_SESS_CERT	15
+#define CRYPTO_LOCK_SSL			16
+#define CRYPTO_LOCK_SSL_METHOD		17
+#define CRYPTO_LOCK_RAND		18
+#define CRYPTO_LOCK_RAND2		19
+#define CRYPTO_LOCK_MALLOC		20
+#define CRYPTO_LOCK_BIO			21
+#define CRYPTO_LOCK_GETHOSTBYNAME	22
+#define CRYPTO_LOCK_GETSERVBYNAME	23
+#define CRYPTO_LOCK_READDIR		24
+#define CRYPTO_LOCK_RSA_BLINDING	25
+#define CRYPTO_LOCK_DH			26
+#define CRYPTO_LOCK_MALLOC2		27
+#define CRYPTO_LOCK_DSO			28
+#define CRYPTO_LOCK_DYNLOCK		29
+#define CRYPTO_LOCK_ENGINE		30
+#define CRYPTO_LOCK_UI			31
+#define CRYPTO_LOCK_ECDSA               32
+#define CRYPTO_LOCK_EC			33
+#define CRYPTO_LOCK_ECDH		34
+#define CRYPTO_NUM_LOCKS		35
 
 #define CRYPTO_LOCK		1
 #define CRYPTO_UNLOCK		2
@@ -156,7 +157,7 @@ extern "C" {
 #endif
 #else
 #define CRYPTO_w_lock(a)
-#define	CRYPTO_w_unlock(a)
+#define CRYPTO_w_unlock(a)
 #define CRYPTO_r_lock(a)
 #define CRYPTO_r_unlock(a)
 #define CRYPTO_add(a,b,c)	((*(a))+=(b))
@@ -285,11 +286,11 @@ int CRYPTO_is_mem_check_on(void);
 #define MemCheck_off()	CRYPTO_mem_ctrl(CRYPTO_MEM_CHECK_DISABLE)
 #define is_MemCheck_on() CRYPTO_is_mem_check_on()
 
-#define OPENSSL_malloc(num)	CRYPTO_malloc((int)num,__FILE__,__LINE__)
+#define OPENSSL_malloc(num)	CRYPTO_malloc(num,__FILE__,__LINE__)
 #define OPENSSL_realloc(addr,num) \
-	CRYPTO_realloc((char *)addr,(int)num,__FILE__,__LINE__)
+	CRYPTO_realloc((char *)addr,num,__FILE__,__LINE__)
 #define OPENSSL_remalloc(addr,num) \
-	CRYPTO_remalloc((char **)addr,(int)num,__FILE__,__LINE__)
+	CRYPTO_remalloc((char **)addr,num,__FILE__,__LINE__)
 #define OPENSSL_freeFunc	CRYPTO_free
 #define OPENSSL_free(addr)	CRYPTO_free(addr)
 
@@ -367,8 +368,8 @@ int CRYPTO_set_mem_ex_functions(void *(*m)(size_t,const char *,int),
                                 void (*f)(void *));
 int CRYPTO_set_locked_mem_ex_functions(void *(*m)(size_t,const char *,int),
                                        void (*free_func)(void *));
-int CRYPTO_set_mem_debug_functions(void (*m)(void *,int,const char *,int,int),
-				   void (*r)(void *,void *,int,const char *,int,int),
+int CRYPTO_set_mem_debug_functions(void (*m)(void *,size_t,const char *,int,int),
+				   void (*r)(void *,void *,size_t,const char *,int,int),
 				   void (*f)(void *,int),
 				   void (*so)(long),
 				   long (*go)(void));
@@ -379,18 +380,18 @@ void CRYPTO_get_mem_ex_functions(void *(**m)(size_t,const char *,int),
                                  void (**f)(void *));
 void CRYPTO_get_locked_mem_ex_functions(void *(**m)(size_t,const char *,int),
                                         void (**f)(void *));
-void CRYPTO_get_mem_debug_functions(void (**m)(void *,int,const char *,int,int),
-				    void (**r)(void *,void *,int,const char *,int,int),
+void CRYPTO_get_mem_debug_functions(void (**m)(void *,size_t,const char *,int,int),
+				    void (**r)(void *,void *,size_t,const char *,int,int),
 				    void (**f)(void *,int),
 				    void (**so)(long),
 				    long (**go)(void));
 
-void *CRYPTO_malloc_locked(int num, const char *file, int line);
+void *CRYPTO_malloc_locked(size_t num, const char *file, int line);
 void CRYPTO_free_locked(void *);
-void *CRYPTO_malloc(int num, const char *file, int line);
+void *CRYPTO_malloc(size_t num, const char *file, int line);
 void CRYPTO_free(void *);
-void *CRYPTO_realloc(void *addr,int num, const char *file, int line);
-void *CRYPTO_remalloc(void *addr,int num, const char *file, int line);
+void *CRYPTO_realloc(void *addr,size_t num, const char *file, int line);
+void *CRYPTO_remalloc(void *addr,size_t num, const char *file, int line);
 
 void CRYPTO_set_mem_debug_options(long bits);
 long CRYPTO_get_mem_debug_options(void);
@@ -409,8 +410,8 @@ int CRYPTO_remove_all_info(void);
  * 0:	called before the actual memory allocation has taken place
  * 1:	called after the actual memory allocation has taken place
  */
-void CRYPTO_dbg_malloc(void *addr,int num,const char *file,int line,int before_p);
-void CRYPTO_dbg_realloc(void *addr1,void *addr2,int num,const char *file,int line,int before_p);
+void CRYPTO_dbg_malloc(void *addr,size_t num,const char *file,int line,int before_p);
+void CRYPTO_dbg_realloc(void *addr1,void *addr2,size_t num,const char *file,int line,int before_p);
 void CRYPTO_dbg_free(void *addr,int before_p);
 /* Tell the debugging code about options.  By default, the following values
  * apply:

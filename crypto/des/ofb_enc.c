@@ -65,7 +65,7 @@
  * byte.
  */
 void DES_ofb_encrypt(const unsigned char *in, unsigned char *out, int numbits,
-		     long length, DES_key_schedule *schedule,
+		     size_t length, DES_key_schedule *schedule,
 		     DES_cblock *ivec)
 	{
 	register DES_LONG d0,d1,vv0,vv1,v0,v1,n=(numbits+7)/8;

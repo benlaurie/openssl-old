@@ -278,7 +278,7 @@ static void bn_GF2m_mul_2x2(BN_ULONG *r, const BN_ULONG a1, const BN_ULONG a0, c
  */
 int	BN_GF2m_add(BIGNUM *r, const BIGNUM *a, const BIGNUM *b)
 	{
-	int i;
+	unsigned int i;
 	const BIGNUM *at, *bt;
 
 	if (a->top < b->top) { at = b; bt = a; }
@@ -312,8 +312,9 @@ int	BN_GF2m_add(BIGNUM *r, const BIGNUM *a, const BIGNUM *b)
 /* Performs modular reduction of a and store result in r.  r could be a. */
 int BN_GF2m_mod_arr(BIGNUM *r, const BIGNUM *a, const unsigned int p[])
 	{
-	int j, k;
-	int n, dN, d0, d1;
+	unsigned int j;
+	int k;
+	unsigned int n, dN, d0, d1;
 	BN_ULONG zz, *z;
 	
 	/* Since the algorithm does reduction in the r value, if a != r, copy the
@@ -370,12 +371,16 @@ int BN_GF2m_mod_arr(BIGNUM *r, const BIGNUM *a, const unsigned int p[])
 
 		for (k = 1; p[k] > 0; k++)
 			{
+			BN_ULONG tmp_ulong;
+
 			/* reducing component t^p[k]*/
 			n = p[k] / BN_BITS2;   
 			d0 = p[k] % BN_BITS2;
 			d1 = BN_BITS2 - d0;
 			z[n] ^= (zz << d0);
-			if (d0) z[n+1] ^= (zz >> d1);
+			tmp_ulong = zz >> d1;
+                        if (d0 && tmp_ulong)
+                                z[n+1] ^= tmp_ulong;
 			}
 
 		
@@ -414,7 +419,9 @@ int	BN_GF2m_mod(BIGNUM *r, const BIGNUM *a, const BIGNUM *p)
  */
 int	BN_GF2m_mod_mul_arr(BIGNUM *r, const BIGNUM *a, const BIGNUM *b, const unsigned int p[], BN_CTX *ctx)
 	{
-	int zlen, i, j, k, ret = 0;
+	size_t zlen;
+	unsigned int i, j;
+	int k, ret = 0;
 	BIGNUM *s;
 	BN_ULONG x1, x0, y1, y0, zz[4];
 	
@@ -738,7 +745,8 @@ int BN_GF2m_mod_div_arr(BIGNUM *r, const BIGNUM *yy, const BIGNUM *xx, const uns
  */
 int	BN_GF2m_mod_exp_arr(BIGNUM *r, const BIGNUM *a, const BIGNUM *b, const unsigned int p[], BN_CTX *ctx)
 	{
-	int ret = 0, i, n;
+	int ret = 0, n;
+	int i;
 	BIGNUM *u;
 	
 	if (BN_is_zero(b))
@@ -753,7 +761,7 @@ int	BN_GF2m_mod_exp_arr(BIGNUM *r, const BIGNUM *a, const BIGNUM *b, const unsig
 	if (!BN_GF2m_mod_arr(u, a, p)) goto err;
 	
 	n = BN_num_bits(b) - 1;
-	for (i = n - 1; i >= 0; i--)
+	for (i = (int)(n - 1); i >= 0; i--)
 		{
 		if (!BN_GF2m_mod_sqr_arr(u, u, p, ctx)) goto err;
 		if (BN_is_bit_set(b, i))
@@ -842,7 +850,8 @@ int BN_GF2m_mod_sqrt(BIGNUM *r, const BIGNUM *a, const BIGNUM *p, BN_CTX *ctx)
  */
 int BN_GF2m_mod_solve_quad_arr(BIGNUM *r, const BIGNUM *a_, const unsigned int p[], BN_CTX *ctx)
 	{
-	int ret = 0, i, count = 0;
+	int ret = 0, count = 0;
+	unsigned int i;
 	BIGNUM *a, *z, *rho, *w, *w2, *tmp;
 	
 	BN_CTX_start(ctx);

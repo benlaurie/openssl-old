@@ -74,7 +74,7 @@
 			*((c)++)=(unsigned char)(((l)>>16L)&0xff), \
 			*((c)++)=(unsigned char)(((l)>>24L)&0xff))
 
-static void mdc2_body(MDC2_CTX *c, const unsigned char *in, unsigned int len);
+static void mdc2_body(MDC2_CTX *c, const unsigned char *in, size_t len);
 int MDC2_Init(MDC2_CTX *c)
 	{
 	c->num=0;
@@ -84,9 +84,9 @@ int MDC2_Init(MDC2_CTX *c)
 	return 1;
 	}
 
-int MDC2_Update(MDC2_CTX *c, const unsigned char *in, unsigned long len)
+int MDC2_Update(MDC2_CTX *c, const unsigned char *in, size_t len)
 	{
-	int i,j;
+	size_t i,j;
 
 	i=c->num;
 	if (i != 0)
@@ -94,7 +94,7 @@ int MDC2_Update(MDC2_CTX *c, const unsigned char *in, unsigned long len)
 		if (i+len < MDC2_BLOCK)
 			{
 			/* partial block */
-			memcpy(&(c->data[i]),in,(int)len);
+			memcpy(&(c->data[i]),in,len);
 			c->num+=(int)len;
 			return 1;
 			}
@@ -160,7 +160,8 @@ static void mdc2_body(MDC2_CTX *c, const unsigned char *in, unsigned int len)
 
 int MDC2_Final(unsigned char *md, MDC2_CTX *c)
 	{
-	int i,j;
+	size_t i;
+	int j;
 
 	i=c->num;
 	j=c->pad_type;

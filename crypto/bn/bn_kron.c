@@ -62,7 +62,7 @@
 /* Returns -2 for errors because both -1 and 0 are valid results. */
 int BN_kronecker(const BIGNUM *a, const BIGNUM *b, BN_CTX *ctx)
 	{
-	int i;
+	unsigned int i;
 	int ret = -2; /* avoid 'uninitialized' warning */
 	int err = 0;
 	BIGNUM *A, *B, *tmp;

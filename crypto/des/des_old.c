@@ -89,24 +89,24 @@ void _ossl_old_des_ecb3_encrypt(_ossl_old_des_cblock *input,_ossl_old_des_cblock
 		(DES_key_schedule *)ks3, enc);
 	}
 DES_LONG _ossl_old_des_cbc_cksum(_ossl_old_des_cblock *input,_ossl_old_des_cblock *output,
-	long length,des_key_schedule schedule,_ossl_old_des_cblock *ivec)
+	size_t length,des_key_schedule schedule,_ossl_old_des_cblock *ivec)
 	{
 	return DES_cbc_cksum((unsigned char *)input, output, length,
 		(DES_key_schedule *)schedule, ivec);
 	}
-void _ossl_old_des_cbc_encrypt(_ossl_old_des_cblock *input,_ossl_old_des_cblock *output,long length,
+void _ossl_old_des_cbc_encrypt(_ossl_old_des_cblock *input,_ossl_old_des_cblock *output,size_t length,
 	des_key_schedule schedule,_ossl_old_des_cblock *ivec,int enc)
 	{
 	DES_cbc_encrypt((unsigned char *)input, (unsigned char *)output,
 		length, (DES_key_schedule *)schedule, ivec, enc);
 	}
-void _ossl_old_des_ncbc_encrypt(_ossl_old_des_cblock *input,_ossl_old_des_cblock *output,long length,
+void _ossl_old_des_ncbc_encrypt(_ossl_old_des_cblock *input,_ossl_old_des_cblock *output,size_t length,
 	des_key_schedule schedule,_ossl_old_des_cblock *ivec,int enc)
 	{
 	DES_ncbc_encrypt((unsigned char *)input, (unsigned char *)output,
 		length, (DES_key_schedule *)schedule, ivec, enc);
 	}
-void _ossl_old_des_xcbc_encrypt(_ossl_old_des_cblock *input,_ossl_old_des_cblock *output,long length,
+void _ossl_old_des_xcbc_encrypt(_ossl_old_des_cblock *input,_ossl_old_des_cblock *output,size_t length,
 	des_key_schedule schedule,_ossl_old_des_cblock *ivec,
 	_ossl_old_des_cblock *inw,_ossl_old_des_cblock *outw,int enc)
 	{
@@ -114,7 +114,7 @@ void _ossl_old_des_xcbc_encrypt(_ossl_old_des_cblock *input,_ossl_old_des_cblock
 		length, (DES_key_schedule *)schedule, ivec, inw, outw, enc);
 	}
 void _ossl_old_des_cfb_encrypt(unsigned char *in,unsigned char *out,int numbits,
-	long length,des_key_schedule schedule,_ossl_old_des_cblock *ivec,int enc)
+	size_t length,des_key_schedule schedule,_ossl_old_des_cblock *ivec,int enc)
 	{
 	DES_cfb_encrypt(in, out, numbits, length,
 		(DES_key_schedule *)schedule, ivec, enc);
@@ -145,7 +145,7 @@ void _ossl_old_des_decrypt3(DES_LONG *data, des_key_schedule ks1,
 		(DES_key_schedule *)ks3);
 	}
 void _ossl_old_des_ede3_cbc_encrypt(_ossl_old_des_cblock *input, _ossl_old_des_cblock *output, 
-	long length, des_key_schedule ks1, des_key_schedule ks2, 
+	size_t length, des_key_schedule ks1, des_key_schedule ks2, 
 	des_key_schedule ks3, _ossl_old_des_cblock *ivec, int enc)
 	{
 	DES_ede3_cbc_encrypt((unsigned char *)input, (unsigned char *)output,
@@ -153,7 +153,7 @@ void _ossl_old_des_ede3_cbc_encrypt(_ossl_old_des_cblock *input, _ossl_old_des_c
 		(DES_key_schedule *)ks3, ivec, enc);
 	}
 void _ossl_old_des_ede3_cfb64_encrypt(unsigned char *in, unsigned char *out,
-	long length, des_key_schedule ks1, des_key_schedule ks2,
+	size_t length, des_key_schedule ks1, des_key_schedule ks2,
 	des_key_schedule ks3, _ossl_old_des_cblock *ivec, int *num, int enc)
 	{
 	DES_ede3_cfb64_encrypt(in, out, length,
@@ -161,7 +161,7 @@ void _ossl_old_des_ede3_cfb64_encrypt(unsigned char *in, unsigned char *out,
 		(DES_key_schedule *)ks3, ivec, num, enc);
 	}
 void _ossl_old_des_ede3_ofb64_encrypt(unsigned char *in, unsigned char *out,
-	long length, des_key_schedule ks1, des_key_schedule ks2,
+	size_t length, des_key_schedule ks1, des_key_schedule ks2,
 	des_key_schedule ks3, _ossl_old_des_cblock *ivec, int *num)
 	{
 	DES_ede3_ofb64_encrypt(in, out, length,
@@ -175,12 +175,12 @@ void _ossl_old_des_xwhite_in2out(_ossl_old_des_cblock (*des_key), _ossl_old_des_
 	DES_xwhite_in2out(des_key, in_white, out_white);
 	}
 
-int _ossl_old_des_enc_read(int fd,char *buf,int len,des_key_schedule sched,
+int _ossl_old_des_enc_read(int fd,char *buf,size_t len,des_key_schedule sched,
 	_ossl_old_des_cblock *iv)
 	{
 	return DES_enc_read(fd, buf, len, (DES_key_schedule *)sched, iv);
 	}
-int _ossl_old_des_enc_write(int fd,char *buf,int len,des_key_schedule sched,
+int _ossl_old_des_enc_write(int fd,char *buf,size_t len,des_key_schedule sched,
 	_ossl_old_des_cblock *iv)
 	{
 	return DES_enc_write(fd, buf, len, (DES_key_schedule *)sched, iv);
@@ -198,19 +198,19 @@ char *_ossl_old_crypt(const char *buf,const char *salt)
 	return DES_crypt(buf, salt);
 	}
 void _ossl_old_des_ofb_encrypt(unsigned char *in,unsigned char *out,
-	int numbits,long length,des_key_schedule schedule,_ossl_old_des_cblock *ivec)
+	int numbits,size_t length,des_key_schedule schedule,_ossl_old_des_cblock *ivec)
 	{
 	DES_ofb_encrypt(in, out, numbits, length, (DES_key_schedule *)schedule,
 		ivec);
 	}
-void _ossl_old_des_pcbc_encrypt(_ossl_old_des_cblock *input,_ossl_old_des_cblock *output,long length,
+void _ossl_old_des_pcbc_encrypt(_ossl_old_des_cblock *input,_ossl_old_des_cblock *output,size_t length,
 	des_key_schedule schedule,_ossl_old_des_cblock *ivec,int enc)
 	{
 	DES_pcbc_encrypt((unsigned char *)input, (unsigned char *)output,
 		length, (DES_key_schedule *)schedule, ivec, enc);
 	}
 DES_LONG _ossl_old_des_quad_cksum(_ossl_old_des_cblock *input,_ossl_old_des_cblock *output,
-	long length,int out_count,_ossl_old_des_cblock *seed)
+	size_t length,int out_count,_ossl_old_des_cblock *seed)
 	{
 	return DES_quad_cksum((unsigned char *)input, output, length,
 		out_count, seed);
@@ -257,13 +257,13 @@ void _ossl_old_des_string_to_2keys(char *str,_ossl_old_des_cblock *key1,_ossl_ol
 	{
 	DES_string_to_2keys(str, key1, key2);
 	}
-void _ossl_old_des_cfb64_encrypt(unsigned char *in, unsigned char *out, long length,
+void _ossl_old_des_cfb64_encrypt(unsigned char *in, unsigned char *out, size_t length,
 	des_key_schedule schedule, _ossl_old_des_cblock *ivec, int *num, int enc)
 	{
 	DES_cfb64_encrypt(in, out, length, (DES_key_schedule *)schedule,
 		ivec, num, enc);
 	}
-void _ossl_old_des_ofb64_encrypt(unsigned char *in, unsigned char *out, long length,
+void _ossl_old_des_ofb64_encrypt(unsigned char *in, unsigned char *out, size_t length,
 	des_key_schedule schedule, _ossl_old_des_cblock *ivec, int *num)
 	{
 	DES_ofb64_encrypt(in, out, length, (DES_key_schedule *)schedule,

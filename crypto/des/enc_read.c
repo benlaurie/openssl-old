@@ -84,21 +84,21 @@ OPENSSL_IMPLEMENT_GLOBAL(int,DES_rw_mode)=DES_PCBC_MODE;
  */
 
 
-int DES_enc_read(int fd, void *buf, int len, DES_key_schedule *sched,
+int DES_enc_read(int fd, void *buf, size_t len, DES_key_schedule *sched,
 		 DES_cblock *iv)
 	{
 	/* data to be unencrypted */
-	int net_num=0;
+	size_t net_num=0;
 	static unsigned char *net=NULL;
 	/* extra unencrypted data 
 	 * for when a block of 100 comes in but is des_read one byte at
 	 * a time. */
 	static unsigned char *unnet=NULL;
 	static int unnet_start=0;
-	static int unnet_left=0;
+	static size_t unnet_left=0;
 	static unsigned char *tmpbuf=NULL;
 	int i;
-	long num=0,rnum;
+	size_t num=0,rnum;
 	unsigned char *p;
 
 	if (tmpbuf == NULL)

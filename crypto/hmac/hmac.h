@@ -88,15 +88,15 @@ void HMAC_CTX_cleanup(HMAC_CTX *ctx);
 
 #define HMAC_cleanup(ctx) HMAC_CTX_cleanup(ctx) /* deprecated */
 
-void HMAC_Init(HMAC_CTX *ctx, const void *key, int len,
+void HMAC_Init(HMAC_CTX *ctx, const void *key, size_t len,
 	       const EVP_MD *md); /* deprecated */
-void HMAC_Init_ex(HMAC_CTX *ctx, const void *key, int len,
+void HMAC_Init_ex(HMAC_CTX *ctx, const void *key, size_t len,
 		  const EVP_MD *md, ENGINE *impl);
-void HMAC_Update(HMAC_CTX *ctx, const unsigned char *data, int len);
-void HMAC_Final(HMAC_CTX *ctx, unsigned char *md, unsigned int *len);
-unsigned char *HMAC(const EVP_MD *evp_md, const void *key, int key_len,
-		    const unsigned char *d, int n, unsigned char *md,
-		    unsigned int *md_len);
+void HMAC_Update(HMAC_CTX *ctx, const unsigned char *data, size_t len);
+void HMAC_Final(HMAC_CTX *ctx, unsigned char *md, size_t *len);
+unsigned char *HMAC(const EVP_MD *evp_md, const void *key, size_t key_len,
+		    const unsigned char *d, size_t n, unsigned char *md,
+		    size_t *md_len);
 
 
 #ifdef  __cplusplus

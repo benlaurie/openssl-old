@@ -71,7 +71,8 @@ BIGNUM *BN_mod_sqrt(BIGNUM *in, const BIGNUM *a, const BIGNUM *p, BN_CTX *ctx)
 	int err = 1;
 	int r;
 	BIGNUM *A, *b, *q, *t, *x, *y;
-	int e, i, j;
+	unsigned int i, e;
+	int j;
 	
 	if (!BN_is_odd(p) || BN_abs_is_word(p, 1))
 		{
@@ -81,7 +82,7 @@ BIGNUM *BN_mod_sqrt(BIGNUM *in, const BIGNUM *a, const BIGNUM *p, BN_CTX *ctx)
 				ret = BN_new();
 			if (ret == NULL)
 				goto end;
-			if (!BN_set_word(ret, BN_is_bit_set(a, 0)))
+			if (!BN_set_word(ret, (BN_ULONG)BN_is_bit_set(a, 0)))
 				{
 				BN_free(ret);
 				return NULL;
@@ -99,7 +100,7 @@ BIGNUM *BN_mod_sqrt(BIGNUM *in, const BIGNUM *a, const BIGNUM *p, BN_CTX *ctx)
 			ret = BN_new();
 		if (ret == NULL)
 			goto end;
-		if (!BN_set_word(ret, BN_is_one(a)))
+		if (!BN_set_word(ret, (BN_ULONG)BN_is_one(a)))
 			{
 			BN_free(ret);
 			return NULL;

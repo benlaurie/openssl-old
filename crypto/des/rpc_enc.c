@@ -60,8 +60,7 @@
 #include "des_locl.h"
 #include "des_ver.h"
 
-int _des_crypt(char *buf,int len,struct desparams *desp);
-int _des_crypt(char *buf, int len, struct desparams *desp)
+int _des_crypt(char *buf, size_t len, struct desparams *desp)
 	{
 	DES_key_schedule ks;
 	int enc;

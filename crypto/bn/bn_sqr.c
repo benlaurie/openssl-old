@@ -64,7 +64,8 @@
 /* I've just gone over this and it is now %20 faster on x86 - eay - 27 Jun 96 */
 int BN_sqr(BIGNUM *r, const BIGNUM *a, BN_CTX *ctx)
 	{
-	int max,al;
+	unsigned int max;
+	size_t al;
 	int ret = 0;
 	BIGNUM *tmp,*rr;
 
@@ -116,7 +117,8 @@ int BN_sqr(BIGNUM *r, const BIGNUM *a, BN_CTX *ctx)
 			}
 		else
 			{
-			int j,k;
+			unsigned int j;
+			unsigned int k;
 
 			j=BN_num_bits_word((BN_ULONG)al);
 			j=1<<(j-1);
@@ -149,9 +151,10 @@ int BN_sqr(BIGNUM *r, const BIGNUM *a, BN_CTX *ctx)
 	}
 
 /* tmp must have 2*n words */
-void bn_sqr_normal(BN_ULONG *r, const BN_ULONG *a, int n, BN_ULONG *tmp)
+void bn_sqr_normal(BN_ULONG *r, const BN_ULONG *a, size_t n, BN_ULONG *tmp)
 	{
-	int i,j,max;
+	unsigned int i,j;
+	unsigned int max;
 	const BN_ULONG *ap;
 	BN_ULONG *rp;
 
@@ -197,9 +200,9 @@ void bn_sqr_normal(BN_ULONG *r, const BN_ULONG *a, int n, BN_ULONG *tmp)
  * a[0]*b[0]+a[1]*b[1]+(a[0]-a[1])*(b[1]-b[0])
  * a[1]*b[1]
  */
-void bn_sqr_recursive(BN_ULONG *r, const BN_ULONG *a, int n2, BN_ULONG *t)
+void bn_sqr_recursive(BN_ULONG *r, const BN_ULONG *a, size_t n2, BN_ULONG *t)
 	{
-	int n=n2/2;
+	size_t n=n2/2;
 	int zero,c1;
 	BN_ULONG ln,lo,*p;
 

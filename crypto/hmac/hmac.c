@@ -60,10 +60,11 @@
 #include <string.h>
 #include <openssl/hmac.h>
 
-void HMAC_Init_ex(HMAC_CTX *ctx, const void *key, int len,
+void HMAC_Init_ex(HMAC_CTX *ctx, const void *key, size_t len,
 		  const EVP_MD *md, ENGINE *impl)
 	{
-	int i,j,reset=0;
+	int i,reset=0;
+	size_t j;
 	unsigned char pad[HMAC_MAX_MD_CBLOCK];
 
 	if (md != NULL)
@@ -110,7 +111,7 @@ void HMAC_Init_ex(HMAC_CTX *ctx, const void *key, int len,
 	EVP_MD_CTX_copy_ex(&ctx->md_ctx,&ctx->i_ctx);
 	}
 
-void HMAC_Init(HMAC_CTX *ctx, const void *key, int len,
+void HMAC_Init(HMAC_CTX *ctx, const void *key, size_t len,
 	       const EVP_MD *md)
 	{
 	if(key && md)
@@ -118,12 +119,12 @@ void HMAC_Init(HMAC_CTX *ctx, const void *key, int len,
 	HMAC_Init_ex(ctx,key,len,md, NULL);
 	}
 
-void HMAC_Update(HMAC_CTX *ctx, const unsigned char *data, int len)
+void HMAC_Update(HMAC_CTX *ctx, const unsigned char *data, size_t len)
 	{
 	EVP_DigestUpdate(&ctx->md_ctx,data,len);
 	}
 
-void HMAC_Final(HMAC_CTX *ctx, unsigned char *md, unsigned int *len)
+void HMAC_Final(HMAC_CTX *ctx, unsigned char *md, size_t *len)
 	{
 	int j;
 	unsigned int i;
@@ -152,9 +153,9 @@ void HMAC_CTX_cleanup(HMAC_CTX *ctx)
 	memset(ctx,0,sizeof *ctx);
 	}
 
-unsigned char *HMAC(const EVP_MD *evp_md, const void *key, int key_len,
-		    const unsigned char *d, int n, unsigned char *md,
-		    unsigned int *md_len)
+unsigned char *HMAC(const EVP_MD *evp_md, const void *key, size_t key_len,
+		    const unsigned char *d, size_t n, unsigned char *md,
+		    size_t *md_len)
 	{
 	HMAC_CTX c;
 	static unsigned char m[EVP_MAX_MD_SIZE];

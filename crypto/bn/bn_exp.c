@@ -118,7 +118,8 @@
 /* this one works - simple but works */
 int BN_exp(BIGNUM *r, const BIGNUM *a, const BIGNUM *p, BN_CTX *ctx)
 	{
-	int i,bits,ret=0;
+	size_t i,bits;
+	int ret=0;
 	BIGNUM *v,*rr;
 
 	BN_CTX_start(ctx);
@@ -228,7 +229,9 @@ int BN_mod_exp(BIGNUM *r, const BIGNUM *a, const BIGNUM *p, const BIGNUM *m,
 int BN_mod_exp_recp(BIGNUM *r, const BIGNUM *a, const BIGNUM *p,
 		    const BIGNUM *m, BN_CTX *ctx)
 	{
-	int i,j,bits,ret=0,wstart,wend,window,wvalue;
+	int j,ret=0,wvalue;
+	unsigned int i;
+	size_t bits,wstart,wend,window;
 	int start=1,ts=0;
 	BIGNUM *aa;
 	BIGNUM val[TABLE_SIZE];
@@ -312,7 +315,7 @@ int BN_mod_exp_recp(BIGNUM *r, const BIGNUM *a, const BIGNUM *p,
 		wend=0;
 		for (i=1; i<window; i++)
 			{
-			if (wstart-i < 0) break;
+			if (wstart < i) break;
 			if (BN_is_bit_set(p,wstart-i))
 				{
 				wvalue<<=(i-wend);
@@ -354,7 +357,9 @@ err:
 int BN_mod_exp_mont(BIGNUM *rr, const BIGNUM *a, const BIGNUM *p,
 		    const BIGNUM *m, BN_CTX *ctx, BN_MONT_CTX *in_mont)
 	{
-	int i,j,bits,ret=0,wstart,wend,window,wvalue;
+	int j,ret=0,wvalue;
+	unsigned int i;
+	size_t bits,wstart,wend,window;
 	int start=1,ts=0;
 	BIGNUM *d,*r;
 	const BIGNUM *aa;
@@ -454,7 +459,7 @@ int BN_mod_exp_mont(BIGNUM *rr, const BIGNUM *a, const BIGNUM *p,
 		wend=0;
 		for (i=1; i<window; i++)
 			{
-			if (wstart-i < 0) break;
+			if (wstart < i) break;
 			if (BN_is_bit_set(p,wstart-i))
 				{
 				wvalue<<=(i-wend);
@@ -497,7 +502,8 @@ int BN_mod_exp_mont_word(BIGNUM *rr, BN_ULONG a, const BIGNUM *p,
                          const BIGNUM *m, BN_CTX *ctx, BN_MONT_CTX *in_mont)
 	{
 	BN_MONT_CTX *mont = NULL;
-	int b, bits, ret=0;
+	unsigned int b, bits;
+	int ret=0;
 	int r_is_one;
 	BN_ULONG w, next_w;
 	BIGNUM *d, *r, *t;
@@ -639,7 +645,9 @@ int BN_mod_exp_simple(BIGNUM *r,
 	const BIGNUM *a, const BIGNUM *p, const BIGNUM *m,
 	BN_CTX *ctx)
 	{
-	int i,j,bits,ret=0,wstart,wend,window,wvalue,ts=0;
+	int j,ret=0,wvalue,ts=0;
+	unsigned int i;
+	size_t bits,wstart,wend,window;
 	int start=1;
 	BIGNUM *d;
 	BIGNUM val[TABLE_SIZE];
@@ -708,7 +716,7 @@ int BN_mod_exp_simple(BIGNUM *r,
 		wend=0;
 		for (i=1; i<window; i++)
 			{
-			if (wstart-i < 0) break;
+			if (wstart < i) break;
 			if (BN_is_bit_set(p,wstart-i))
 				{
 				wvalue<<=(i-wend);

@@ -165,11 +165,13 @@ int BN_div(BIGNUM *dv, BIGNUM *rem, const BIGNUM *m, const BIGNUM *d,
 int BN_div(BIGNUM *dv, BIGNUM *rm, const BIGNUM *num, const BIGNUM *divisor,
 	   BN_CTX *ctx)
 	{
-	int norm_shift,i,j,loop;
+	size_t norm_shift;
+	int j;
+	unsigned int i,loop;
 	BIGNUM *tmp,wnum,*snum,*sdiv,*res;
 	BN_ULONG *resp,*wnump;
 	BN_ULONG d0,d1;
-	int num_n,div_n;
+	size_t num_n,div_n;
 
 	bn_check_top(num);
 	bn_check_top(divisor);

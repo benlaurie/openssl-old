@@ -278,10 +278,10 @@ struct env_md_st
 	{
 	int type;
 	int pkey_type;
-	int md_size;
+	size_t md_size;
 	unsigned long flags;
 	int (*init)(EVP_MD_CTX *ctx);
-	int (*update)(EVP_MD_CTX *ctx,const void *data,unsigned long count);
+	int (*update)(EVP_MD_CTX *ctx,const void *data,size_t count);
 	int (*final)(EVP_MD_CTX *ctx,unsigned char *md);
 	int (*copy)(EVP_MD_CTX *to,const EVP_MD_CTX *from);
 	int (*cleanup)(EVP_MD_CTX *ctx);
@@ -290,8 +290,8 @@ struct env_md_st
 	int (*sign)();
 	int (*verify)();
 	int required_pkey_type[5]; /*EVP_PKEY_xxx */
-	int block_size;
-	int ctx_size; /* how big does the ctx->md_data need to be */
+	size_t block_size;
+	size_t ctx_size; /* how big does the ctx->md_data need to be */
 	} /* EVP_MD */;
 
 #define EVP_MD_FLAG_ONESHOT	0x0001 /* digest can only handle a single
@@ -346,14 +346,14 @@ struct env_md_ctx_st
 struct evp_cipher_st
 	{
 	int nid;
-	int block_size;
-	int key_len;		/* Default value for variable length ciphers */
-	int iv_len;
+	size_t block_size;
+	size_t key_len;		/* Default value for variable length ciphers */
+	size_t iv_len;
 	unsigned long flags;	/* Various flags */
 	int (*init)(EVP_CIPHER_CTX *ctx, const unsigned char *key,
 		    const unsigned char *iv, int enc);	/* init key */
 	int (*do_cipher)(EVP_CIPHER_CTX *ctx, unsigned char *out,
-			 const unsigned char *in, unsigned int inl);/* encrypt/decrypt data */
+			 const unsigned char *in, size_t inl);/* encrypt/decrypt data */
 	int (*cleanup)(EVP_CIPHER_CTX *); /* cleanup ctx */
 	int ctx_size;		/* how big ctx->cipher_data needs to be */
 	int (*set_asn1_parameters)(EVP_CIPHER_CTX *, ASN1_TYPE *); /* Populate a ASN1_TYPE with parameters */
@@ -538,15 +538,14 @@ int     EVP_MD_CTX_copy_ex(EVP_MD_CTX *out,const EVP_MD_CTX *in);
 #define EVP_MD_CTX_clear_flags(ctx,flgs) ((ctx)->flags&=~(flgs))
 #define EVP_MD_CTX_test_flags(ctx,flgs) ((ctx)->flags&(flgs))
 int	EVP_DigestInit_ex(EVP_MD_CTX *ctx, const EVP_MD *type, ENGINE *impl);
-int	EVP_DigestUpdate(EVP_MD_CTX *ctx,const void *d,
-			 unsigned int cnt);
+int	EVP_DigestUpdate(EVP_MD_CTX *ctx,const void *d, size_t cnt);
 int	EVP_DigestFinal_ex(EVP_MD_CTX *ctx,unsigned char *md,unsigned int *s);
-int	EVP_Digest(void *data, unsigned int count,
-		unsigned char *md, unsigned int *size, const EVP_MD *type, ENGINE *impl);
+int	EVP_Digest(void *data, size_t count,
+		unsigned char *md, size_t *size, const EVP_MD *type, ENGINE *impl);
 
 int     EVP_MD_CTX_copy(EVP_MD_CTX *out,const EVP_MD_CTX *in);  
 int	EVP_DigestInit(EVP_MD_CTX *ctx, const EVP_MD *type);
-int	EVP_DigestFinal(EVP_MD_CTX *ctx,unsigned char *md,unsigned int *s);
+int	EVP_DigestFinal(EVP_MD_CTX *ctx,unsigned char *md,size_t *s);
 
 int	EVP_read_pw_string(char *buf,int length,const char *prompt,int verify);
 void	EVP_set_pw_prompt(char *prompt);

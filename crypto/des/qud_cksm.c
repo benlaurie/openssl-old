@@ -74,7 +74,7 @@
 #define NOISE	((DES_LONG)83653421L)
 
 DES_LONG DES_quad_cksum(const unsigned char *input, DES_cblock output[],
-	     long length, int out_count, DES_cblock *seed)
+	     size_t length, int out_count, DES_cblock *seed)
 	{
 	DES_LONG z0,z1,t0,t1;
 	int i;

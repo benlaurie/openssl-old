@@ -63,7 +63,7 @@
 int BN_lshift1(BIGNUM *r, const BIGNUM *a)
 	{
 	register BN_ULONG *ap,*rp,t,c;
-	int i;
+	unsigned int i;
 
 	if (r != a)
 		{
@@ -153,9 +153,10 @@ int BN_lshift(BIGNUM *r, const BIGNUM *a, int n)
 	return(1);
 	}
 
-int BN_rshift(BIGNUM *r, const BIGNUM *a, int n)
+int BN_rshift(BIGNUM *r, const BIGNUM *a, size_t n)
 	{
-	int i,j,nw,lb,rb;
+	int i,j,lb,rb;
+	size_t nw;
 	BN_ULONG *t,*f;
 	BN_ULONG l,tmp;
 

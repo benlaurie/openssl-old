@@ -104,7 +104,9 @@ int BN_from_montgomery(BIGNUM *ret, const BIGNUM *a, BN_MONT_CTX *mont,
 #ifdef MONT_WORD
 	BIGNUM *n,*r;
 	BN_ULONG *ap,*np,*rp,n0,v,*nrp;
-	int al,nl,max,i,x,ri;
+	int ri;
+	size_t al,nl;
+	unsigned int i,max,x;
 
 	BN_CTX_start(ctx);
 	if ((r = BN_CTX_get(ctx)) == NULL) goto err;

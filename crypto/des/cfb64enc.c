@@ -64,7 +64,7 @@
  */
 
 void DES_cfb64_encrypt(const unsigned char *in, unsigned char *out,
-		       long length, DES_key_schedule *schedule,
+		       size_t length, DES_key_schedule *schedule,
 		       DES_cblock *ivec, int *num, int enc)
 	{
 	register DES_LONG v0,v1;

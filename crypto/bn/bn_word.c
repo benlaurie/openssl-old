@@ -108,7 +108,7 @@ BN_ULONG BN_div_word(BIGNUM *a, BN_ULONG w)
 int BN_add_word(BIGNUM *a, BN_ULONG w)
 	{
 	BN_ULONG l;
-	int i;
+	unsigned int i;
 
 	if (a->neg)
 		{
@@ -138,7 +138,7 @@ int BN_add_word(BIGNUM *a, BN_ULONG w)
 
 int BN_sub_word(BIGNUM *a, BN_ULONG w)
 	{
-	int i;
+	size_t i;
 
 	if (BN_is_zero(a) || a->neg)
 		{

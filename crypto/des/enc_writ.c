@@ -77,7 +77,7 @@
  *  -  This code cannot handle non-blocking sockets.
  */
 
-int DES_enc_write(int fd, const void *_buf, int len,
+int DES_enc_write(int fd, const void *_buf, size_t len,
 		  DES_key_schedule *sched, DES_cblock *iv)
 	{
 #ifdef _LIBC
@@ -86,7 +86,9 @@ int DES_enc_write(int fd, const void *_buf, int len,
 #endif
 	const unsigned char *buf=_buf;
 	long rnum;
-	int i,j,k,outnum;
+	size_t i,j;
+	int k;
+	size_t outnum;
 	static unsigned char *outbuf=NULL;
 	unsigned char shortbuf[8];
 	unsigned char *p;
@@ -149,16 +151,16 @@ int DES_enc_write(int fd, const void *_buf, int len,
 	/* output */
 	outnum=rnum+HDRSIZE;
 
-	for (j=0; j<outnum; j+=i)
+	for (j=0; j<outnum; j+=k)
 		{
 		/* eay 26/08/92 I was not doing writing from where we
 		 * got up to. */
-		i=write(fd,(void *)&(outbuf[j]),outnum-j);
-		if (i == -1)
+		k=write(fd,(void *)&(outbuf[j]),outnum-j);
+		if (k == -1)
 			{
 #ifdef EINTR
 			if (errno == EINTR)
-				i=0;
+				k=0;
 			else
 #endif
 			        /* This is really a bad error - very bad

@@ -122,14 +122,14 @@
 #include "bn_prime.h"
 
 static int witness(BIGNUM *w, const BIGNUM *a, const BIGNUM *a1,
-	const BIGNUM *a1_odd, int k, BN_CTX *ctx, BN_MONT_CTX *mont);
-static int probable_prime(BIGNUM *rnd, int bits);
-static int probable_prime_dh(BIGNUM *rnd, int bits,
+	const BIGNUM *a1_odd, size_t k, BN_CTX *ctx, BN_MONT_CTX *mont);
+static int probable_prime(BIGNUM *rnd, size_t bits);
+static int probable_prime_dh(BIGNUM *rnd, size_t bits,
 	const BIGNUM *add, const BIGNUM *rem, BN_CTX *ctx);
-static int probable_prime_dh_safe(BIGNUM *rnd, int bits,
+static int probable_prime_dh_safe(BIGNUM *rnd, size_t bits,
 	const BIGNUM *add, const BIGNUM *rem, BN_CTX *ctx);
 
-BIGNUM *BN_generate_prime(BIGNUM *ret, int bits, int safe,
+BIGNUM *BN_generate_prime(BIGNUM *ret, size_t bits, int safe,
 	const BIGNUM *add, const BIGNUM *rem,
 	void (*callback)(int,int,void *), void *cb_arg)
 	{
@@ -220,7 +220,7 @@ int BN_is_prime_fasttest(const BIGNUM *a, int checks,
 		int do_trial_division)
 	{
 	int i, j, ret = -1;
-	int k;
+	unsigned int k;
 	BN_CTX *ctx = NULL;
 	BIGNUM *A1, *A1_odd, *check; /* taken from ctx */
 	BN_MONT_CTX *mont = NULL;
@@ -323,7 +323,7 @@ err:
 	}
 
 static int witness(BIGNUM *w, const BIGNUM *a, const BIGNUM *a1,
-	const BIGNUM *a1_odd, int k, BN_CTX *ctx, BN_MONT_CTX *mont)
+	const BIGNUM *a1_odd, size_t k, BN_CTX *ctx, BN_MONT_CTX *mont)
 	{
 	if (!BN_mod_exp_mont(w, w, a1_odd, a, ctx, mont)) /* w := w^a1_odd mod a */
 		return -1;
@@ -346,7 +346,7 @@ static int witness(BIGNUM *w, const BIGNUM *a, const BIGNUM *a1,
 	return 1;
 	}
 
-static int probable_prime(BIGNUM *rnd, int bits)
+static int probable_prime(BIGNUM *rnd, size_t bits)
 	{
 	int i;
 	BN_ULONG mods[NUMPRIMES];
@@ -377,7 +377,7 @@ again:
 	return(1);
 	}
 
-static int probable_prime_dh(BIGNUM *rnd, int bits,
+static int probable_prime_dh(BIGNUM *rnd, size_t bits,
 	const BIGNUM *add, const BIGNUM *rem, BN_CTX *ctx)
 	{
 	int i,ret=0;
@@ -414,7 +414,7 @@ err:
 	return(ret);
 	}
 
-static int probable_prime_dh_safe(BIGNUM *p, int bits, const BIGNUM *padd,
+static int probable_prime_dh_safe(BIGNUM *p, size_t bits, const BIGNUM *padd,
 	const BIGNUM *rem, BN_CTX *ctx)
 	{
 	int i,ret=0;

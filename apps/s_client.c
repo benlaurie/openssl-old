@@ -140,7 +140,6 @@ typedef unsigned int u_int;
 #include <conio.h>
 #endif
 
-
 #ifdef OPENSSL_SYS_VMS
 #include "term_sock.h"
 #endif
@@ -257,9 +256,10 @@ int MAIN(int argc, char **argv)
 #endif
 #ifdef OPENSSL_SYS_VMS
         int stdin_sock;
+
         TerminalSocket (TERM_SOCK_CREATE, &stdin_sock);
 #endif
-
+     
 #if !defined(OPENSSL_NO_SSL2) && !defined(OPENSSL_NO_SSL3)
 	meth=SSLv23_client_method();
 #elif !defined(OPENSSL_NO_SSL3)
@@ -444,10 +444,10 @@ bad:
 	if (!app_RAND_load_file(NULL, bio_err, 1) && inrand == NULL
 		&& !RAND_status())
 		{
-		BIO_printf(bio_err,"warning, not much extra random data, consider using the -rand option\n\n");
+		BIO_printf(bio_err,"warning, not much extra random data, consider using the -rand option\n");
 		}
 	if (inrand != NULL)
-		BIO_printf(bio_err,"%ld semi-random bytes loaded\n\n",
+		BIO_printf(bio_err,"%ld semi-random bytes loaded\n",
 			app_RAND_load_files(inrand));
 
 	if (bio_c_out == NULL)
@@ -524,7 +524,7 @@ re_start:
 		SHUTDOWN(s);
 		goto end;
 		}
-	BIO_printf(bio_c_out,"CONNECTED(%08X)\n\n",s);
+	BIO_printf(bio_c_out,"CONNECTED(%08X)\n",s);
 
 #ifdef FIONBIO
 	if (c_nbio)
@@ -822,7 +822,7 @@ printf("read=%d pending=%d peek=%d\n",k,SSL_pending(con),SSL_peek(con,zbuf,10240
 				read_tty=0;
 				break;
 			case SSL_ERROR_WANT_READ:
-				BIO_printf(bio_c_out,"read R BLOCK\n\n");
+				BIO_printf(bio_c_out,"read R BLOCK\n");
 				write_tty=0;
 				read_ssl=1;
 				if ((read_tty == 0) && (write_ssl == 0))
@@ -929,10 +929,10 @@ end:
 		BIO_free(bio_c_out);
 		bio_c_out=NULL;
 		}
-	apps_shutdown();
 #ifdef OPENSSL_SYS_VMS
         TerminalSocket (TERM_SOCK_DELETE, &stdin_sock);
 #endif
+	apps_shutdown();
 	EXIT(ret);
 	}
 
@@ -966,7 +966,7 @@ static void print_stuff(BIO *bio, SSL *s, int full)
 				BIO_printf(bio,"%2d s:%s\n",i,buf);
 				X509_NAME_oneline(X509_get_issuer_name(
 					sk_X509_value(sk,i)),buf,BUFSIZ);
-				BIO_printf(bio,"   i:%s\n\n",buf);
+				BIO_printf(bio,"   i:%s\n",buf);
 				if (c_showcerts)
 					PEM_write_bio_X509(bio,sk_X509_value(sk,i));
 				}
@@ -1040,7 +1040,7 @@ static void print_stuff(BIO *bio, SSL *s, int full)
 		}
 	BIO_printf(bio,((s->hit)?"---\nReused, ":"---\nNew, "));
 	c=SSL_get_current_cipher(s);
-	BIO_printf(bio,"%s, Cipher is %s\n\n",
+	BIO_printf(bio,"%s, Cipher is %s\n",
 		SSL_CIPHER_get_version(c),
 		SSL_CIPHER_get_name(c));
 	if (peer != NULL) {
@@ -1051,7 +1051,7 @@ static void print_stuff(BIO *bio, SSL *s, int full)
 		EVP_PKEY_free(pktmp);
 	}
 	SSL_SESSION_print(bio,SSL_get_session(s));
-	BIO_printf(bio,"---\n\n");
+	BIO_printf(bio,"---\n");
 	if (peer != NULL)
 		X509_free(peer);
 	/* flush, or debugging output gets mixed with http response */

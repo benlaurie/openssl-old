@@ -1,4 +1,6 @@
-#ifdef VMS
+#include <openssl/e_os2.h>
+
+#ifdef OPENSSL_SYS_VMS
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -274,8 +276,8 @@ unsigned long BinTimeBuff[2];
 struct sockaddr_in sin;
 char AscTimeBuff[32];
 short LocalHostPort;
-unsigned int status,
-	     slen;
+int status;
+unsigned int slen;
 
 #ifdef __alpha
 struct _iosb iosb;

@@ -831,7 +831,7 @@ bad:
 			goto end;
 			}
 		RSA_free(rsa);
-		BIO_printf(bio_s_out,"\n\n");
+		BIO_printf(bio_s_out,"\n");
 		}
 #endif
 #endif
@@ -887,7 +887,7 @@ static void print_stats(BIO *bio, SSL_CTX *ssl_ctx)
 	BIO_printf(bio,"%4d session cache misses\n",SSL_CTX_sess_misses(ssl_ctx));
 	BIO_printf(bio,"%4d session cache timeouts\n",SSL_CTX_sess_timeouts(ssl_ctx));
 	BIO_printf(bio,"%4d callback cache hits\n",SSL_CTX_sess_cb_hits(ssl_ctx));
-	BIO_printf(bio,"%4d cache full overflows (%d allowed)\n\n",
+	BIO_printf(bio,"%4d cache full overflows (%d allowed)\n",
 		SSL_CTX_sess_cache_full(ssl_ctx),
 		SSL_CTX_sess_get_cache_size(ssl_ctx));
 	}
@@ -1126,7 +1126,7 @@ static int sv_body(char *hostname, int s, unsigned char *context)
 				case SSL_ERROR_WANT_WRITE:
 				case SSL_ERROR_WANT_READ:
 				case SSL_ERROR_WANT_X509_LOOKUP:
-					BIO_printf(bio_s_out,"Write BLOCK\n\n");
+					BIO_printf(bio_s_out,"Write BLOCK\n");
 					break;
 				case SSL_ERROR_SYSCALL:
 				case SSL_ERROR_SSL:
@@ -1136,7 +1136,7 @@ static int sv_body(char *hostname, int s, unsigned char *context)
 					goto err;
 					/* break; */
 				case SSL_ERROR_ZERO_RETURN:
-					BIO_printf(bio_s_out,"DONE\n\n");
+					BIO_printf(bio_s_out,"DONE\n");
 					ret=1;
 					goto err;
 					}
@@ -1174,13 +1174,12 @@ again:
 #endif
 					write(fileno(stdout),buf,
 						(unsigned int)i);
-					BIO_printf(bio_s_out,"\n");
 					if (SSL_pending(con)) goto again;
 					break;
 				case SSL_ERROR_WANT_WRITE:
 				case SSL_ERROR_WANT_READ:
 				case SSL_ERROR_WANT_X509_LOOKUP:
-					BIO_printf(bio_s_out,"Read BLOCK\n\n");
+					BIO_printf(bio_s_out,"Read BLOCK\n");
 					break;
 				case SSL_ERROR_SYSCALL:
 				case SSL_ERROR_SSL:
@@ -1272,7 +1271,7 @@ static int init_ssl_connection(SSL *con)
 	if (SSL_get_shared_ciphers(con,buf,BUFSIZ) != NULL)
 		BIO_printf(bio_s_out,"Shared ciphers:%s\n",buf);
 	str=SSL_CIPHER_get_name(SSL_get_current_cipher(con));
-	BIO_printf(bio_s_out,"CIPHER is %s\n\n",(str != NULL)?str:"(NONE)");
+	BIO_printf(bio_s_out,"CIPHER is %s\n",(str != NULL)?str:"(NONE)");
 	if (con->hit) BIO_printf(bio_s_out,"Reused session-id\n");
 	if (SSL_ctrl(con,SSL_CTRL_GET_FLAGS,0,NULL) &
 		TLS1_FLAGS_TLS_PADDING_BUG)
@@ -1428,7 +1427,7 @@ static int www_body(char *hostname, int s, unsigned char *context)
 				}
 			else
 				{
-				BIO_printf(bio_s_out,"read R BLOCK\n\n");
+				BIO_printf(bio_s_out,"read R BLOCK\n");
 #ifndef OPENSSL_SYS_MSDOS
 				sleep(1);
 #endif
@@ -1654,7 +1653,7 @@ static int www_body(char *hostname, int s, unsigned char *context)
 							goto write_error;
 						else
 							{
-							BIO_printf(bio_s_out,"rwrite W BLOCK\n\n");
+							BIO_printf(bio_s_out,"rwrite W BLOCK\n");
 							}
 						}
 					else

@@ -1,6 +1,6 @@
 /* apps/ecparam.c */
 /*
- * Originally written by Nils Larsch for the OpenSSL project.
+ * Written by Nils Larsch for the OpenSSL project.
  */
 /* ====================================================================
  * Copyright (c) 1998-2002 The OpenSSL Project.  All rights reserved.
@@ -92,111 +92,36 @@
 #include <openssl/err.h>
 #include <openssl/bn.h>
 #include <openssl/ec.h>
-#ifndef OPENSSL_NO_ECDSA
-#include <openssl/ecdsa.h>
-#endif
 #include <openssl/x509.h>
 #include <openssl/pem.h>
 
 #undef PROG
 #define PROG	ecparam_main
 
-/* -inform arg            - input format - default PEM (DER or PEM)
- * -outform arg           - output format - default PEM
- * -in arg                - input file  - default stdin
- * -out arg               - output file - default stdout
- * -noout
- * -text
- * -check                 - validate the ec parameters
- * -C
- * -noout
- * -name file             - use the ecparameters with 'short name' name
- * -list_curves           - prints a list of all currently available curve
- *                          'short names' and exits
- * -conv_form                  - specifies the point conversion form 
- *                          possible values : compressed
- *                                            uncompressed (default)
- *                                            hybrid
- * -param_enc             - specifies the way the ec parameters are encoded
- *                          in the asn1 der encoding
- *                          possilbe values : named_curve (default)
- *                                            explicit
- * -no_seed               - if 'explicit' parameters are choosen do not
- *                          use the seed
- * -genkey                - generates a ecdsa private key
- * -rand file
- * -engine e              - use engine e, possible a hardware device
+/* -inform arg      - input format - default PEM (DER or PEM)
+ * -outform arg     - output format - default PEM
+ * -in  arg         - input file  - default stdin
+ * -out arg         - output file - default stdout
+ * -noout           - do not print the ec parameter
+ * -text            - print the ec parameters in text form
+ * -check           - validate the ec parameters
+ * -C               - print a 'C' function creating the parameters
+ * -name arg        - use the ec parameters with 'short name' name
+ * -list_curves     - prints a list of all currently available curve 'short names'
+ * -conv_form arg   - specifies the point conversion form 
+ *                  - possible values: compressed
+ *                                     uncompressed (default)
+ *                                     hybrid
+ * -param_enc arg   - specifies the way the ec parameters are encoded
+ *                    in the asn1 der encoding
+ *                    possible values: named_curve (default)
+ *                                     explicit
+ * -no_seed         - if 'explicit' parameters are choosen do not use the seed
+ * -genkey          - generate ec key
+ * -rand file       - files to use for random number input
+ * -engine e        - use engine e, possibly a hardware device
  */
 
-static const char *curve_list[67] = {
-	"prime192v1   - 192 bit prime curve from the X9.62 draft",
-	"prime192v2   - 192 bit prime curve from the X9.62 draft",
-	"prime192v3   - 192 bit prime curve from the X9.62 draft",
-	"prime239v1   - 239 bit prime curve from the X9.62 draft",
-	"prime239v2   - 239 bit prime curve from the X9.62 draft",
-	"prime239v3   - 239 bit prime curve from the X9.62 draft", 
-	"prime256v1   - 256 bit prime curve from the X9.62 draft", 
-	"secp112r1    - SECG recommended curve over a 112 bit prime field", 
-	"secp112r2    - SECG recommended curve over a 112 bit prime field", 
-	"secp128r1    - SECG recommended curve over a 128 bit prime field",
-	"secp128r2    - SECG recommended curve over a 128 bit prime field", 
-	"secp160k1    - SECG recommended curve over a 160 bit prime field", 
-	"secp160r1    - SECG recommended curve over a 160 bit prime field", 
-	"secp160r2    - SECG recommended curve over a 160 bit prime field", 
-	"secp192k1    - SECG recommended curve over a 192 bit prime field",
-	"prime192v1   - SECG recommended curve over a 192 bit prime field (aka secp192r1)",
-	"secp224k1    - SECG recommended curve over a 224 bit prime field", 
-	"secp224r1    - SECG/NIST recommended curve over a 224 bit prime field", 
-	"secp256k1    - SECG recommended curve over a 256 bit prime field",
-	"prime256v1   - SECG recommended curve over a 256 bit prime field (aka secp256r1)",
-	"secp384r1    - SECG/NIST recommended curve over a 384 bit prime field", 
-	"secp521r1    - SECG/NIST recommended curve over a 521 bit prime field",
-	"wap-wsg-idm-ecid-wtls6  - 112 bit prime curve from the WTLS standard",
-	"wap-wsg-idm-ecid-wtls8  - 112 bit prime curve from the WTLS standard",
-	"wap-wsg-idm-ecid-wtls7  - 160 bit prime curve from the WTLS standard",
-	"wap-wsg-idm-ecid-wtls9  - 160 bit prime curve from the WTLS standard",
-	"wap-wsg-idm-ecid-wtls12 - 224 bit prime curve from the WTLS standard",
-	"c2pnb163v1   - 163 bit binary curve from the X9.62 draft",
-	"c2pnb163v2   - 163 bit binary curve from the X9.62 draft",
-	"c2pnb163v3   - 163 bit binary curve from the X9.62 draft",
-	"c2pnb176v1   - 176 bit binary curve from the X9.62 draft",
-	"c2tnb191v1   - 191 bit binary curve from the X9.62 draft",
-	"c2tnb191v2   - 191 bit binary curve from the X9.62 draft",
-	"c2tnb191v3   - 191 bit binary curve from the X9.62 draft",
-	"c2pnb208w1   - 208 bit binary curve from the X9.62 draft",
-	"c2tnb239v1   - 239 bit binary curve from the X9.62 draft",
-	"c2tnb239v2   - 239 bit binary curve from the X9.62 draft",
-	"c2tnb239v3   - 239 bit binary curve from the X9.62 draft",
-	"c2pnb272w1   - 272 bit binary curve from the X9.62 draft",
-	"c2pnb304w1   - 304 bit binary curve from the X9.62 draft",
-	"c2tnb359v1   - 359 bit binary curve from the X9.62 draft",
-	"c2pnb368w1   - 368 bit binary curve from the X9.62 draft",
-	"c2tnb431r1   - 431 bit binary curve from the X9.62 draft",
-	"sect113r1    - SECG recommended curve over a 113 bit binary field",
-	"sect113r2    - SECG recommended curve over a 113 bit binary field",
-	"sect131r1    - SECG recommended curve over a 131 bit binary field",
-	"sect131r2    - SECG recommended curve over a 131 bit binary field",
-	"sect163k1    - SECG/NIST recommended curve over a 163 bit binary field",
-	"sect163r1    - SECG recommended curve over a 163 bit binary field",
-	"sect163r2    - SECG/NIST recommended curve over a 163 bit binary field",
-	"sect193r1    - SECG recommended curve over a 193 bit binary field",
-	"sect193r2    - SECG recommended curve over a 193 bit binary field",
-	"sect233k1    - SECG/NIST recommended curve over a 233 bit binary field",
-	"sect233r1    - SECG/NIST recommended curve over a 233 bit binary field",
-	"sect239k1    - SECG recommended curve over a 239 bit binary field",
-	"sect283k1    - SECG/NIST recommended curve over a 283 bit binary field",
-	"sect283r1    - SECG/NIST recommended curve over a 283 bit binary field",
-	"sect409k1    - SECG/NIST recommended curve over a 409 bit binary field",
-	"sect409r1    - SECG/NIST recommended curve over a 409 bit binary field",
-	"sect571k1    - SECG/NIST recommended curve over a 571 bit binary field",
-	"sect571r1    - SECG/NIST recommended curve over a 571 bit binary field",
-	"wap-wsg-idm-ecid-wtls1  - 113 bit binary curve from the WTLS standard",
-	"wap-wsg-idm-ecid-wtls4  - 113 bit binary curve from the WTLS standard",
-	"wap-wsg-idm-ecid-wtls3  - 163 bit binary curve from the WTLS standard",
-	"wap-wsg-idm-ecid-wtls5  - 163 bit binary curve from the WTLS standard",
-	"wap-wsg-idm-ecid-wtls10 - 233 bit binary curve from the WTLS standard",
-	"wap-wsg-idm-ecid-wtls11 - 233 bit binary curve from the WTLS standard"
-};
 
 static int ecparam_print_var(BIO *,BIGNUM *,const char *,int,unsigned char *);
 
@@ -336,52 +261,51 @@ int MAIN(int argc, char **argv)
 bad:
 		BIO_printf(bio_err, "%s [options] <infile >outfile\n",prog);
 		BIO_printf(bio_err, "where options are\n");
-		BIO_printf(bio_err, " -inform arg             input format - "
+		BIO_printf(bio_err, " -inform arg       input format - "
 				"default PEM (DER or PEM)\n");
-		BIO_printf(bio_err, " -outform arg            output format - "
+		BIO_printf(bio_err, " -outform arg      output format - "
 				"default PEM\n");
-		BIO_printf(bio_err, " -in  arg                input file  - "
+		BIO_printf(bio_err, " -in  arg          input file  - "
 				"default stdin\n");
-		BIO_printf(bio_err, " -out arg                output file - "
+		BIO_printf(bio_err, " -out arg          output file - "
 				"default stdout\n");
-		BIO_printf(bio_err, " -noout                  do not print the "
+		BIO_printf(bio_err, " -noout            do not print the "
 				"ec parameter\n");
-		BIO_printf(bio_err, " -text                   print the ec "
+		BIO_printf(bio_err, " -text             print the ec "
 				"parameters in text form\n");
-		BIO_printf(bio_err, " -check                  validate the ec "
+		BIO_printf(bio_err, " -check            validate the ec "
 				"parameters\n");
-		BIO_printf(bio_err, " -C                      print a 'C' "
+		BIO_printf(bio_err, " -C                print a 'C' "
 				"function creating the parameters\n");
-		BIO_printf(bio_err, " -name arg               use the "
+		BIO_printf(bio_err, " -name arg         use the "
 				"ec parameters with 'short name' name\n");
-		BIO_printf(bio_err, " -list_curves            prints a list of "
-				"all currently available curve\n");
-		BIO_printf(bio_err, "                         'short names'\n");
-		BIO_printf(bio_err, " -conv_form arg          specifies the "
+		BIO_printf(bio_err, " -list_curves      prints a list of "
+				"all currently available curve 'short names'\n");
+		BIO_printf(bio_err, " -conv_form arg    specifies the "
 				"point conversion form \n");
-		BIO_printf(bio_err, "                         possible values :"
+		BIO_printf(bio_err, "                   possible values:"
 				" compressed\n");
-		BIO_printf(bio_err, "                                          "
+		BIO_printf(bio_err, "                                   "
 				" uncompressed (default)\n");
-		BIO_printf(bio_err, "                                          "
+		BIO_printf(bio_err, "                                   "
 				" hybrid\n");
-		BIO_printf(bio_err, " -param_enc arg          specifies the way"
+		BIO_printf(bio_err, " -param_enc arg    specifies the way"
 				" the ec parameters are encoded\n");
-		BIO_printf(bio_err, "                         in the asn1 der "
+		BIO_printf(bio_err, "                   in the asn1 der "
 				"encoding\n");
-		BIO_printf(bio_err, "                         possilbe values :"
+		BIO_printf(bio_err, "                   possible values:"
 				" named_curve (default)\n");
-		BIO_printf(bio_err,"                                      "
-				"     explicit\n");
-		BIO_printf(bio_err, " -no_seed                if 'explicit'"
-				" parameters are choosen do not\n");
-		BIO_printf(bio_err, "                         use the seed\n");
-		BIO_printf(bio_err, " -genkey                 generate ecdsa"
+		BIO_printf(bio_err, "                                   "
+				" explicit\n");
+		BIO_printf(bio_err, " -no_seed          if 'explicit'"
+				" parameters are choosen do not"
+				" use the seed\n");
+		BIO_printf(bio_err, " -genkey           generate ec"
 				" key\n");
-		BIO_printf(bio_err, " -rand file              files to use for"
+		BIO_printf(bio_err, " -rand file        files to use for"
 				" random number input\n");
-		BIO_printf(bio_err, " -engine e               use engine e, "
-				"possible a hardware device\n");
+		BIO_printf(bio_err, " -engine e         use engine e, "
+				"possibly a hardware device\n");
 		goto end;
 		}
 
@@ -428,12 +352,44 @@ bad:
 
 	if (list_curves)
 		{
-		int counter=0;
+		EC_builtin_curve *curves = NULL;
+		size_t crv_len = 0;
+		size_t n = 0;
+		size_t len;
 
-		for (; counter < sizeof(curve_list)/sizeof(char *); counter++)
-			if (BIO_printf(bio_err, " %s\n", curve_list[counter]) 
-				<= 0) 
-				goto end;
+		crv_len = EC_get_builtin_curves(NULL, 0);
+
+		curves = OPENSSL_malloc(sizeof(EC_builtin_curve) * crv_len);
+
+		if (curves == NULL)
+			goto end;
+
+		if (!EC_get_builtin_curves(curves, crv_len))
+			{
+			OPENSSL_free(curves);
+			goto end;
+			}
+
+		
+		for (n = 0; n < crv_len; n++)
+			{
+			const char *comment;
+			const char *sname;
+			comment = curves[n].comment;
+			sname   = OBJ_nid2sn(curves[n].nid);
+			if (comment == NULL)
+				comment = "CURVE DESCRIPTION NOT AVAILABLE";
+			if (sname == NULL)
+				sname = "";
+
+			len = BIO_printf(out, "  %-10s: ", sname);
+			if (len + strlen(comment) > 80)
+				BIO_printf(out, "\n%80s\n", comment);
+			else
+				BIO_printf(out, "%s\n", comment);
+			} 
+
+		OPENSSL_free(curves);
 		ret = 0;
 		goto end;
 		}

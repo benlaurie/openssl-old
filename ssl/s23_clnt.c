@@ -87,11 +87,18 @@ SSL_METHOD *SSLv23_client_method(void)
 
 	if (init)
 		{
-		memcpy((char *)&SSLv23_client_data,
-			(char *)sslv23_base_method(),sizeof(SSL_METHOD));
-		SSLv23_client_data.ssl_connect=ssl23_connect;
-		SSLv23_client_data.get_ssl_method=ssl23_get_client_method;
-		init=0;
+		CRYPTO_w_lock(CRYPTO_LOCK_SSL_METHOD);
+
+		if (init)
+			{
+			memcpy((char *)&SSLv23_client_data,
+				(char *)sslv23_base_method(),sizeof(SSL_METHOD));
+			SSLv23_client_data.ssl_connect=ssl23_connect;
+			SSLv23_client_data.get_ssl_method=ssl23_get_client_method;
+			init=0;
+			}
+
+		CRYPTO_w_unlock(CRYPTO_LOCK_SSL_METHOD);
 		}
 	return(&SSLv23_client_data);
 	}

@@ -152,10 +152,10 @@ int MAIN(int argc, char **argv)
 #ifndef OPENSSL_NO_DSA
 	DSA *dsa_params=NULL;
 #endif
-#ifndef OPENSSL_NO_EC
+#ifndef OPENSSL_NO_ECDSA
 	EC_KEY *ec_params = NULL;
 #endif
-	unsigned long nmflag = 0;
+	unsigned long nmflag = 0, reqflag = 0;
 	int ex=1,x509=0,days=30;
 	X509 *x509ss=NULL;
 	X509_REQ *req=NULL;
@@ -327,14 +327,14 @@ int MAIN(int argc, char **argv)
 				}
 			else 
 #endif
-#ifndef OPENSSL_NO_EC
-				if (strncmp("ecdsa:",p,4) == 0)
+#ifndef OPENSSL_NO_ECDSA
+				if (strncmp("ec:",p,3) == 0)
 				{
 				X509 *xtmp=NULL;
 				EVP_PKEY *dtmp;
 
 				pkey_type=TYPE_EC;
-				p+=6;
+				p+=3;
 				if ((in=BIO_new_file(p,"r")) == NULL)
 					{
 					perror(p);
@@ -354,7 +354,8 @@ int MAIN(int argc, char **argv)
 						goto end;
 						}
 
-					if ((dtmp=X509_get_pubkey(xtmp)) == NULL) goto end;
+					if ((dtmp=X509_get_pubkey(xtmp))==NULL)
+						goto end;
 					if (dtmp->type == EVP_PKEY_EC)
 						ec_params = ECParameters_dup(dtmp->pkey.eckey);
 					EVP_PKEY_free(dtmp);
@@ -382,7 +383,9 @@ int MAIN(int argc, char **argv)
 				}
 			else
 #endif
-				pkey_type=TYPE_RSA;
+				{
+				goto bad;
+				}
 
 			newreq=1;
 			}
@@ -406,6 +409,11 @@ int MAIN(int argc, char **argv)
 			{
 			if (--argc < 1) goto bad;
 			if (!set_name_ex(&nmflag, *(++argv))) goto bad;
+			}
+		else if (strcmp(*argv,"-reqopt") == 0)
+			{
+			if (--argc < 1) goto bad;
+			if (!set_cert_ex(&reqflag, *(++argv))) goto bad;
 			}
 		else if (strcmp(*argv,"-subject") == 0)
 			subject=1;
@@ -485,7 +493,9 @@ bad:
 		BIO_printf(bio_err,"                the random number generator\n");
 		BIO_printf(bio_err," -newkey rsa:bits generate a new RSA key of 'bits' in size\n");
 		BIO_printf(bio_err," -newkey dsa:file generate a new DSA key, parameters taken from CA in 'file'\n");
-		BIO_printf(bio_err," -newkey ecdsa:file generate a new ECDSA key, parameters taken from CA in 'file'\n");
+#ifndef OPENSSL_NO_ECDSA
+		BIO_printf(bio_err," -newkey ec:file generate a new EC key, parameters taken from CA in 'file'\n");
+#endif
 		BIO_printf(bio_err," -[digest]      Digest to sign with (md5, sha1, md2, mdc2, md4)\n");
 		BIO_printf(bio_err," -config file   request template file.\n");
 		BIO_printf(bio_err," -subj arg      set or modify request subject\n");
@@ -500,7 +510,8 @@ bad:
 		BIO_printf(bio_err," -extensions .. specify certificate extension section (override value in config file)\n");
 		BIO_printf(bio_err," -reqexts ..    specify request extension section (override value in config file)\n");
 		BIO_printf(bio_err," -utf8          input characters are UTF8 (default ASCII)\n");
-		BIO_printf(bio_err," -nameopt arg    - various certificate name options\n");
+		BIO_printf(bio_err," -nameopt arg   - various certificate name options\n");
+		BIO_printf(bio_err," -reqopt arg    - various request text options\n\n");
 		goto end;
 		}
 
@@ -708,14 +719,14 @@ bad:
 			}
 
 		if (newkey < MIN_KEY_LENGTH && (pkey_type == TYPE_RSA || pkey_type == TYPE_DSA))
-		/* TODO: appropriate minimal keylength for the different algorithm (esp. ECDSA) */
 			{
 			BIO_printf(bio_err,"private key length is too short,\n");
 			BIO_printf(bio_err,"it needs to be at least %d bits, not %d\n",MIN_KEY_LENGTH,newkey);
 			goto end;
 			}
 		BIO_printf(bio_err,"Generating a %d bit %s private key\n",
-			newkey,(pkey_type == TYPE_RSA)?"RSA":(pkey_type == TYPE_DSA)?"DSA":"ECDSA");
+			newkey,(pkey_type == TYPE_RSA)?"RSA":
+			(pkey_type == TYPE_DSA)?"DSA":"EC");
 
 		if ((pkey=EVP_PKEY_new()) == NULL) goto end;
 
@@ -737,7 +748,7 @@ bad:
 			dsa_params=NULL;
 			}
 #endif
-#ifndef OPENSSL_NO_EC
+#ifndef OPENSSL_NO_ECDSA
 			if (pkey_type == TYPE_EC)
 			{
 			if (!EC_KEY_generate_key(ec_params)) goto end;
@@ -1048,9 +1059,9 @@ loop:
 	if (text)
 		{
 		if (x509)
-			X509_print(out,x509ss);
+			X509_print_ex(out, x509ss, nmflag, reqflag);
 		else	
-			X509_REQ_print(out,req);
+			X509_REQ_print_ex(out, req, nmflag, reqflag);
 		}
 
 	if(subject) 
@@ -1137,7 +1148,7 @@ end:
 #ifndef OPENSSL_NO_DSA
 	if (dsa_params != NULL) DSA_free(dsa_params);
 #endif
-#ifndef OPENSSL_NO_EC
+#ifndef OPENSSL_NO_ECDSA
 	if (ec_params != NULL) EC_KEY_free(ec_params);
 #endif
 	apps_shutdown();

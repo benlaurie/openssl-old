@@ -715,7 +715,7 @@ static int cca_rsa_verify(int type, const unsigned char *m, unsigned int m_len,
 
 	if (type == NID_sha1 || type == NID_md5)
 		{
-		memset(hashBuffer, keyLength+1, 0);
+		memset(hashBuffer, 0, keyLength+1);
 		OPENSSL_free(hashBuffer);
 		}
 
@@ -838,7 +838,7 @@ static int cca_rsa_sign(int type, const unsigned char *m, unsigned int m_len,
 
 	if (type == NID_sha1 || type == NID_md5)
 		{
-		memset(hashBuffer, keyLength+1, 0);
+		memset(hashBuffer, 0, keyLength+1);
 		OPENSSL_free(hashBuffer);
 		}
 
@@ -953,7 +953,7 @@ static void cca_ex_free(void *obj, void *item, CRYPTO_EX_DATA *ad, int idx,
 #ifdef ENGINE_DYNAMIC_SUPPORT 
 static int bind_fn(ENGINE *e, const char *id)
 	{
-	if(id && (strcmp(id, engine_cswift_id) != 0))
+	if(id && (strcmp(id, engine_4758_cca_id) != 0))
 		return 0;
 	if(!bind_helper(e))
 		return 0;

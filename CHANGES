@@ -4,6 +4,10 @@
 
  Changes between 0.9.7 and 0.9.8  [xx XXX 2002]
 
+  *) Let 'openssl req' fail if an argument to '-newkey' is not
+     recognized instead of using RSA as a default.
+     [Bodo Moeller]
+
   *) Add support for ECC-based ciphersuites from draft-ietf-tls-ecc-01.txt.
      As these are not official, they are not included in "ALL";
      the "ECCdraft" ciphersuite group alias can be used to select them.
@@ -232,10 +236,11 @@ TODO: bug: pad  x  with leading zeros if necessary
      [Nils Larsch <nla@trustcenter.de>]
 
   *) Include some named elliptic curves, and add OIDs from X9.62,
-     SECG, and WAP/WTLS.  The curves can be obtained from the new
-     functions
-          EC_GROUP_new_by_nid()
-          EC_GROUP_new_by_name()
+     SECG, and WAP/WTLS.  Each curve can be obtained from the new
+     function
+          EC_GROUP_new_by_nid(),
+     and the list of available named curves can be obtained with
+          EC_get_builtin_curves().
      Also add a 'curve_name' member to EC_GROUP objects, which can be
      accessed via
          EC_GROUP_set_nid()
@@ -243,6 +248,15 @@ TODO: bug: pad  x  with leading zeros if necessary
      [Nils Larsch <nla@trustcenter.de, Bodo Moeller]
  
  Changes between 0.9.6g and 0.9.7  [XX xxx 2002]
+
+  *) Make -nameopt work fully for req and add -reqopt switch.
+     [Michael Bell <michael.bell@rz.hu-berlin.de>, Steve Henson]
+
+  *) The "block size" for block ciphers in CFB and OFB mode should be 1.
+     [Steve Henson, reported by Yngve Nysaeter Pettersen <yngve@opera.com>]
+
+  *) The "block size" for block ciphers in CFB and OFB mode should be 1.
+     [Steve Henson]
 
   *) Make sure tests can be performed even if the corresponding algorithms
      have been removed entirely.  This was also the last step to make
@@ -1908,6 +1922,25 @@ des-cbc           3624.96k     5258.21k     5530.91k     5624.30k     5628.26k
      [Richard Levitte]
 
  Changes between 0.9.6g and 0.9.6h  [xx XXX xxxx]
+
+  *) Don't impose a 16-byte length minimum on session IDs in ssl/s3_clnt.c
+     (the SSL 3.0 and TLS 1.0 specifications allow any length up to 32 bytes).
+     [Bodo Moeller]
+
+  *) Fix initialization code race conditions in
+        SSLv23_method(),  SSLv23_client_method(),   SSLv23_server_method(),
+        SSLv2_method(),   SSLv2_client_method(),    SSLv2_server_method(),
+        SSLv3_method(),   SSLv3_client_method(),    SSLv3_server_method(),
+        TLSv1_method(),   TLSv1_client_method(),    TLSv1_server_method(),
+        ssl2_get_cipher_by_char(),
+        ssl3_get_cipher_by_char().
+     [Patrick McCormick <patrick@tellme.com>, Bodo Moeller]
+
+  *) Reorder cleanup sequence in SSL_CTX_free(): only remove the ex_data after
+     the cached sessions are flushed, as the remove_cb() might use ex_data
+     contents. Bug found by Sam Varshavchik <mrsam@courier-mta.com>
+     (see [openssl.org #212]).
+     [Geoff Thorpe, Lutz Jaenicke]
 
   *) Fix typo in OBJ_txt2obj which incorrectly passed the content
      length, instead of the encoding length to d2i_ASN1_OBJECT.

@@ -88,6 +88,6 @@ unsigned char *MD2(const unsigned char *d, size_t n, unsigned char *md)
 	}
 #endif
 	MD2_Final(md,&c);
-	memset(&c,0,sizeof(c));	/* Security consideration */
+	OPENSSL_cleanse(&c,sizeof(c));	/* Security consideration */
 	return(md);
 	}

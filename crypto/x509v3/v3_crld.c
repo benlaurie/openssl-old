@@ -105,7 +105,7 @@ static STACK_OF(DIST_POINT) *v2i_crld(X509V3_EXT_METHOD *method,
 				X509V3_CTX *ctx, STACK_OF(CONF_VALUE) *nval)
 {
 	STACK_OF(DIST_POINT) *crld = NULL;
-	STACK_OF(GENERAL_NAME) *gens = NULL;
+	GENERAL_NAMES *gens = NULL;
 	GENERAL_NAME *gen = NULL;
 	CONF_VALUE *cnf;
 	int i;

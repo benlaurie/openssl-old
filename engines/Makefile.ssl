@@ -17,6 +17,9 @@ MAKEDEPEND=	$(TOP)/util/domd $(TOP) -MD $(MAKEDEPPROG)
 MAKEFILE=	Makefile.ssl
 AR=		ar r
 
+PEX_LIBS=
+EX_LIBS=
+ 
 CFLAGS= $(INCLUDES) $(CFLAG)
 
 GENERAL=Makefile engines.com install.com
@@ -68,7 +71,7 @@ libs:	$(LIBOBJ)
 		for l in $(LIBNAMES); do \
 			$(NEWMAKE) -f ../Makefile.shared \
 				CC="$(CC)" LIBNAME=$$l LIBEXTRAS=e_$$l.o \
-				LIBDEPS='-L.. -lcrypto' \
+				LIBDEPS='-L.. -lcrypto $(EX_LIBS)' \
 				link_o.$(SHLIB_TARGET); \
 		done; \
 	else \
@@ -89,10 +92,10 @@ install:
 	@if [ -n "$(SHARED_LIBS)" ]; then \
 		set -e; \
 		for l in $(LIBNAMES); do \
-			( echo installing $$i; \
-			  cp lib$$i.so $(INSTALL_PREFIX)$(OPENSSLDIR)/engines/lib$$i.so.new; \
-			  chmod 555 $(INSTALL_PREFIX)$(OPENSSLDIR)/engines/lib$$i.so.new; \
-			  mv $(INSTALL_PREFIX)$(OPENSSLDIR)/engines/lib$$i.so.new $(INSTALL_PREFIX)$(OPENSSLDIR)/engines/lib$$i.so ); \
+			( echo installing $$l; \
+			  cp lib$$l.so $(INSTALL_PREFIX)$(OPENSSLDIR)/engines/lib$$l.so.new; \
+			  chmod 555 $(INSTALL_PREFIX)$(OPENSSLDIR)/engines/lib$$l.so.new; \
+			  mv $(INSTALL_PREFIX)$(OPENSSLDIR)/engines/lib$$l.so.new $(INSTALL_PREFIX)$(OPENSSLDIR)/engines/lib$$l.so ); \
 		done; \
 	fi
 

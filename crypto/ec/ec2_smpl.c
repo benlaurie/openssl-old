@@ -9,19 +9,6 @@
  * The ECC Code is licensed pursuant to the OpenSSL open source
  * license provided below.
  *
- * In addition, Sun covenants to all licensees who provide a reciprocal
- * covenant with respect to their own patents if any, not to sue under
- * current and future patent claims necessarily infringed by the making,
- * using, practicing, selling, offering for sale and/or otherwise
- * disposing of the ECC Code as delivered hereunder (or portions thereof),
- * provided that such covenant shall not apply:
- *  1) for code that a licensee deletes from the ECC Code;
- *  2) separates from the ECC Code; or
- *  3) for infringements caused by:
- *       i) the modification of the ECC Code or
- *      ii) the combination of the ECC Code with other software or
- *          devices where such combination causes the infringement.
- *
  * The software is originally written by Sheueling Chang Shantz and
  * Douglas Stebila of Sun Microsystems Laboratories.
  *
@@ -234,16 +221,14 @@ int ec_GF2m_simple_group_get_curve(const EC_GROUP *group, BIGNUM *p, BIGNUM *a, 
 		if (!BN_copy(p, &group->field)) return 0;
 		}
 
-	if (a != NULL || b != NULL)
+	if (a != NULL)
 		{
-		if (a != NULL)
-			{
-			if (!BN_copy(a, &group->a)) goto err;
-			}
-		if (b != NULL)
-			{
-			if (!BN_copy(b, &group->b)) goto err;
-			}
+		if (!BN_copy(a, &group->a)) goto err;
+		}
+
+	if (b != NULL)
+		{
+		if (!BN_copy(b, &group->b)) goto err;
 		}
 	
 	ret = 1;
@@ -364,11 +349,11 @@ int ec_GF2m_simple_point_set_affine_coordinates(const EC_GROUP *group, EC_POINT 
 		}
 
 	if (!BN_copy(&point->X, x)) goto err;
-	point->X.neg = 0;
+	BN_set_sign(&point->X, 0);
 	if (!BN_copy(&point->Y, y)) goto err;
-	point->Y.neg = 0;
+	BN_set_sign(&point->Y, 0);
 	if (!BN_copy(&point->Z, BN_value_one())) goto err;
-	point->Z.neg = 0;
+	BN_set_sign(&point->Z, 0);
 	point->Z_is_one = 1;
 	ret = 1;
 
@@ -399,12 +384,12 @@ int ec_GF2m_simple_point_get_affine_coordinates(const EC_GROUP *group, const EC_
 	if (x != NULL)
 		{
 		if (!BN_copy(x, &point->X)) goto err;
-		x->neg = 0;
+		BN_set_sign(x, 0);
 		}
 	if (y != NULL)
 		{
 		if (!BN_copy(y, &point->Y)) goto err;
-		y->neg = 0;
+		BN_set_sign(y, 0);
 		}
 	ret = 1;
 		

@@ -64,19 +64,6 @@
  * The Contribution is licensed pursuant to the OpenSSL open source
  * license provided above.
  *
- * In addition, Sun covenants to all licensees who provide a reciprocal
- * covenant with respect to their own patents if any, not to sue under
- * current and future patent claims necessarily infringed by the making,
- * using, practicing, selling, offering for sale and/or otherwise
- * disposing of the Contribution as delivered hereunder 
- * (or portions thereof), provided that such covenant shall not apply:
- *  1) for code that a licensee deletes from the Contribution;
- *  2) separates from the Contribution; or
- *  3) for infringements caused by:
- *       i) the modification of the Contribution or
- *      ii) the combination of the Contribution with other software or
- *          devices where such combination causes the infringement.
- *
  * The elliptic curve binary polynomial software is originally written by 
  * Sheueling Chang Shantz and Douglas Stebila of Sun Microsystems Laboratories.
  *
@@ -127,9 +114,9 @@ typedef struct ec_point_st EC_POINT;
  */
 const EC_METHOD *EC_GFp_simple_method(void);
 const EC_METHOD *EC_GFp_mont_method(void);
+const EC_METHOD *EC_GFp_nist_method(void);
 #if 0
 const EC_METHOD *EC_GFp_recp_method(void); /* TODO */
-const EC_METHOD *EC_GFp_nist_method(void); /* TODO */
 #endif
 
 /* EC_METHOD for curves over GF(2^m).
@@ -370,6 +357,10 @@ void ERR_load_EC_strings(void);
 #define EC_F_ECPKPARAMETERS_PRINT_FP			 150
 #define EC_F_ECPUBLICKEY_GET_OCTET			 151
 #define EC_F_ECPUBLICKEY_SET_OCTET			 152
+#define EC_F_ECP_NIST_MOD_192				 203
+#define EC_F_ECP_NIST_MOD_224				 204
+#define EC_F_ECP_NIST_MOD_256				 205
+#define EC_F_ECP_NIST_MOD_521				 206
 #define EC_F_EC_ASN1_GROUP2CURVE			 153
 #define EC_F_EC_ASN1_GROUP2FIELDID			 154
 #define EC_F_EC_ASN1_GROUP2PARAMETERS			 155
@@ -387,6 +378,9 @@ void ERR_load_EC_strings(void);
 #define EC_F_EC_GFP_MONT_FIELD_ENCODE			 134
 #define EC_F_EC_GFP_MONT_FIELD_MUL			 131
 #define EC_F_EC_GFP_MONT_FIELD_SQR			 132
+#define EC_F_EC_GFP_NIST_FIELD_MUL			 200
+#define EC_F_EC_GFP_NIST_FIELD_SQR			 201
+#define EC_F_EC_GFP_NIST_GROUP_SET_CURVE_GFP		 202
 #define EC_F_EC_GFP_SIMPLE_GROUP_CHECK_DISCRIMINANT	 165
 #define EC_F_EC_GFP_SIMPLE_GROUP_SET_CURVE		 166
 #define EC_F_EC_GFP_SIMPLE_GROUP_SET_CURVE_GFP		 100
@@ -468,6 +462,7 @@ void ERR_load_EC_strings(void);
 #define EC_R_GROUP2PKPARAMETERS_FAILURE			 120
 #define EC_R_I2D_ECPKPARAMETERS_FAILURE			 121
 #define EC_R_INCOMPATIBLE_OBJECTS			 101
+#define EC_R_INTERNAL_ERROR				 132
 #define EC_R_INVALID_ARGUMENT				 112
 #define EC_R_INVALID_COMPRESSED_POINT			 110
 #define EC_R_INVALID_COMPRESSION_BIT			 109
@@ -478,9 +473,13 @@ void ERR_load_EC_strings(void);
 #define EC_R_INVALID_PRIVATE_KEY			 123
 #define EC_R_MISSING_PARAMETERS				 124
 #define EC_R_MISSING_PRIVATE_KEY			 125
+#define EC_R_NOT_A_NIST_PRIME			         135
+#define EC_R_NOT_A_SUPPORTED_NIST_PRIME	                 136
 #define EC_R_NOT_IMPLEMENTED				 126
 #define EC_R_NOT_INITIALIZED				 111
+#define EC_R_NO_FIELD_MOD				 133
 #define EC_R_NO_SUCH_EXTRA_DATA				 105
+#define EC_R_PASSED_NULL_PARAMETER			 134
 #define EC_R_PKPARAMETERS2GROUP_FAILURE			 127
 #define EC_R_POINT_AT_INFINITY				 106
 #define EC_R_POINT_IS_NOT_ON_CURVE			 107

@@ -64,19 +64,6 @@
  * The Contribution is licensed pursuant to the Eric Young open source
  * license provided above.
  *
- * In addition, Sun covenants to all licensees who provide a reciprocal
- * covenant with respect to their own patents if any, not to sue under
- * current and future patent claims necessarily infringed by the making,
- * using, practicing, selling, offering for sale and/or otherwise
- * disposing of the Contribution as delivered hereunder 
- * (or portions thereof), provided that such covenant shall not apply:
- *  1) for code that a licensee deletes from the Contribution;
- *  2) separates from the Contribution; or
- *  3) for infringements caused by:
- *       i) the modification of the Contribution or
- *      ii) the combination of the  Contribution with other software or
- *          devices where such combination causes the infringement.
- *
  * The binary polynomial arithmetic software is originally written by 
  * Sheueling Chang Shantz and Douglas Stebila of Sun Microsystems Laboratories.
  *
@@ -352,6 +339,11 @@ typedef struct bn_recp_ctx_st
 
 #define BN_one(a)	(BN_set_word((a),1))
 #define BN_zero(a)	(BN_set_word((a),0))
+/* BN_set_sign(BIGNUM *, int) sets the sign of a BIGNUM
+ * (0 for a non-negative value, 1 for negative) */
+#define BN_set_sign(a,b) ((a)->neg = (b))
+/* BN_get_sign(BIGNUM *) returns the sign of the BIGNUM */
+#define BN_get_sign(a)   ((a)->neg)
 
 /*#define BN_ascii2bn(a)	BN_hex2bn(a) */
 /*#define BN_bn2ascii(a)	BN_bn2hex(a) */
@@ -374,6 +366,8 @@ BIGNUM *BN_new(void);
 void	BN_init(BIGNUM *);
 void	BN_clear_free(BIGNUM *a);
 BIGNUM *BN_copy(BIGNUM *a, const BIGNUM *b);
+/* BN_ncopy(): like BN_copy() but copies at most the first n BN_ULONGs */
+BIGNUM *BN_ncopy(BIGNUM *a, const BIGNUM *b, size_t n);
 void	BN_swap(BIGNUM *a, BIGNUM *b);
 BIGNUM *BN_bin2bn(const unsigned char *s,size_t len,BIGNUM *ret);
 size_t	BN_bn2bin(const BIGNUM *a, unsigned char *to);
@@ -500,37 +494,68 @@ int	BN_div_recp(BIGNUM *dv, BIGNUM *rem, const BIGNUM *m,
 
 /* Functions for arithmetic over binary polynomials represented by BIGNUMs. 
  *
- * The BIGNUM::neg property of BIGNUMs representing binary polynomials is ignored.
+ * The BIGNUM::neg property of BIGNUMs representing binary polynomials is
+ * ignored.
  *
  * Note that input arguments are not const so that their bit arrays can
  * be expanded to the appropriate size if needed.
  */
-int	BN_GF2m_add(BIGNUM *r, const BIGNUM *a, const BIGNUM *b); /* r = a + b */
+
+int	BN_GF2m_add(BIGNUM *r, const BIGNUM *a, const BIGNUM *b); /*r = a + b*/
 #define BN_GF2m_sub(r, a, b) BN_GF2m_add(r, a, b)
-int	BN_GF2m_mod(BIGNUM *r, const BIGNUM *a, const BIGNUM *p); /* r = a mod p */
-int	BN_GF2m_mod_mul(BIGNUM *r, const BIGNUM *a, const BIGNUM *b, const BIGNUM *p, BN_CTX *ctx); /* r = (a * b) mod p */
-int	BN_GF2m_mod_sqr(BIGNUM *r, const BIGNUM *a, const BIGNUM *p, BN_CTX *ctx); /* r = (a * a) mod p */
-int BN_GF2m_mod_inv(BIGNUM *r, const BIGNUM *b, const BIGNUM *p, BN_CTX *ctx); /* r = (1 / b) mod p */
-int BN_GF2m_mod_div(BIGNUM *r, const BIGNUM *a, const BIGNUM *b, const BIGNUM *p, BN_CTX *ctx); /* r = (a / b) mod p */
-int BN_GF2m_mod_exp(BIGNUM *r, const BIGNUM *a, const BIGNUM *b, const BIGNUM *p, BN_CTX *ctx); /* r = (a ^ b) mod p */
-int BN_GF2m_mod_sqrt(BIGNUM *r, const BIGNUM *a, const BIGNUM *p, BN_CTX *ctx); /* r = sqrt(a) mod p */
-int BN_GF2m_mod_solve_quad(BIGNUM *r, const BIGNUM *a, const BIGNUM *p, BN_CTX *ctx); /* r^2 + r = a mod p */
+int	BN_GF2m_mod(BIGNUM *r, const BIGNUM *a, const BIGNUM *p); /*r=a mod p*/
+int	BN_GF2m_mod_mul(BIGNUM *r, const BIGNUM *a, const BIGNUM *b,
+	const BIGNUM *p, BN_CTX *ctx); /* r = (a * b) mod p */
+int	BN_GF2m_mod_sqr(BIGNUM *r, const BIGNUM *a, const BIGNUM *p,
+	BN_CTX *ctx); /* r = (a * a) mod p */
+int	BN_GF2m_mod_inv(BIGNUM *r, const BIGNUM *b, const BIGNUM *p,
+	BN_CTX *ctx); /* r = (1 / b) mod p */
+int	BN_GF2m_mod_div(BIGNUM *r, const BIGNUM *a, const BIGNUM *b,
+	const BIGNUM *p, BN_CTX *ctx); /* r = (a / b) mod p */
+int	BN_GF2m_mod_exp(BIGNUM *r, const BIGNUM *a, const BIGNUM *b,
+	const BIGNUM *p, BN_CTX *ctx); /* r = (a ^ b) mod p */
+int	BN_GF2m_mod_sqrt(BIGNUM *r, const BIGNUM *a, const BIGNUM *p,
+	BN_CTX *ctx); /* r = sqrt(a) mod p */
+int	BN_GF2m_mod_solve_quad(BIGNUM *r, const BIGNUM *a, const BIGNUM *p,
+	BN_CTX *ctx); /* r^2 + r = a mod p */
 #define BN_GF2m_cmp(a, b) BN_ucmp((a), (b))
 /* Some functions allow for representation of the irreducible polynomials
  * as an unsigned int[], say p.  The irreducible f(t) is then of the form:
  *     t^p[0] + t^p[1] + ... + t^p[k]
  * where m = p[0] > p[1] > ... > p[k] = 0.
  */
-int	BN_GF2m_mod_arr(BIGNUM *r, const BIGNUM *a, const unsigned int p[]); /* r = a mod p */
-int	BN_GF2m_mod_mul_arr(BIGNUM *r, const BIGNUM *a, const BIGNUM *b, const unsigned int p[], BN_CTX *ctx); /* r = (a * b) mod p */
-int	BN_GF2m_mod_sqr_arr(BIGNUM *r, const BIGNUM *a, const unsigned int p[], BN_CTX *ctx); /* r = (a * a) mod p */
-int BN_GF2m_mod_inv_arr(BIGNUM *r, const BIGNUM *b, const unsigned int p[], BN_CTX *ctx); /* r = (1 / b) mod p */
-int BN_GF2m_mod_div_arr(BIGNUM *r, const BIGNUM *a, const BIGNUM *b, const unsigned int p[], BN_CTX *ctx); /* r = (a / b) mod p */
-int BN_GF2m_mod_exp_arr(BIGNUM *r, const BIGNUM *a, const BIGNUM *b, const unsigned int p[], BN_CTX *ctx); /* r = (a ^ b) mod p */
-int BN_GF2m_mod_sqrt_arr(BIGNUM *r, const BIGNUM *a, const unsigned int p[], BN_CTX *ctx); /* r = sqrt(a) mod p */
-int BN_GF2m_mod_solve_quad_arr(BIGNUM *r, const BIGNUM *a, const unsigned int p[], BN_CTX *ctx); /* r^2 + r = a mod p */
-int BN_GF2m_poly2arr(const BIGNUM *a, unsigned int p[], int max);
-int BN_GF2m_arr2poly(const unsigned int p[], BIGNUM *a);
+int	BN_GF2m_mod_arr(BIGNUM *r, const BIGNUM *a, const unsigned int p[]);
+	/* r = a mod p */
+int	BN_GF2m_mod_mul_arr(BIGNUM *r, const BIGNUM *a, const BIGNUM *b,
+	const unsigned int p[], BN_CTX *ctx); /* r = (a * b) mod p */
+int	BN_GF2m_mod_sqr_arr(BIGNUM *r, const BIGNUM *a, const unsigned int p[],
+	BN_CTX *ctx); /* r = (a * a) mod p */
+int	BN_GF2m_mod_inv_arr(BIGNUM *r, const BIGNUM *b, const unsigned int p[],
+	BN_CTX *ctx); /* r = (1 / b) mod p */
+int	BN_GF2m_mod_div_arr(BIGNUM *r, const BIGNUM *a, const BIGNUM *b,
+	const unsigned int p[], BN_CTX *ctx); /* r = (a / b) mod p */
+int	BN_GF2m_mod_exp_arr(BIGNUM *r, const BIGNUM *a, const BIGNUM *b,
+	const unsigned int p[], BN_CTX *ctx); /* r = (a ^ b) mod p */
+int	BN_GF2m_mod_sqrt_arr(BIGNUM *r, const BIGNUM *a,
+	const unsigned int p[], BN_CTX *ctx); /* r = sqrt(a) mod p */
+int	BN_GF2m_mod_solve_quad_arr(BIGNUM *r, const BIGNUM *a,
+	const unsigned int p[], BN_CTX *ctx); /* r^2 + r = a mod p */
+int	BN_GF2m_poly2arr(const BIGNUM *a, unsigned int p[], int max);
+int	BN_GF2m_arr2poly(const unsigned int p[], BIGNUM *a);
+
+/* faster mod functions for the 'NIST primes' 
+ * 0 <= a < p^2 */
+int BN_nist_mod_192(BIGNUM *r, const BIGNUM *a, const BIGNUM *p, BN_CTX *ctx);
+int BN_nist_mod_224(BIGNUM *r, const BIGNUM *a, const BIGNUM *p, BN_CTX *ctx);
+int BN_nist_mod_256(BIGNUM *r, const BIGNUM *a, const BIGNUM *p, BN_CTX *ctx);
+int BN_nist_mod_384(BIGNUM *r, const BIGNUM *a, const BIGNUM *p, BN_CTX *ctx);
+int BN_nist_mod_521(BIGNUM *r, const BIGNUM *a, const BIGNUM *p, BN_CTX *ctx);
+
+const BIGNUM *BN_get0_nist_prime_192(void);
+const BIGNUM *BN_get0_nist_prime_224(void);
+const BIGNUM *BN_get0_nist_prime_256(void);
+const BIGNUM *BN_get0_nist_prime_384(void);
+const BIGNUM *BN_get0_nist_prime_521(void);
 
 /* library internal functions */
 

@@ -64,19 +64,6 @@
  * The Contribution is licensed pursuant to the OpenSSL open source
  * license provided above.
  *
- * In addition, Sun covenants to all licensees who provide a reciprocal
- * covenant with respect to their own patents if any, not to sue under
- * current and future patent claims necessarily infringed by the making,
- * using, practicing, selling, offering for sale and/or otherwise
- * disposing of the Contribution as delivered hereunder 
- * (or portions thereof), provided that such covenant shall not apply:
- *  1) for code that a licensee deletes from the Contribution;
- *  2) separates from the Contribution; or
- *  3) for infringements caused by:
- *       i) the modification of the Contribution or
- *      ii) the combination of the Contribution with other software or
- *          devices where such combination causes the infringement.
- *
  * The elliptic curve binary polynomial software is originally written by 
  * Sheueling Chang Shantz and Douglas Stebila of Sun Microsystems Laboratories.
  *
@@ -616,7 +603,7 @@ void prime_field_tests()
 
 		if (!BN_pseudo_rand(y, BN_num_bits(y), 0, 0)) ABORT;
 		if (!BN_add(z, z, y)) ABORT;
-		z->neg = 1;
+		BN_set_sign(z, 1);
 		scalars[0] = y;
 		scalars[1] = z; /* z = -(order + y) */
 
@@ -628,7 +615,7 @@ void prime_field_tests()
 
 		if (!BN_pseudo_rand(x, BN_num_bits(y) - 1, 0, 0)) ABORT;
 		if (!BN_add(z, x, y)) ABORT;
-		z->neg = 1;
+		BN_set_sign(z, 1);
 		scalars[0] = x;
 		scalars[1] = y;
 		scalars[2] = z; /* z = -(x+y) */
@@ -1082,7 +1069,7 @@ void char2_field_tests()
 
 		if (!BN_pseudo_rand(y, BN_num_bits(y), 0, 0)) ABORT;
 		if (!BN_add(z, z, y)) ABORT;
-		z->neg = 1;
+		BN_set_sign(z, 1);
 		scalars[0] = y;
 		scalars[1] = z; /* z = -(order + y) */
 
@@ -1094,7 +1081,7 @@ void char2_field_tests()
 
 		if (!BN_pseudo_rand(x, BN_num_bits(y) - 1, 0, 0)) ABORT;
 		if (!BN_add(z, x, y)) ABORT;
-		z->neg = 1;
+		BN_set_sign(z, 1);
 		scalars[0] = x;
 		scalars[1] = y;
 		scalars[2] = z; /* z = -(x+y) */

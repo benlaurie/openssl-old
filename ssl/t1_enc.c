@@ -110,10 +110,10 @@
  */
 
 #include <stdio.h>
+#include "ssl_locl.h"
 #include <openssl/comp.h>
 #include <openssl/evp.h>
 #include <openssl/hmac.h>
-#include "ssl_locl.h"
 #include <openssl/md5.h>
 
 static void tls1_P_hash(const EVP_MD *md, const unsigned char *sec,
@@ -490,10 +490,16 @@ printf("\nkey block\n");
 		 */
 		s->s3->need_empty_fragments = 1;
 
-#ifndef NO_RC4
-		if ((s->session->cipher != NULL) && ((s->session->cipher->algorithms & SSL_ENC_MASK) == SSL_RC4))
-			s->s3->need_empty_fragments = 0;
+		if (s->session->cipher != NULL)
+			{
+			if ((s->session->cipher->algorithms & SSL_ENC_MASK) == SSL_eNULL)
+				s->s3->need_empty_fragments = 0;
+			
+#ifndef OPENSSL_NO_RC4
+			if ((s->session->cipher->algorithms & SSL_ENC_MASK) == SSL_RC4)
+				s->s3->need_empty_fragments = 0;
 #endif
+			}
 		}
 		
 	return(1);

@@ -38,7 +38,7 @@
       o SSL/TLS: support Kerberos cipher suites (RFC2712).
       o SSL/TLS: allow more precise control of renegotiations and sessions.
       o SSL/TLS: add callback to retrieve SSL/TLS messages.
-      o SSL/TLS: add draft AES ciphersuites (disabled unless explicitly requested).
+      o SSL/TLS: support AES cipher suites (RFC3268).
 
   Major changes between OpenSSL 0.9.6c and OpenSSL 0.9.6d:
 
@@ -91,7 +91,7 @@
       o Bug fixes for Win32, HP/UX and Irix.
       o Bug fixes in BIGNUM, SSL, PKCS#7, PKCS#12, X.509, CONF and
         memory checking routines.
-      o Bug fixes for RSA operations in threaded enviroments.
+      o Bug fixes for RSA operations in threaded environments.
       o Bug fixes in misc. openssl applications.
       o Remove a few potential memory leaks.
       o Add tighter checks of BIGNUM routines.

@@ -101,3 +101,14 @@ I/O.
 o Add new ASN1 structures, such as OCSP, CRMF, S/MIME v3 (CMS), attribute
 certificates etc etc.
 
+Description of major changes
+============================
+
+The BOOLEAN type now takes three values. 0xff is TRUE, 0 is FALSE and -1 is
+absent. The meaning of absent depends on the context. If for example the
+boolean type is DEFAULT FALSE (as in the case of the critical flag for
+certificate extensions) then -1 is FALSE, if DEFAULT TRUE then -1 is TRUE.
+Usually the value will only ever be read via an API which will hide this from an
+application.
+
+

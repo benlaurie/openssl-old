@@ -62,9 +62,16 @@
 #include <openssl/asn1t.h>
 #include <openssl/objects.h>
 
+static void asn1_item_combine_free(ASN1_VALUE *val, const ASN1_ITEM *it, int combine);
+
 /* Free up an ASN1 structure */
 
 void ASN1_item_free(ASN1_VALUE *val, const ASN1_ITEM *it)
+{
+	asn1_item_combine_free(val, it, 0);
+}
+
+static void asn1_item_combine_free(ASN1_VALUE *val, const ASN1_ITEM *it, int combine)
 {
 	const ASN1_TEMPLATE *tt = NULL, *seqtt;
 	const ASN1_EXTERN_FUNCS *ef;
@@ -90,7 +97,7 @@ void ASN1_item_free(ASN1_VALUE *val, const ASN1_ITEM *it)
 			chval = asn1_get_field(val, tt);
 			ASN1_template_free(chval, tt);
 		} 
-		OPENSSL_free(val);
+		if(!combine) OPENSSL_free(val);
 		break;
 
 		case ASN1_ITYPE_COMPAT:
@@ -110,7 +117,7 @@ void ASN1_item_free(ASN1_VALUE *val, const ASN1_ITEM *it)
 			seqval = asn1_get_field(val, seqtt);
 			ASN1_template_free(seqval, seqtt);
 		}
-		OPENSSL_free(val);
+		if(!combine) OPENSSL_free(val);
 		break;
 	}
 }
@@ -124,7 +131,7 @@ void ASN1_template_free(ASN1_VALUE *val, const ASN1_TEMPLATE *tt)
 			ASN1_item_free((ASN1_VALUE *)sk_value(sk, i), tt->item);
 		}
 		sk_free(sk);
-	} else ASN1_item_free(val, tt->item);
+	} else asn1_item_combine_free(val, tt->item, tt->flags & ASN1_TFLG_COMBINE);
 }
 
 void ASN1_primitive_free(ASN1_VALUE *val, long utype)

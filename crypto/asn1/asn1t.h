@@ -123,7 +123,9 @@ extern "C" {
  *		} value;
  *	} chname;
  *	
- *	the name of the selector must be 'type'
+ *	the name of the selector must be 'type'.
+ * 	to use an alternative selector name use the
+ *      ASN1_CHOICE_END_selector() version.
  */
 
 #define ASN1_CHOICE(tname) \
@@ -131,20 +133,19 @@ extern "C" {
 
 #define ASN1_CHOICE_END(stname) ASN1_CHOICE_END_name(stname, stname)
 
-#define ASN1_CHOICE_END_name(stname, tname) \
+#define ASN1_CHOICE_END_name(stname, tname) ASN1_CHOICE_END_selector(stname, tname, type)
+
+#define ASN1_CHOICE_END_selector(stname, tname, selname) \
 	;\
 	ASN1_ITEM tname##_it = { \
 		ASN1_ITYPE_CHOICE,\
-		offsetof(stname,type) ,\
+		offsetof(stname,selname) ,\
 		tname##_ch_tt,\
 		sizeof(tname##_ch_tt) / sizeof(ASN1_TEMPLATE),\
 		NULL,\
 		sizeof(stname),\
 		#stname \
 	}
-
-
-
 
 /* These help with SEQUENCE or CHOICE components */
 
@@ -153,6 +154,11 @@ extern "C" {
 #define ASN1_EX_TYPE(flags, tag, stname, field, type) { \
 	(flags), (tag), offsetof(stname, field),\
 	#field, &(type##_it) }
+
+/* used when the structure is combined with the parent */
+
+#define ASN1_EX_COMBINE(flags, tag, type) { \
+	(flags)|ASN1_TFLG_COMBINE, (tag), 0, NULL, &(type##_it) }
 
 #define ASN1_IMP_EX(stname, field, type, tag, ex) \
 		ASN1_EX_TYPE(ASN1_TFLG_IMPLICIT | ex, tag, stname, field, type)
@@ -316,6 +322,15 @@ struct ASN1_ADB_TABLE_st {
 
 #define ASN1_TFLG_ADB_INT	(0x1<<9)
 
+/* This flag means a parent structure is passed
+ * instead of the field: this is useful is a
+ * SEQUENCE is being combined with a CHOICE for
+ * example. Since this means the structure and
+ * item name will differ we need to use the
+ * ASN1_CHOICE_END_name() macro for example.
+ */
+
+#define ASN1_TFLG_COMBINE	(0x1<<10)
 
 /* This is the actual ASN1 item itself */
 

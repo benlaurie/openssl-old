@@ -63,6 +63,8 @@
 #include <openssl/err.h>
 #include <openssl/asn1t.h>
 
+static int asn1_item_ex_combine_new(ASN1_VALUE **pval, const ASN1_ITEM *it, int combine);
+
 ASN1_VALUE *ASN1_item_new(const ASN1_ITEM *it)
 {
 	ASN1_VALUE *ret = NULL;
@@ -73,6 +75,11 @@ ASN1_VALUE *ASN1_item_new(const ASN1_ITEM *it)
 /* Allocate an ASN1 structure */
 
 int ASN1_item_ex_new(ASN1_VALUE **pval, const ASN1_ITEM *it)
+{
+	return asn1_item_ex_combine_new(pval, it, 0);
+}
+
+static int asn1_item_ex_combine_new(ASN1_VALUE **pval, const ASN1_ITEM *it, int combine)
 {
 	const ASN1_TEMPLATE *tt = NULL;
 	const ASN1_COMPAT_FUNCS *cf;
@@ -110,16 +117,20 @@ int ASN1_item_ex_new(ASN1_VALUE **pval, const ASN1_ITEM *it)
 		break;
 
 		case ASN1_ITYPE_CHOICE:
-		*pval = OPENSSL_malloc(it->size);
-		if(!*pval) goto memerr;
-		memset(*pval, 0, it->size);
+		if(!combine) {
+			*pval = OPENSSL_malloc(it->size);
+			if(!*pval) goto memerr;
+			memset(*pval, 0, it->size);
+		}
 		asn1_set_choice_selector(pval, -1, it);
 		break;
 
 		case ASN1_ITYPE_SEQUENCE:
-		*pval = OPENSSL_malloc(it->size);
-		if(!*pval) goto memerr;
-		memset(*pval, 0, it->size);
+		if(!combine) {
+			*pval = OPENSSL_malloc(it->size);
+			if(!*pval) goto memerr;
+			memset(*pval, 0, it->size);
+		}
 		for(i = 0, tt = it->templates; i < it->tcount; tt++, i++) {
 			pseqval = asn1_get_field_ptr(pval, tt);
 			if(!ASN1_template_new(pseqval, tt)) goto memerr;
@@ -132,7 +143,6 @@ int ASN1_item_ex_new(ASN1_VALUE **pval, const ASN1_ITEM *it)
 	ASN1err(ASN1_F_ASN1_ITEM_NEW, ERR_R_MALLOC_FAILURE);
 	return 0;
 }
-
 
 int ASN1_template_new(ASN1_VALUE **pval, const ASN1_TEMPLATE *tt)
 {
@@ -157,7 +167,7 @@ int ASN1_template_new(ASN1_VALUE **pval, const ASN1_TEMPLATE *tt)
 		return 1;
 	}
 	/* Otherwise pass it back to the item routine */
-	return ASN1_item_ex_new(pval, it);
+	return asn1_item_ex_combine_new(pval, it, tt->flags & ASN1_TFLG_COMBINE);
 }
 
 /* NB: could probably combine most of the real XXX_new() behaviour and junk all the old

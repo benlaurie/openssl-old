@@ -376,7 +376,6 @@ int asn1_template_ex_d2i(ASN1_VALUE **val, unsigned char **in, long inlen, const
 	aclass = flags & ASN1_TFLG_TAG_CLASS;
 
 	p = *in;
-	q = p;
 
 	/* Check if EXPLICIT tag expected */
 	if(flags & ASN1_TFLG_EXPTAG) {
@@ -385,6 +384,7 @@ int asn1_template_ex_d2i(ASN1_VALUE **val, unsigned char **in, long inlen, const
 		 * starts: so read in EXPLICIT header to get the info.
 		 */
 		ret = asn1_check_tlen(&len, NULL, NULL, &exp_eoc, &cst, &p, inlen, tt->tag, aclass, opt, ctx);
+		q = p;
 		if(!ret) {
 			ASN1err(ASN1_F_ASN1_TEMPLATE_EX_D2I, ERR_R_NESTED_ASN1_ERROR);
 			return 0;

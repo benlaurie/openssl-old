@@ -103,9 +103,11 @@ typedef char ** char_pp;
 typedef char * char_p;
 #ifdef OPENSSL_SYS_VMS
 void *_malloc32(size_t);
+#define _free32 free
 void *_memset32(void *__s, int __c, size_t __n);
 #else
-#define _malloc32 malloc
+#define _malloc32 OPENSSL_malloc
+#define _free32 OPENSSL_free
 #define _memset32 memset
 #endif
 #if !defined(OPENSSL_SYS_VMS) && __INITIAL_POINTER_SIZE == 64
@@ -334,7 +336,6 @@ static struct hostent *ghbn_dup(struct hostent *a)
 	ret->h_addrtype=a->h_addrtype;
 	for (i=0; a->h_addr_list[i] != NULL; i++)
 		{
-#ifdef OPENSSL_SYS_VMS
 		if ((ret->h_addr_list[i]=(char_p)_malloc32(a->h_length)) == NULL)  /* changed for both 32-bit & 64-bit */
 			goto err;
 		memcpy(ret->h_addr_list[i],a->h_addr_list[i],a->h_length);
@@ -359,27 +360,15 @@ static void ghbn_free(struct hostent *a)
 
 	if (a->h_aliases != NULL)
 		{
-#ifdef OPENSSL_SYS_VMS
 		for (i=0; a->h_aliases[i] != NULL; i++)
-			free(a->h_aliases[i]);
-		free(a->h_aliases);
-#else
-		for (i=0; a->h_aliases[i] != NULL; i++)
-			OPENSSL_free(a->h_aliases[i]);
-		OPENSSL_free(a->h_aliases);
-#endif
+			_free32(a->h_aliases[i]);
+		_free32(a->h_aliases);
 		}
 	if (a->h_addr_list != NULL)
 		{
-#ifdef OPENSSL_SYS_VMS
 		for (i=0; a->h_addr_list[i] != NULL; i++)
-			free(a->h_addr_list[i]);
-		free(a->h_addr_list);
-#else
-		for (i=0; a->h_addr_list[i] != NULL; i++)
-			OPENSSL_free(a->h_addr_list[i]);
-		OPENSSL_free(a->h_addr_list);
-#endif
+			_free32(a->h_addr_list[i]);
+		_free32(a->h_addr_list);
 		}
 	if (a->h_name != NULL) OPENSSL_free(a->h_name);
 	OPENSSL_free(a);

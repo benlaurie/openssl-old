@@ -81,15 +81,15 @@
 typedef char * char_32p;
 #ifdef OPENSSL_SYS_VMS
 void *_malloc32(size_t);
+#define _free32 free
 void *_memset32(void *__s, int __c, size_t __n);
 #else
-#define _malloc32 malloc
+#define _malloc32 OPENSSL_malloc
+#define _free32 OPENSSL_free
 #define _memset32 memset
 #endif
 #if !defined(OPENSSL_SYS_VMS) && __INITIAL_POINTER_SIZE == 64
 #pragma __required_pointer_size __restore
-#endif
-
 #endif
 
 
@@ -158,8 +158,7 @@ static int sock_read(BIO *b, char *out, int outl)
 	{
 	int ret=0;
 
-#ifdef OPENSSL_SYS_VMS
-#if __INITIAL_POINTER_SIZE == 64
+#if defined(OPENSSL_SYS_VMS) && __INITIAL_POINTER_SIZE == 64
 #pragma __required_pointer_size __save
 #pragma __required_pointer_size 32
 
@@ -174,7 +173,6 @@ static int sock_read(BIO *b, char *out, int outl)
 
 #pragma __required_pointer_size __restore
 #endif
-#endif
 
 #if defined(OPENSSL_SYS_VMS) && __INITIAL_POINTER_SIZE == 64
 	if (out32 != NULL)
@@ -186,7 +184,7 @@ static int sock_read(BIO *b, char *out, int outl)
 #if defined(OPENSSL_SYS_VMS) &&  __INITIAL_POINTER_SIZE == 64
 		ret=readsocket(b->num,out32,outl);
 		memcpy(out,out32,outl);
-		free(out32);
+		_free32(out32);
 #else
 		ret=readsocket(b->num,out,outl);
 #endif		
@@ -204,8 +202,7 @@ static int sock_write(BIO *b, const char *in, int inl)
 	{
 	int ret;
 	
-#ifdef OPENSSL_SYS_VMS
-#if __INITIAL_POINTER_SIZE == 64
+#if defined(OPENSSL_SYS_VMS) && __INITIAL_POINTER_SIZE == 64
 #pragma __required_pointer_size __save
 #pragma __required_pointer_size 32
 
@@ -217,13 +214,12 @@ static int sock_write(BIO *b, const char *in, int inl)
 
 #pragma __required_pointer_size __restore
 #endif
-#endif
 
 	clear_socket_error();
 
 #if defined(OPENSSL_SYS_VMS) && __INITIAL_POINTER_SIZE == 64
 	ret=writesocket(b->num,in32,inl);
-	free(in32);
+	_free32(in32);
 #else
 	ret=writesocket(b->num,in,inl);
 #endif

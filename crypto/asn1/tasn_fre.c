@@ -163,14 +163,13 @@ void ASN1_template_free(ASN1_VALUE **pval, const ASN1_TEMPLATE *tt)
 {
 	int i;
 	if(tt->flags & ASN1_TFLG_SK_MASK) {
-		STACK *sk = (STACK *)*pval;
-		if(!sk) return;
-		for(i = 0; i < sk_num(sk); i++) {
+		STACK_OF(ASN1_VALUE) *sk = (STACK_OF(ASN1_VALUE) *)*pval;
+		for(i = 0; i < sk_ASN1_VALUE_num(sk); i++) {
 			ASN1_VALUE *vtmp;
-			vtmp = (ASN1_VALUE *)sk_value(sk, i);
+			vtmp = sk_ASN1_VALUE_value(sk, i);
 			asn1_item_combine_free(&vtmp, tt->item, 0);
 		}
-		sk_free(sk);
+		sk_ASN1_VALUE_free(sk);
 		*pval = NULL;
 	} else asn1_item_combine_free(pval, tt->item, tt->flags & ASN1_TFLG_COMBINE);
 }

@@ -869,7 +869,7 @@ static int asn1_check_tlen(long *olen, int *otag, unsigned char *oclass, char *i
 		/* If definite length, length + header can't exceed total
 		 * amount of data available.
 		 */
-		if(!(i & 1) && (plen + ctx->hdrlen) > len) {
+		if(!(i & 1) && ((plen + ctx->hdrlen) > len)) {
 			ASN1err(ASN1_F_ASN1_CHECK_TLEN, ASN1_R_TOO_LONG);
 			asn1_tlc_clear(ctx);
 			return 0;
@@ -894,10 +894,10 @@ static int asn1_check_tlen(long *olen, int *otag, unsigned char *oclass, char *i
 		/* We have a tag and class match, so assume we are going to do something with it */
 		asn1_tlc_clear(ctx);
 	}
-	if(i & 1) {
-		plen = len - (p - q);
-		if(inf) *inf = 1;
-	}
+
+	if(i & 1) plen = len - (p - q);
+
+	if(inf) *inf = i & 1;
 
 	if(cst) *cst = i & V_ASN1_CONSTRUCTED;
 

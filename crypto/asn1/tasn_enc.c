@@ -63,7 +63,7 @@
 #include <openssl/objects.h>
 
 static int asn1_i2d_ex_primitive(ASN1_VALUE **pval, unsigned char **out, const ASN1_ITEM *it, int tag, int aclass);
-static int asn1_set_seq_out(STACK *seq, unsigned char **out, int skcontlen, const ASN1_ITEM *item, int isset);
+static int asn1_set_seq_out(STACK_OF(ASN1_VALUE) *seq, unsigned char **out, int skcontlen, const ASN1_ITEM *item, int isset);
 
 /* Encode an ASN1 item, this is compatible with the
  * standard 'i2d' function. 'out' points to 
@@ -216,7 +216,7 @@ int ASN1_template_i2d(ASN1_VALUE **pval, unsigned char **out, const ASN1_TEMPLAT
 	aclass = flags & ASN1_TFLG_TAG_CLASS;
 	if(flags & ASN1_TFLG_SK_MASK) {
 		/* SET OF, SEQUENCE OF */
-		STACK *sk = (STACK *)*pval;
+		STACK_OF(ASN1_VALUE) *sk = (STACK_OF(ASN1_VALUE) *)*pval;
 		int isset, sktag, skaclass;
 		int skcontlen, sklen;
 		ASN1_VALUE *skitem;
@@ -233,8 +233,8 @@ int ASN1_template_i2d(ASN1_VALUE **pval, unsigned char **out, const ASN1_TEMPLAT
 		}
 		/* Now work out length of items */
 		skcontlen = 0;
-		for(i = 0; i < sk_num(sk); i++) {
-			skitem = (ASN1_VALUE *)sk_value(sk, i);
+		for(i = 0; i < sk_ASN1_VALUE_num(sk); i++) {
+			skitem = sk_ASN1_VALUE_value(sk, i);
 			skcontlen += ASN1_item_ex_i2d(&skitem, NULL, tt->item, -1, 0);
 		}
 		sklen = ASN1_object_size(1, skcontlen, sktag);
@@ -298,41 +298,41 @@ static int der_cmp(const void *a, const void *b)
 
 /* Output the content octets of SET OF or SEQUENCE OF */
 
-static int asn1_set_seq_out(STACK *sk, unsigned char **out, int skcontlen, const ASN1_ITEM *item, int do_sort)
+static int asn1_set_seq_out(STACK_OF(ASN1_VALUE) *sk, unsigned char **out, int skcontlen, const ASN1_ITEM *item, int do_sort)
 {
 	int i;
-	void *skitem;
+	ASN1_VALUE *skitem;
 	unsigned char *tmpdat, *p;
 	DER_ENC *derlst, *tder;
 	if(do_sort) {
 		/* Don't need to sort less than 2 items */
-		if(sk_num(sk) < 2) do_sort = 0;
+		if(sk_ASN1_VALUE_num(sk) < 2) do_sort = 0;
 		else {
-			derlst = OPENSSL_malloc(sk_num(sk) * sizeof(*derlst));
+			derlst = OPENSSL_malloc(sk_ASN1_VALUE_num(sk) * sizeof(*derlst));
 			tmpdat = OPENSSL_malloc(skcontlen);
 			if(!derlst || !tmpdat) return 0;
 		}
 	}
 	/* If not sorting just output each item */
 	if(!do_sort) {
-		for(i = 0; i < sk_num(sk); i++) {
-			skitem = sk_value(sk, i);
+		for(i = 0; i < sk_ASN1_VALUE_num(sk); i++) {
+			skitem = sk_ASN1_VALUE_value(sk, i);
 			ASN1_item_i2d(skitem, out, item);
 		}
 		return 1;
 	}
 	p = tmpdat;
 	/* Doing sort: build up a list of each member's DER encoding */
-	for(i = 0, tder = derlst; i < sk_num(sk); i++, tder++) {
-		skitem = sk_value(sk, i);
+	for(i = 0, tder = derlst; i < sk_ASN1_VALUE_num(sk); i++, tder++) {
+		skitem = sk_ASN1_VALUE_value(sk, i);
 		tder->data = p;
 		tder->length = ASN1_item_i2d(skitem, &p, item);
 	}
 	/* Now sort them */
-	qsort(derlst, sk_num(sk), sizeof(*derlst), der_cmp);
+	qsort(derlst, sk_ASN1_VALUE_num(sk), sizeof(*derlst), der_cmp);
 	/* Output sorted DER encoding */	
 	p = *out;
-	for(i = 0, tder = derlst; i < sk_num(sk); i++, tder++) {
+	for(i = 0, tder = derlst; i < sk_ASN1_VALUE_num(sk); i++, tder++) {
 		memcpy(p, tder->data, tder->length);
 		p += tder->length;
 	}

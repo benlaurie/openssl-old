@@ -689,6 +689,8 @@ extern const ASN1_ITEM BIGNUM_it;
 extern const ASN1_ITEM LONG_it;
 extern const ASN1_ITEM ZLONG_it;
 
+DECLARE_STACK_OF(ASN1_VALUE)
+
 /* Functions used internally by the ASN1 code */
 
 int ASN1_item_ex_new(ASN1_VALUE **pval, const ASN1_ITEM *it);

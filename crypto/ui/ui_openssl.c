@@ -456,7 +456,7 @@ error:
 	ok=1;
 #endif
 
-	memset(result,0,BUFSIZ);
+	OPENSSL_cleanse(result,BUFSIZ);
 	return ok;
 	}
 

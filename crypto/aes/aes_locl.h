@@ -62,7 +62,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && !defined(OPENSSL_SYS_WINCE)
 # ifdef _WIN64 /* little-endian, strict alignment */
 #  define GETU32(pt) (((u32)(pt)[3] << 24) ^ ((u32)(pt)[2] << 16) ^ ((u32)(pt)[1] <<  8) ^ ((u32)(pt)[0]))
 #  define PUTU32(ct, st) { (ct)[3] = (u8)((st) >> 24); (ct)[2] = (u8)((st) >> 16); (ct)[1] = (u8)((st) >>  8); (ct)[0] = (u8)(st); }

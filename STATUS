@@ -47,9 +47,6 @@
 
   NEEDS PATCH
 
-    o  inappropriate AlgorithmIdentifier used in S/MIME signatures
-       (key type instead of signature algorithm)
-
     o  apps/ca.c: "Sign the certificate?" - "n" creates empty certificate file
 
     o  Whenever strncpy is used, make sure the resulting string is NULL-terminated

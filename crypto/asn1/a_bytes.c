@@ -71,6 +71,12 @@ B_ASN1_T61STRING,B_ASN1_VIDEOTEXSTRING,B_ASN1_IA5STRING,0,
 B_ASN1_UNIVERSALSTRING,B_ASN1_UNKNOWN,B_ASN1_BMPSTRING,B_ASN1_UNKNOWN,
 	};
 
+unsigned long ASN1_tag2bit(int tag)
+{
+	if((tag < 0) || (tag > 30)) return 0;
+	return tag2bit[tag];
+}
+
 static int asn1_collate_primitive(ASN1_STRING *a, ASN1_CTX *c);
 /* type is a 'bitmap' of acceptable string types.
  */

@@ -31,6 +31,7 @@ LIBSRC=	a_object.c a_bitstr.c a_utctm.c a_gentm.c a_time.c a_int.c a_octet.c \
 	d2i_s_pr.c i2d_s_pr.c d2i_s_pu.c i2d_s_pu.c \
 	d2i_pu.c d2i_pr.c i2d_pu.c i2d_pr.c\
 	t_req.c t_x509.c t_x509a.c t_crl.c t_pkey.c t_spki.c t_bitst.c \
+	tasn_new.c tasn_fre.c tasn_enc.c tasn_dec.c tasn_utl.c tasn_typ.c \
 	p7_i_s.c p7_signi.c p7_signd.c p7_recip.c p7_enc_c.c p7_evp.c \
 	p7_dgst.c p7_s_e.c p7_enc.c p7_lib.c \
 	f_int.c f_string.c i2d_dhp.c i2d_dsap.c d2i_dhp.c d2i_dsap.c n_pkey.c \
@@ -46,6 +47,7 @@ LIBOBJ= a_object.o a_bitstr.o a_utctm.o a_gentm.o a_time.o a_int.o a_octet.o \
 	d2i_s_pr.o i2d_s_pr.o d2i_s_pu.o i2d_s_pu.o \
 	d2i_pu.o d2i_pr.o i2d_pu.o i2d_pr.o \
 	t_req.o t_x509.o t_x509a.o t_crl.o t_pkey.o t_spki.o t_bitst.o \
+	tasn_new.o tasn_fre.o tasn_enc.o tasn_dec.o tasn_utl.o tasn_typ.o \
 	p7_i_s.o p7_signi.o p7_signd.o p7_recip.o p7_enc_c.o p7_evp.o \
 	p7_dgst.o p7_s_e.o p7_enc.o p7_lib.o \
 	f_int.o f_string.o i2d_dhp.o i2d_dsap.o d2i_dhp.o d2i_dsap.o n_pkey.o \
@@ -55,7 +57,7 @@ LIBOBJ= a_object.o a_bitstr.o a_utctm.o a_gentm.o a_time.o a_int.o a_octet.o \
 
 SRC= $(LIBSRC)
 
-EXHEADER=  asn1.h asn1_mac.h
+EXHEADER=  asn1.h asn1_mac.h asn1t.h
 HEADER=	$(EXHEADER)
 
 ALL=    $(GENERAL) $(SRC) $(HEADER)
@@ -1097,6 +1099,44 @@ t_x509a.o: ../../include/openssl/rsa.h ../../include/openssl/safestack.h
 t_x509a.o: ../../include/openssl/sha.h ../../include/openssl/stack.h
 t_x509a.o: ../../include/openssl/symhacks.h ../../include/openssl/x509.h
 t_x509a.o: ../../include/openssl/x509_vfy.h ../cryptlib.h
+tasn_dec.o: ../../include/openssl/asn1.h ../../include/openssl/asn1t.h
+tasn_dec.o: ../../include/openssl/bio.h ../../include/openssl/bn.h
+tasn_dec.o: ../../include/openssl/buffer.h ../../include/openssl/crypto.h
+tasn_dec.o: ../../include/openssl/err.h ../../include/openssl/lhash.h
+tasn_dec.o: ../../include/openssl/obj_mac.h ../../include/openssl/objects.h
+tasn_dec.o: ../../include/openssl/opensslconf.h
+tasn_dec.o: ../../include/openssl/opensslv.h ../../include/openssl/safestack.h
+tasn_dec.o: ../../include/openssl/stack.h ../../include/openssl/symhacks.h
+tasn_enc.o: ../../include/openssl/asn1.h ../../include/openssl/asn1t.h
+tasn_enc.o: ../../include/openssl/bio.h ../../include/openssl/bn.h
+tasn_enc.o: ../../include/openssl/crypto.h ../../include/openssl/obj_mac.h
+tasn_enc.o: ../../include/openssl/objects.h ../../include/openssl/opensslconf.h
+tasn_enc.o: ../../include/openssl/opensslv.h ../../include/openssl/safestack.h
+tasn_enc.o: ../../include/openssl/stack.h ../../include/openssl/symhacks.h
+tasn_fre.o: ../../include/openssl/asn1.h ../../include/openssl/asn1t.h
+tasn_fre.o: ../../include/openssl/bio.h ../../include/openssl/bn.h
+tasn_fre.o: ../../include/openssl/crypto.h ../../include/openssl/obj_mac.h
+tasn_fre.o: ../../include/openssl/objects.h ../../include/openssl/opensslconf.h
+tasn_fre.o: ../../include/openssl/opensslv.h ../../include/openssl/safestack.h
+tasn_fre.o: ../../include/openssl/stack.h ../../include/openssl/symhacks.h
+tasn_new.o: ../../include/openssl/asn1.h ../../include/openssl/asn1t.h
+tasn_new.o: ../../include/openssl/bio.h ../../include/openssl/bn.h
+tasn_new.o: ../../include/openssl/crypto.h ../../include/openssl/err.h
+tasn_new.o: ../../include/openssl/lhash.h ../../include/openssl/obj_mac.h
+tasn_new.o: ../../include/openssl/objects.h ../../include/openssl/opensslconf.h
+tasn_new.o: ../../include/openssl/opensslv.h ../../include/openssl/safestack.h
+tasn_new.o: ../../include/openssl/stack.h ../../include/openssl/symhacks.h
+tasn_typ.o: ../../include/openssl/asn1.h ../../include/openssl/asn1t.h
+tasn_typ.o: ../../include/openssl/bio.h ../../include/openssl/bn.h
+tasn_typ.o: ../../include/openssl/crypto.h ../../include/openssl/opensslconf.h
+tasn_typ.o: ../../include/openssl/opensslv.h ../../include/openssl/safestack.h
+tasn_typ.o: ../../include/openssl/stack.h ../../include/openssl/symhacks.h
+tasn_utl.o: ../../include/openssl/asn1.h ../../include/openssl/asn1t.h
+tasn_utl.o: ../../include/openssl/bio.h ../../include/openssl/bn.h
+tasn_utl.o: ../../include/openssl/crypto.h ../../include/openssl/obj_mac.h
+tasn_utl.o: ../../include/openssl/objects.h ../../include/openssl/opensslconf.h
+tasn_utl.o: ../../include/openssl/opensslv.h ../../include/openssl/safestack.h
+tasn_utl.o: ../../include/openssl/stack.h ../../include/openssl/symhacks.h
 x_algor.o: ../../include/openssl/asn1.h ../../include/openssl/asn1_mac.h
 x_algor.o: ../../include/openssl/bio.h ../../include/openssl/blowfish.h
 x_algor.o: ../../include/openssl/bn.h ../../include/openssl/buffer.h

@@ -62,6 +62,12 @@
 
   NEEDS PATCH
 
+    o  parameters should be omitted (not NULL) with id-dsa-with-sha1 OID
+       in X.509 signatures
+
+    o  inappropriate AlgorithmIdentifier used in S/MIME signatures
+       (key type rather than not signature algorithm)
+
     o  apps/ca.c: "Sign the certificate?" - "n" creates empty certificate file
 
     o  "OpenSSL STATUS" is never up-to-date.

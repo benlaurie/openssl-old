@@ -224,7 +224,7 @@ $ LIB_BN = "bn_add,bn_div,bn_exp,bn_lib,bn_ctx,bn_mul,bn_mod,"+ -
 	"bn_recp,bn_mont,bn_mpi,bn_exp2,bn_gf2m"
 $ LIB_EC = "ec_lib,ecp_smpl,ecp_mont,ecp_recp,ecp_nist,ec_cvt,ec_mult,"+ -
 	"ec_err,ec_curve,ec_check,ec_print,ec_asn1,ec_key,"+ -
-	"ec2_smpl,ec2_smpt,ec2_mult"
+	"ec2_smpl,ec2_mult"
 $ LIB_RSA = "rsa_eay,rsa_gen,rsa_lib,rsa_sign,rsa_saos,rsa_err,"+ -
 	"rsa_pk1,rsa_ssl,rsa_none,rsa_oaep,rsa_chk,rsa_null,"+ -
 	"rsa_asn1"
@@ -236,7 +236,7 @@ $ LIB_DSO = "dso_dl,dso_dlfcn,dso_err,dso_lib,dso_null,"+ -
 	"dso_openssl,dso_win32,dso_vms"
 $ LIB_ENGINE = "eng_err,eng_lib,eng_list,eng_init,eng_ctrl,"+ -
 	"eng_table,eng_pkey,eng_fat,eng_all,"+ -
-	"tb_rsa,tb_dsa,tb_ecdsa,tb_dh,tb_rand,tb_cipher,tb_digest,tb_ecdh"+ -
+	"tb_rsa,tb_dsa,tb_ecdsa,tb_dh,tb_rand,tb_cipher,tb_digest,tb_ecdh,"+ -
 	"eng_openssl,eng_dyn,eng_cnf,"+ -
 	"hw_atalla,hw_cswift,hw_ncipher,hw_nuron,hw_ubsec,"+ -
 	"hw_openbsd_dev_crypto,hw_aep,hw_sureware,hw_4758_cca"

@@ -9,19 +9,6 @@
  * The ECC Code is licensed pursuant to the OpenSSL open source
  * license provided below.
  *
- * In addition, Sun covenants to all licensees who provide a reciprocal
- * covenant with respect to their own patents if any, not to sue under
- * current and future patent claims necessarily infringed by the making,
- * using, practicing, selling, offering for sale and/or otherwise
- * disposing of the ECC Code as delivered hereunder (or portions thereof),
- * provided that such covenant shall not apply:
- *  1) for code that a licensee deletes from the ECC Code;
- *  2) separates from the ECC Code; or
- *  3) for infringements caused by:
- *       i) the modification of the ECC Code or
- *      ii) the combination of the ECC Code with other software or
- *          devices where such combination causes the infringement.
- *
  * The software is originally written by Sheueling Chang Shantz and
  * Douglas Stebila of Sun Microsystems Laboratories.
  *
@@ -234,16 +221,14 @@ int ec_GF2m_simple_group_get_curve(const EC_GROUP *group, BIGNUM *p, BIGNUM *a, 
 		if (!BN_copy(p, &group->field)) return 0;
 		}
 
-	if (a != NULL || b != NULL)
+	if (a != NULL)
 		{
-		if (a != NULL)
-			{
-			if (!BN_copy(a, &group->a)) goto err;
-			}
-		if (b != NULL)
-			{
-			if (!BN_copy(b, &group->b)) goto err;
-			}
+		if (!BN_copy(a, &group->a)) goto err;
+		}
+
+	if (b != NULL)
+		{
+		if (!BN_copy(b, &group->b)) goto err;
 		}
 	
 	ret = 1;

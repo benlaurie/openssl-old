@@ -64,19 +64,6 @@
  * The Contribution is licensed pursuant to the Eric Young open source
  * license provided above.
  *
- * In addition, Sun covenants to all licensees who provide a reciprocal
- * covenant with respect to their own patents if any, not to sue under
- * current and future patent claims necessarily infringed by the making,
- * using, practicing, selling, offering for sale and/or otherwise
- * disposing of the Contribution as delivered hereunder 
- * (or portions thereof), provided that such covenant shall not apply:
- *  1) for code that a licensee deletes from the Contribution;
- *  2) separates from the Contribution; or
- *  3) for infringements caused by:
- *       i) the modification of the Contribution or
- *      ii) the combination of the  Contribution with other software or
- *          devices where such combination causes the infringement.
- *
  * The binary polynomial arithmetic software is originally written by 
  * Sheueling Chang Shantz and Douglas Stebila of Sun Microsystems Laboratories.
  *
@@ -355,6 +342,8 @@ BIGNUM *BN_new(void);
 void	BN_init(BIGNUM *);
 void	BN_clear_free(BIGNUM *a);
 BIGNUM *BN_copy(BIGNUM *a, const BIGNUM *b);
+/* BN_ncopy(): like BN_copy() but copies at most the first n BN_ULONGs */
+BIGNUM *BN_ncopy(BIGNUM *a, const BIGNUM *b, size_t n);
 void	BN_swap(BIGNUM *a, BIGNUM *b);
 BIGNUM *BN_bin2bn(const unsigned char *s,int len,BIGNUM *ret);
 int	BN_bn2bin(const BIGNUM *a, unsigned char *to);
@@ -512,6 +501,20 @@ int BN_GF2m_mod_sqrt_arr(BIGNUM *r, const BIGNUM *a, const unsigned int p[], BN_
 int BN_GF2m_mod_solve_quad_arr(BIGNUM *r, const BIGNUM *a, const unsigned int p[], BN_CTX *ctx); /* r^2 + r = a mod p */
 int BN_GF2m_poly2arr(const BIGNUM *a, unsigned int p[], int max);
 int BN_GF2m_arr2poly(const unsigned int p[], BIGNUM *a);
+
+/* faster mod functions for the 'NIST primes' 
+ * 0 <= a < p^2 */
+int BN_nist_mod_192(BIGNUM *r, const BIGNUM *a, const BIGNUM *p, BN_CTX *ctx);
+int BN_nist_mod_224(BIGNUM *r, const BIGNUM *a, const BIGNUM *p, BN_CTX *ctx);
+int BN_nist_mod_256(BIGNUM *r, const BIGNUM *a, const BIGNUM *p, BN_CTX *ctx);
+int BN_nist_mod_384(BIGNUM *r, const BIGNUM *a, const BIGNUM *p, BN_CTX *ctx);
+int BN_nist_mod_521(BIGNUM *r, const BIGNUM *a, const BIGNUM *p, BN_CTX *ctx);
+
+const BIGNUM *BN_get0_nist_prime_192(void);
+const BIGNUM *BN_get0_nist_prime_224(void);
+const BIGNUM *BN_get0_nist_prime_256(void);
+const BIGNUM *BN_get0_nist_prime_384(void);
+const BIGNUM *BN_get0_nist_prime_521(void);
 
 /* library internal functions */
 

@@ -117,19 +117,6 @@
  * The Contribution is licensed pursuant to the OpenSSL open source
  * license provided above.
  *
- * In addition, Sun covenants to all licensees who provide a reciprocal
- * covenant with respect to their own patents if any, not to sue under
- * current and future patent claims necessarily infringed by the making,
- * using, practicing, selling, offering for sale and/or otherwise
- * disposing of the Contribution as delivered hereunder 
- * (or portions thereof), provided that such covenant shall not apply:
- *  1) for code that a licensee deletes from the Contribution;
- *  2) separates from the Contribution; or
- *  3) for infringements caused by:
- *       i) the modification of the Contribution or
- *      ii) the combination of the  Contribution with other software or
- *          devices where such combination causes the infringement.
- *
  * ECC cipher suite support in OpenSSL originally written by
  * Vipul Gupta and Sumit Gupta of Sun Microsystems Laboratories.
  *
@@ -702,8 +689,8 @@ OPENSSL_GLOBAL SSL_CIPHER ssl3_ciphers[]={
 /* Cipher 28 VRS */
 	{
 	1,
-	SSL3_TXT_KRB5_RC4_40_CBC_SHA,
-	SSL3_CK_KRB5_RC4_40_CBC_SHA,
+	SSL3_TXT_KRB5_RC4_40_SHA,
+	SSL3_CK_KRB5_RC4_40_SHA,
 	SSL_kKRB5|SSL_aKRB5|  SSL_RC4|SSL_SHA1   |SSL_SSLV3,
 	SSL_EXPORT|SSL_EXP40,
 	0,
@@ -744,8 +731,8 @@ OPENSSL_GLOBAL SSL_CIPHER ssl3_ciphers[]={
 /* Cipher 2B VRS */
 	{
 	1,
-	SSL3_TXT_KRB5_RC4_40_CBC_MD5,
-	SSL3_CK_KRB5_RC4_40_CBC_MD5,
+	SSL3_TXT_KRB5_RC4_40_MD5,
+	SSL3_CK_KRB5_RC4_40_MD5,
 	SSL_kKRB5|SSL_aKRB5|  SSL_RC4|SSL_MD5    |SSL_SSLV3,
 	SSL_EXPORT|SSL_EXP40,
 	0,

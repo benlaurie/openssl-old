@@ -64,19 +64,6 @@
  * The Contribution is licensed pursuant to the OpenSSL open source
  * license provided above.
  *
- * In addition, Sun covenants to all licensees who provide a reciprocal
- * covenant with respect to their own patents if any, not to sue under
- * current and future patent claims necessarily infringed by the making,
- * using, practicing, selling, offering for sale and/or otherwise
- * disposing of the Contribution as delivered hereunder 
- * (or portions thereof), provided that such covenant shall not apply:
- *  1) for code that a licensee deletes from the Contribution;
- *  2) separates from the Contribution; or
- *  3) for infringements caused by:
- *       i) the modification of the Contribution or
- *      ii) the combination of the Contribution with other software or
- *          devices where such combination causes the infringement.
- *
  * The ECDH and ECDSA speed test software is originally written by 
  * Sumit Gupta of Sun Microsystems Laboratories.
  *
@@ -261,7 +248,7 @@ static int do_multi(int multi);
 #define RSA_NUM		4
 #define DSA_NUM		3
 
-#define EC_NUM       15
+#define EC_NUM       16
 #define MAX_ECDH_SIZE 256
 
 static const char *names[ALGOR_NUM]={
@@ -520,20 +507,21 @@ int MAIN(int argc, char **argv)
 #define	R_RSA_4096	3
 
 #define R_EC_P160    0
-#define R_EC_P224    1
-#define R_EC_P256    2
-#define R_EC_P384    3
-#define R_EC_P521    4
-#define R_EC_K163    5
-#define R_EC_K233    6
-#define R_EC_K283    7
-#define R_EC_K409    8
-#define R_EC_K571    9
-#define R_EC_B163    10
-#define R_EC_B233    11
-#define R_EC_B283    12
-#define R_EC_B409    13
-#define R_EC_B571    14
+#define R_EC_P192    1	
+#define R_EC_P224    2
+#define R_EC_P256    3
+#define R_EC_P384    4
+#define R_EC_P521    5
+#define R_EC_K163    6
+#define R_EC_K233    7
+#define R_EC_K283    8
+#define R_EC_K409    9
+#define R_EC_K571    10
+#define R_EC_B163    11
+#define R_EC_B233    12
+#define R_EC_B283    13
+#define R_EC_B409    14
+#define R_EC_B571    15
 
 #ifndef OPENSSL_NO_RSA
 	RSA *rsa_key[RSA_NUM];
@@ -560,6 +548,7 @@ int MAIN(int argc, char **argv)
 	{	
 	/* Prime Curves */
 	NID_secp160r1,
+	NID_X9_62_prime192v1,
 	NID_secp224r1,
 	NID_X9_62_prime256v1,
 	NID_secp384r1,
@@ -580,6 +569,7 @@ int MAIN(int argc, char **argv)
 	{
 	/* Prime Curves */
 	"secp160r1",
+	"nistp192",
 	"nistp224",
 	"nistp256",
 	"nistp384",
@@ -598,7 +588,7 @@ int MAIN(int argc, char **argv)
 	};
 	static int test_curves_bits[EC_NUM] =
         {
-        160, 224, 256, 384, 521,
+        160, 192, 224, 256, 384, 521,
         163, 233, 283, 409, 571,
         163, 233, 283, 409, 571
         };

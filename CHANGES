@@ -4,6 +4,29 @@
 
  Changes between 0.9.7 and 0.9.8  [xx XXX 2002]
 
+  *) Implement fast modular reduction for pseudo-Mersenne primes
+     used in NIST curves (crypto/bn/bn_nist.c, crypto/ec/ecp_nist.c).
+     EC_GROUP_new_curve_GFp() will now automatically use this
+     if applicable.
+     [Nils Larsch <nla@trustcenter.de>]
+
+  *) Add new lock type (CRYPTO_LOCK_BN).
+     [Bodo Moeller]
+
+  *) Change the ENGINE framework to automatically load engines
+     dynamically from specific directories unless they could be
+     found to already be built in or loaded.  Move all the
+     current engines except for the cryptodev one to a new
+     directory engines/.
+     The engines in engines/ are built as shared libraries if
+     the "shared" options was given to ./Configure or ./config.
+     Otherwise, they are inserted in libcrypto.a.
+     /usr/local/ssl/engines is the default directory for dynamic
+     engines, but that can be overriden at configure time through
+     the usual use of --prefix and/or --openssldir, and at run
+     time with the environment variable OPENSSL_ENGINES.
+     [Geoff Thorpe and Richard Levitte]
+
   *) Add Makefile.shared, a helper makefile to build shared
      libraries.  Addapt Makefile.org.
      [Richard Levitte]
@@ -1964,6 +1987,16 @@ des-cbc           3624.96k     5258.21k     5530.91k     5624.30k     5628.26k
      [Richard Levitte]
 
  Changes between 0.9.6g and 0.9.6h  [xx XXX xxxx]
+
+  *) Add a SSL_SESS_CACHE_NO_INTERNAL_STORE flag to take over half
+     the job SSL_SESS_CACHE_NO_INTERNAL_LOOKUP was inconsistently
+     doing, define a new flag (SSL_SESS_CACHE_NO_INTERNAL) to be
+     the bitwise-OR of the two for use by the majority of applications
+     wanting this behaviour, and update the docs. The documented
+     behaviour and actual behaviour were inconsistent and had been
+     changing anyway, so this is more a bug-fix than a behavioural
+     change.
+     [Geoff Thorpe, diagnosed by Nadav Har'El]
 
   *) Don't impose a 16-byte length minimum on session IDs in ssl/s3_clnt.c
      (the SSL 3.0 and TLS 1.0 specifications allow any length up to 32 bytes).

@@ -61,19 +61,6 @@
  * The Contribution is licensed pursuant to the OpenSSL open source
  * license provided above.
  *
- * In addition, Sun covenants to all licensees who provide a reciprocal
- * covenant with respect to their own patents if any, not to sue under
- * current and future patent claims necessarily infringed by the making,
- * using, practicing, selling, offering for sale and/or otherwise
- * disposing of the Contribution as delivered hereunder 
- * (or portions thereof), provided that such covenant shall not apply:
- *  1) for code that a licensee deletes from the Contribution;
- *  2) separates from the Contribution; or
- *  3) for infringements caused by:
- *       i) the modification of the Contribution or
- *      ii) the combination of the Contribution with other software or
- *          devices where such combination causes the infringement.
- *
  * The elliptic curve binary polynomial software is originally written by 
  * Sheueling Chang Shantz and Douglas Stebila of Sun Microsystems Laboratories.
  *
@@ -472,54 +459,9 @@ int main(void)
 	EC_KEY_free(ret_ecdsa);
 	ret_ecdsa = NULL;
 	PKCS8_PRIV_KEY_INFO_free(pkcs8);
-	BIO_printf(bio_err, "PKCS8_NO_OCTET        : ");
-        if ((pkcs8 = EVP_PKEY2PKCS8_broken(pkey, PKCS8_NO_OCTET)) == NULL) goto err;
-        if ((ret_pkey = EVP_PKCS82PKEY(pkcs8)) == NULL) goto err;
-        ret_ecdsa = EVP_PKEY_get1_EC_KEY(ret_pkey);
-        if (ecdsa_cmp(ecdsa, ret_ecdsa))
-        {
-                BIO_printf(bio_err, "TEST FAILED \n");
-                goto err;
-        }
-        else BIO_printf(bio_err, "TEST OK \n");
-        EVP_PKEY_free(ret_pkey);
-        ret_pkey = NULL;
-        EC_KEY_free(ret_ecdsa);
-        ret_ecdsa = NULL;
-	PKCS8_PRIV_KEY_INFO_free(pkcs8);
-	BIO_printf(bio_err, "PKCS8_EMBEDDED_PARAM  : ");
-        if ((pkcs8 = EVP_PKEY2PKCS8_broken(pkey, PKCS8_EMBEDDED_PARAM)) == NULL) goto err;
-        if ((ret_pkey = EVP_PKCS82PKEY(pkcs8)) == NULL) goto err;
-        ret_ecdsa = EVP_PKEY_get1_EC_KEY(ret_pkey);
-        if (ecdsa_cmp(ecdsa, ret_ecdsa))
-        {
-                BIO_printf(bio_err, "TEST FAILED \n");
-                goto err;
-        }
-        else BIO_printf(bio_err, "TEST OK \n");
-        EVP_PKEY_free(ret_pkey);
-        ret_pkey = NULL;
-        EC_KEY_free(ret_ecdsa);
-        ret_ecdsa = NULL;
-	PKCS8_PRIV_KEY_INFO_free(pkcs8);
-        BIO_printf(bio_err, "PKCS8_NS_DB           : ");
-        if ((pkcs8 = EVP_PKEY2PKCS8_broken(pkey, PKCS8_NS_DB)) == NULL) goto err;
-        if ((ret_pkey = EVP_PKCS82PKEY(pkcs8)) == NULL) goto err;
-        ret_ecdsa = EVP_PKEY_get1_EC_KEY(ret_pkey);
-        if (ecdsa_cmp(ecdsa, ret_ecdsa))
-        {
-                BIO_printf(bio_err, "TEST FAILED \n");
-                goto err;
-        }
-        else BIO_printf(bio_err, "TEST OK \n");
-        EVP_PKEY_free(ret_pkey);
-        ret_pkey = NULL;
-        EC_KEY_free(ret_ecdsa);
-        ret_ecdsa = NULL;
 	EVP_PKEY_free(pkey);
 	pkey  = NULL;
 	ecdsa = NULL;
-	PKCS8_PRIV_KEY_INFO_free(pkcs8);
 	pkcs8 = NULL;
 
 	/* sign and verify tests */

@@ -322,9 +322,9 @@ $!  Check To See If We Are To Link With A Specific TCP/IP Library.
 $!
 $   LINK /'DEBUGGER'/'TRACEBACK' /EXE='EXE_FILE' /MAP='MAP_FILE' /FULL/CROSS -
 	'OBJECT_FILE''EXTRA_OBJ', -
-        'SSL_LIB'/LIBRARY,
+        'SSL_LIB'/LIBRARY, -
 	'CRYPTO_LIB'/LIBRARY, -
-        'TCPIP_LIB',
+        'TCPIP_LIB', -
 	'OPT_FILE'/OPTION, -
 	SYS$DISK:[-]SSL_IDENT.OPT/OPTION
 $!

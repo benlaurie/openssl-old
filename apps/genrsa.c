@@ -56,6 +56,12 @@
  * [including the GNU Public Licence.]
  */
 
+/* Until the key-gen callbacks are modified to use newer prototypes, we allow
+ * deprecated functions for openssl-internal code */
+#ifdef OPENSSL_NO_DEPRECATED
+#undef OPENSSL_NO_DEPRECATED
+#endif
+
 #ifndef OPENSSL_NO_RSA
 #include <stdio.h>
 #include <string.h>
@@ -258,7 +264,7 @@ err:
 	if (ret != 0)
 		ERR_print_errors(bio_err);
 	apps_shutdown();
-	EXIT(ret);
+	OPENSSL_EXIT(ret);
 	}
 
 static void MS_CALLBACK genrsa_cb(int p, int n, void *arg)

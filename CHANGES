@@ -4,6 +4,23 @@
 
  Changes between 0.9.7 and 0.9.8  [xx XXX 2002]
 
+  *) Change the "progress" mechanism used in key-generation and
+     primality testing to functions that take a new BN_GENCB pointer in
+     place of callback/argument pairs. The new API functions have "_ex"
+     postfixes and the older functions are reimplemented as wrappers for
+     the new ones. The OPENSSL_NO_DEPRECATED symbol can be used to hide
+     declarations of the old functions to help (graceful) attempts to
+     migrate to the new functions. Also, the new key-generation API
+     functions operate on a caller-supplied key-structure and return
+     success/failure rather than returning a key or NULL - this is to
+     help make "keygen" another member function of RSA_METHOD etc.
+     [Geoff Thorpe]
+
+  *) Change the ZLIB compression method to be stateful, and make it
+     available to TLS with the number defined in 
+     draft-ietf-tls-compression-04.txt.
+     [Richard Levitte]
+
   *) Add the ASN.1 structures and functions for CertificatePair, which
      is defined as follows (according to X.509_4thEditionDraftV6.pdf):
 
@@ -334,6 +351,25 @@ TODO: bug: pad  x  with leading zeros if necessary
      [Nils Larsch <nla@trustcenter.de, Bodo Moeller]
  
  Changes between 0.9.6h and 0.9.7  [XX xxx 2002]
+
+  *) The hw_ncipher.c engine requires dynamic locks.  Unfortunately, it
+     seems that in spite of existing for more than a year, many application
+     author have done nothing to provide the necessary callbacks, which
+     means that this particular engine will not work properly anywhere.
+     This is a very unfortunate situation which forces us, in the name
+     of usability, to give the hw_ncipher.c a static lock, which is part
+     of libcrypto.
+     NOTE: This is for the 0.9.7 series ONLY.  This hack will never
+     appear in 0.9.8 or later.  We EXPECT application authors to have
+     dealt properly with this when 0.9.8 is released (unless we actually
+     make such changes in the libcrypto locking code that changes will
+     have to be made anyway).
+     [Richard Levitte]
+
+  *) In asn1_d2i_read_bio() repeatedly call BIO_read() until all content
+     octets have been read, EOF or an error occurs. Without this change
+     some truncated ASN1 structures will not produce an error.
+     [Steve Henson]
 
   *) Disable Heimdal support, since it hasn't been fully implemented.
      Still give the possibility to force the use of Heimdal, but with
@@ -2114,7 +2150,7 @@ des-cbc           3624.96k     5258.21k     5530.91k     5624.30k     5628.26k
   *) Clean old EAY MD5 hack from e_os.h.
      [Richard Levitte]
 
- Changes between 0.9.6g and 0.9.6h  [xx XXX xxxx]
+ Changes between 0.9.6g and 0.9.6h  [5 Dec 2002]
 
   *) New function OPENSSL_cleanse(), which is used to cleanse a section of
      memory from it's contents.  This is done with a counter that will

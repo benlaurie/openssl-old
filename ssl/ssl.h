@@ -587,7 +587,7 @@ typedef int (*GEN_SESSION_CB)(const SSL *ssl, unsigned char *id,
 typedef struct ssl_comp_st
 	{
 	int id;
-	char *name;
+	const char *name;
 #ifndef OPENSSL_NO_COMP
 	COMP_METHOD *method;
 #else
@@ -1690,6 +1690,7 @@ void ERR_load_SSL_strings(void);
 #define SSL_R_CIPHER_TABLE_SRC_ERROR			 139
 #define SSL_R_COMPRESSED_LENGTH_TOO_LONG		 140
 #define SSL_R_COMPRESSION_FAILURE			 141
+#define SSL_R_COMPRESSION_ID_NOT_WITHIN_PRIVATE_RANGE	 1120
 #define SSL_R_COMPRESSION_LIBRARY_ERROR			 142
 #define SSL_R_CONNECTION_ID_IS_DIFFERENT		 143
 #define SSL_R_CONNECTION_TYPE_NOT_SET			 144

@@ -62,7 +62,7 @@
 #include "bn_lcl.h"
 #include <openssl/rand.h>
 
-BIGNUM *BN_generate_prime(BIGNUM *ret, int bits, int safe,
+BIGNUM *BN_generate_prime(BIGNUM *ret, size_t bits, int safe,
 	const BIGNUM *add, const BIGNUM *rem,
 	void (*callback)(int,int,void *), void *cb_arg)
 	{

@@ -121,9 +121,6 @@
 
 #ifndef OPENSSL_NO_FP_API
 #include <stdio.h>
-#ifdef OPENSSL_SYS_WINCE
-#include <stdio_extras.h>
-#endif
 #endif
 
 #include <openssl/stack.h>
@@ -301,6 +298,7 @@ DECLARE_STACK_OF(CRYPTO_EX_DATA_FUNCS)
 #define CRYPTO_EX_INDEX_UI		11
 #define CRYPTO_EX_INDEX_ECDSA		12
 #define CRYPTO_EX_INDEX_ECDH		13
+#define CRYPTO_EX_INDEX_COMP		14
 
 /* Dynamically assigned indexes start from this value (don't use directly, use
  * via CRYPTO_ex_data_new_class). */

@@ -52,13 +52,11 @@ $!	UCX		for UCX
 $!	TCPIP		for TCPIP (post UCX)
 $!	SOCKETSHR	for SOCKETSHR+NETLIB
 $!
-$!  P6, if defined, sets a compiler thread NOT needed on OpenVMS 7.1 (and up)
+$!  P6, if defined, sets the pointer size to build with.  The values can be
+$!  be "32" or "64".  Any other value will default to "32"
 $!
+$!  P7, if defined, sets a compiler thread NOT needed on OpenVMS 7.1 (and up)
 $!
-$! Define USER_CCFLAGS
-$!
-$ @[-]vms_build_info.com
-$ WRITE SYS$OUTPUT " Using USER_CCFLAGS = ", USER_CCFLAGS
 $!
 $! Define A TCP/IP Library That We Will Need To Link To.
 $! (That Is, If We Need To Link To One.)
@@ -135,7 +133,6 @@ $!
 $! Define The EXE Directory.
 $!
 $ EXE_DIR := SYS$DISK:[-.'ARCH'.EXE.SSL]
-$ CRYPTO_EXE_DIR := SYS$DISK:[-.'ARCH'.EXE.CRYPTO]
 $!
 $! Check To See If The Architecture Specific Directory Exists.
 $!
@@ -152,15 +149,15 @@ $ ENDIF
 $!
 $! Define The Library Name.
 $!
-$ SSL_LIB := 'EXE_DIR'LIBSSL'build_bits'.OLB
+$ SSL_LIB := 'EXE_DIR'LIBSSL'FILE_POINTER_SIZE'.OLB
 $!
 $! Define The CRYPTO-LIB We Are To Use.
 $!
-$ CRYPTO_LIB := SYS$DISK:[-.'ARCH'.EXE.CRYPTO]LIBCRYPTO'build_bits'.OLB
+$ CRYPTO_LIB := SYS$DISK:[-.'ARCH'.EXE.CRYPTO]LIBCRYPTO'FILE_POINTER_SIZE'.OLB
 $!
 $! Define The RSAREF-LIB We Are To Use.
 $!
-$ RSAREF_LIB := SYS$DISK:[-.'ARCH'.EXE.RSAREF]LIBRSAGLUE'build_bits'.OLB
+$ RSAREF_LIB := SYS$DISK:[-.'ARCH'.EXE.RSAREF]LIBRSAGLUE'FILE_POINTER_SIZE'.OLB
 $!
 $! Check To See What We Are To Do.
 $!
@@ -364,21 +361,6 @@ $     LINK/'DEBUGGER'/'TRACEBACK'/EXE='EXE_DIR'SSL_TASK.EXE -
 	  'TCPIP_LIB','OPT_FILE'/OPTION, -
 	  SYS$DISK:[-]SSL_IDENT.OPT/OPTION
 $!
-$!
-$!  Create the CRYPTO Shareable Image
-$!!     LINK/'DEBUGGER'/'TRACEBACK'/SHARE='CRYPTO_EXE_DIR'LIBCRYPTO.EXE -
-$!!!          /MAP='LIS_DIR'LIBCRYPTO.MAP /FULL/CROSS -
-$!!!        'CRYPTO_LIB'/LIBRARY, -
-$!!!	'CRYPTO_EXE_DIR'LIBCRYPTO.OPT/OPTION
-$!
-$!
-$!  Create the SSL Shareable Image	
-$!!     LINK/'DEBUGGER'/'TRACEBACK'/SHARE='EXE_DIR'LIBSSL.EXE -
-$!!!	  /MAP='LIS_DIR'LIBSSL.MAP /FULL/CROSS -
-$!!!	'RSAREF_LIB'/LIBRARY, -
-$!!!	'EXE_DIR'LIBSSL.OPT/OPTION
-$!      !!!!!!!! 'TCPIP_LIB','OPT_SHARE_FILE'/OPTION
-$!
 $!  Else...
 $!
 $   ELSE
@@ -392,20 +374,6 @@ $     LINK/'DEBUGGER'/'TRACEBACK'/EXE='EXE_DIR'SSL_TASK.EXE -
 	  'OPT_FILE'/OPTION, -
 	  SYS$DISK:[-]SSL_IDENT.OPT/OPTION
 $!
-$!
-$!  Create the CRYPTO Shareable Image
-$!!     LINK/'DEBUGGER'/'TRACEBACK'/SHARE='CRYPTO_EXE_DIR'LIBCRYPTO.EXE -
-$!!!          /MAP='LIS_DIR'LIBCRYPTO.MAP /FULL/CROSS -
-$!!!        'CRYPTO_LIB'/LIBRARY, -
-$!!!        'CRYPTO_EXE_DIR'LIBCRYPTO.OPT/OPTION
-$!
-$!
-$!  Create the SSL Shareable Image
-$!!     LINK/'DEBUGGER'/'TRACEBACK'/SHARE='EXE_DIR'LIBSSL.EXE -
-$!!!          /MAP='LIS_DIR'LIBSSL.MAP /FULL/CROSS -
-$!!!        'RSAREF_LIB'/LIBRARY, -
-$!!!        'EXE_DIR'LIBSSL.OPT/OPTION
-$!      !!!!!!!! 'TCPIP_LIB','OPT_SHARE_FILE'/OPTION
 $!  End The TCP/IP Library Check.
 $!
 $   ENDIF
@@ -431,23 +399,6 @@ $     LINK/'DEBUGGER'/'TRACEBACK'/EXE='EXE_DIR'SSL_TASK.EXE -
           'TCPIP_LIB','OPT_FILE'/OPTION, -
 	  SYS$DISK:[-]SSL_IDENT.OPT/OPTION
 $!
-$!
-$!  Create the CRYPTO Shareable Image
-$!!     LINK/'DEBUGGER'/'TRACEBACK'/SHARE='CRYPTO_EXE_DIR'LIBCRYPTO.EXE -
-$!!!          /MAP='LIS_DIR'LIBCRYPTO.MAP /FULL/CROSS -
-$!!!        'CRYPTO_LIB'/LIBRARY, -
-$!!!        'CRYPTO_EXE_DIR'LIBCRYPTO.OPT/OPTION
-$!
-$!
-$!  Create the SSL Shareable Image
-$!!     LINK/'DEBUGGER'/'TRACEBACK'/SHARE='EXE_DIR'LIBSSL.EXE -
-$!!!          /MAP='LIS_DIR'LIBSSL.MAP /FULL/CROSS -
-$!!!        'RSAREF_LIB'/LIBRARY, -
-$!!!	'TCPIP_LIB', -
-$!!!        'EXE_DIR'LIBSSL.OPT/OPTION
-$!      !!!!!!!! 'TCPIP_LIB','OPT_SHARE_FILE'/OPTION
-$!
-$!
 $!  Else...
 $!
 $   ELSE
@@ -461,20 +412,6 @@ $     LINK/'DEBUGGER'/'TRACEBACK'/EXE='EXE_DIR'SSL_TASK.EXE -
 	  'CRYPTO_LIB'/LIBRARY, -
           'OPT_FILE'/OPTION, -
 	  SYS$DISK:[-]SSL_IDENT.OPT/OPTION
-$!
-$!
-$!  Create the CRYPTO Shareable Image
-$!     LINK/'DEBUGGER'/'TRACEBACK'/SHARE='CRYPTO_EXE_DIR'LIBCRYPTO.EXE -
-$!!!          /MAP='LIS_DIR'LIBCRYPTO.MAP /FULL/CROSS -
-$!!!        'CRYPTO_LIB'/LIBRARY, -
-$!!!        'CRYPTO_EXE_DIR'LIBCRYPTO.OPT/OPTION
-$!
-$!
-$!  Create the SSL Shareable Image
-$!!     LINK/'DEBUGGER'/'TRACEBACK'/SHARE='EXE_DIR'LIBSSL.EXE -
-$!!!          /MAP='LIS_DIR'LIBSSL.MAP /FULL/CROSS -
-$!!!        'EXE_DIR'LIBSSL.OPT/OPTION
-$!      !!!!!!!! 'TCPIP_LIB','OPT_SHARE_FILE'/OPTION
 $!
 $!  End The TCP/IP Library Check.
 $!
@@ -866,15 +803,73 @@ $! End The P3 Check.
 $!
 $ ENDIF
 $!
+$! On Alpha, pointers can be 32 or 64 bit wide.  Libraries for both variants
+$! can be built, and will then have "32" in the name for the 32-bit variant.
+$! On VAX as well as the 64-bit variant on Alpha, the name carries no extra
+$! information about pointer size (i.e., 64 bits is default on Alpha and 32
+$! bits is default on VAX).
+$!
+$ IF (P6.NES."32" .AND. P6.NES."64")
+$ THEN
+$!
+$!  Set The Default
+$!
+$   P6 = ""
+$!
+$! End of First Check Of P6
+$!
+$ ENDIF
+$!
+$! Check If P6 Isn't Set (Or Set Properly)
+$!
+$ IF (P6.EQS."" .OR. (P6.NES."32" .AND. ARCH.EQS."VAX"))
+$ THEN
+$!
+$!  Check If We're On A VAX
+$!
+$   IF ARCH.EQS."VAX"
+$   THEN
+$!
+$!    On VAX, We Force 32 Bit Pointers
+$!
+$     P6 = "32"
+$!
+$!    Else...
+$!
+$   ELSE
+$!
+$!    On Alpha, We Use 64 Bit Pointers By Default
+$!
+$     P6 = "64"
+$!
+$!    End Of Check For VAX
+$!
+$   ENDIF
+$!
+$! End Check Of P6
+$!
+$ ENDIF
+$!
+$! Set POINTER_SIZE
+$!
+$ POINTER_SIZE = P6
+$ QUAL_POINTER_SIZE = ""
+$ FILE_POINTER_SIZE = ""
+$ IF ARCH.EQS."AXP"
+$ THEN
+$   QUAL_POINTER_SIZE = "/POINTER_SIZE="+POINTER_SIZE
+$   IF POINTER_SIZE.EQS."32" THEN FILE_POINTER_SIZE = "32"
+$ ENDIF
+$!
 $! Special Threads For OpenVMS v7.1 Or Later
 $!
 $! Written By:  Richard Levitte
 $!              richard@levitte.org
 $!
 $!
-$! Check To See If We Have A Option For P6.
+$! Check To See If We Have A Option For P7.
 $!
-$ IF (P6.EQS."")
+$ IF (P7.EQS."")
 $ THEN
 $!
 $!  Get The Version Of VMS We Are Using.
@@ -896,7 +891,7 @@ $!  End The VMS Version Check.
 $!
 $   ENDIF
 $!
-$! End The P6 Check.
+$! End The P7 Check.
 $!
 $ ENDIF
 $!
@@ -1072,7 +1067,6 @@ $!
 $!    Define The Linker Options File Name.
 $!
 $     OPT_FILE = "SYS$DISK:[]VAX_VAXC_OPTIONS.OPT"
-$     OPT_SHARE_FILE = "SYS$DISK:[]VAX_VAXC_OPTIONS_SHARE.OPT"
 $!
 $!  End VAXC Check
 $!
@@ -1100,7 +1094,6 @@ $!
 $!    Define The Linker Options File Name.
 $!
 $     OPT_FILE = "SYS$DISK:[]VAX_GNUC_OPTIONS.OPT"
-$     OPT_SHARE_FILE = "SYS$DISK:[]VAX_GNUC_OPTIONS_SHARE.OPT"
 $!
 $!  End The GNU C Check.
 $!
@@ -1151,6 +1144,7 @@ $   ELSE
 $     CCDISABLEWARNINGS = ""
 $     CC4DISABLEWARNINGS = ""
 $   ENDIF
+$   CC = CC + QUAL_POINTER_SIZE
 $   CC2 = CC + "/DEFINE=(" + CCDEFS + ",_POSIX_C_SOURCE)" + CCDISABLEWARNINGS
 $   CC3 = CC + "/DEFINE=(" + CCDEFS + ISSEVEN + ")" + CCDISABLEWARNINGS
 $   CC = CC + "/DEFINE=(" + CCDEFS + ")" + CCDISABLEWARNINGS

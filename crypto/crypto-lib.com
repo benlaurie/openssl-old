@@ -52,17 +52,15 @@ $!	UCX		for UCX
 $!	TCPIP		for TCPIP (post UCX)
 $!	SOCKETSHR	for SOCKETSHR+NETLIB
 $!
-$!  P6, if defined, sets a compiler thread NOT needed on OpenVMS 7.1 (and up)
+$!  P6, if defined, sets the pointer size to build with.  The values can be
+$!  be "32" or "64".  Any other value will default to "32"
 $!
-$!  P7, if defined, sets a choice of crypto methods to compile.
+$!  P7, if defined, sets a compiler thread NOT needed on OpenVMS 7.1 (and up)
+$!
+$!  P8, if defined, sets a choice of crypto methods to compile.
 $!  WARNING: this should only be done to recompile some part of an already
 $!  fully compiled library.
 $!
-$!
-$! Define USER_CCFLAGS
-$!
-$ @[-]vms_build_info.com
-$ WRITE SYS$OUTPUT " Using USER_CCFLAGS = ", USER_CCFLAGS
 $!
 $! Define A TCP/IP Library That We Will Need To Link To.
 $! (That Is, If We Need To Link To One.)
@@ -165,15 +163,15 @@ $ ENDIF
 $!
 $! Define The Library Name.
 $!
-$ LIB_NAME := 'EXE_DIR'LIBCRYPTO'build_bits'.OLB
+$ LIB_NAME := 'EXE_DIR'LIBCRYPTO'FILE_POINTER_SIZE'.OLB
 $!
 $! Define The CRYPTO-LIB We Are To Use.
 $!
-$ CRYPTO_LIB := 'EXE_DIR'LIBCRYPTO'build_bits'.OLB
+$ CRYPTO_LIB := 'EXE_DIR'LIBCRYPTO'FILE_POINTER_SIZE'.OLB
 $!
 $! Define The RSAREF-LIB We Are To Use.
 $!
-$ RSAREF_LIB := SYS$DISK:[-.'ARCH'.EXE.RSAREF]LIBRSAGLUE'build_bits'.OLB
+$ RSAREF_LIB := SYS$DISK:[-.'ARCH'.EXE.RSAREF]LIBRSAGLUE'FILE_POINTER_SIZE'.OLB
 $!
 $! Check To See If We Already Have A "[.xxx.EXE.CRYPTO]LIBCRYPTO.OLB" Library...
 $!
@@ -251,7 +249,7 @@ $ LIB_STACK = "stack"
 $ LIB_LHASH = "lhash,lh_stats"
 $ LIB_RAND = "md_rand,randfile,rand_lib,rand_err,rand_egd,"+ -
 	"rand_vms"
-$ LIB_ERR = "err,err_all,err_prn,progname"
+$ LIB_ERR = "err,err_all,err_prn"
 $ LIB_OBJECTS = "o_names,obj_dat,obj_lib,obj_err"
 $ LIB_EVP = "encode,digest,evp_enc,evp_key,"+ -
 	"e_des,e_bf,e_idea,e_des3,"+ -
@@ -305,7 +303,7 @@ $!
 $! Setup exceptional compilations
 $!
 $ COMPILEWITH_CC3 = ",bss_rtcp,"
-$ COMPILEWITH_CC4 = ",a_utctm,bss_log,o_time,read_pwd,"
+$ COMPILEWITH_CC4 = ",a_utctm,bss_log,o_time,read_pwd,err,"
 $ COMPILEWITH_CC5 = ",md2_dgst,md4_dgst,md5_dgst,mdc2dgst," + -
                     "sha_dgst,sha1dgst,rmd_dgst,bf_enc,"
 $!
@@ -1063,9 +1061,9 @@ $! Written By:  Richard Levitte
 $!              richard@levitte.org
 $!
 $!
-$! Check To See If We Have A Option For P6.
+$! Check To See If We Have A Option For P7.
 $!
-$ IF (P6.EQS."")
+$ IF (P7.EQS."")
 $ THEN
 $!
 $!  Get The Version Of VMS We Are Using.
@@ -1087,7 +1085,7 @@ $!  End The VMS Version Check.
 $!
 $   ENDIF
 $!
-$! End The P6 Check.
+$! End The P7 Check.
 $!
 $ ENDIF
 $!
@@ -1194,6 +1192,64 @@ $ IF F$TYPE(USER_CCFLAGS) .NES. "" THEN CCEXTRAFLAGS = USER_CCFLAGS
 $ CCDISABLEWARNINGS = "LONGLONGTYPE,LONGLONGSUFX"
 $ IF F$TYPE(USER_CCDISABLEWARNINGS) .NES. "" THEN -
 	CCDISABLEWARNINGS = CCDISABLEWARNINGS + "," + USER_CCDISABLEWARNINGS
+$!
+$! On Alpha, pointers can be 32 or 64 bit wide.  Libraries for both variants
+$! can be built, and will then have "32" in the name for the 32-bit variant.
+$! On VAX as well as the 64-bit variant on Alpha, the name carries no extra
+$! information about pointer size (i.e., 64 bits is default on Alpha and 32
+$! bits is default on VAX).
+$!
+$ IF (P6.NES."32" .AND. P6.NES."64")
+$ THEN
+$!
+$!  Set The Default
+$!
+$   P6 = ""
+$!
+$! End of First Check Of P6
+$!
+$ ENDIF
+$!
+$! Check If P6 Isn't Set (Or Set Properly)
+$!
+$ IF (P6.EQS."" .OR. (P6.NES."32" .AND. ARCH.EQS."VAX"))
+$ THEN
+$!
+$!  Check If We're On A VAX
+$!
+$   IF ARCH.EQS."VAX"
+$   THEN
+$!
+$!    On VAX, We Force 32 Bit Pointers
+$!
+$     P6 = "32"
+$!
+$!    Else...
+$!
+$   ELSE
+$!
+$!    On Alpha, We Use 64 Bit Pointers By Default
+$!
+$     P6 = "64"
+$!
+$!    End Of Check For VAX
+$!
+$   ENDIF
+$!
+$! End Check Of P6
+$!
+$ ENDIF
+$!
+$! Set POINTER_SIZE
+$!
+$ POINTER_SIZE = P6
+$ QUAL_POINTER_SIZE = ""
+$ FILE_POINTER_SIZE = ""
+$ IF ARCH.EQS."AXP"
+$ THEN
+$   QUAL_POINTER_SIZE = "/POINTER_SIZE="+POINTER_SIZE
+$   IF POINTER_SIZE.EQS."32" THEN FILE_POINTER_SIZE = "32"
+$ ENDIF
 $!
 $!  Check To See If The User Entered A Valid Paramter.
 $!
@@ -1342,6 +1398,7 @@ $   ELSE
 $     CCDISABLEWARNINGS = ""
 $     CC4DISABLEWARNINGS = ""
 $   ENDIF
+$   CC = CC + QUAL_POINTER_SIZE
 $   CC3 = CC + "/DEFINE=(" + CCDEFS + ISSEVEN + ")" + CCDISABLEWARNINGS
 $   CC = CC + "/DEFINE=(" + CCDEFS + ")" + CCDISABLEWARNINGS
 $   IF ARCH .EQS. "VAX" .AND. COMPILER .EQS. "DECC" .AND. P3 .NES. "DEBUG"
@@ -1494,10 +1551,10 @@ $!
 $! Check if the user wanted to compile just a subset of all the encryption
 $! methods.
 $!
-$ IF P7 .NES. ""
+$ IF P8 .NES. ""
 $ THEN
-$   ENCRYPT_TYPES = P7
-$! NYI:   ENCRYPT_PROGRAMS = P7
+$   ENCRYPT_TYPES = P8
+$! NYI:   ENCRYPT_PROGRAMS = P8
 $ ENDIF
 $!
 $!  Time To RETURN...

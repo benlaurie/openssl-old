@@ -47,7 +47,10 @@ $!	UCX		for UCX
 $!	TCPIP		for TCPIP (post UCX)
 $!	SOCKETSHR	for SOCKETSHR+NETLIB
 $!
-$!  P5, if defined, sets a compiler thread NOT needed on OpenVMS 7.1 (and up)
+$!  P5, if defined, sets the pointer size to build with.  The values can be
+$!  be "32" or "64".  Any other value will default to "32"
+$!
+$!  P6, if defined, sets a compiler thread NOT needed on OpenVMS 7.1 (and up)
 $!
 $!
 $! Define A TCP/IP Library That We Will Need To Link To.
@@ -76,10 +79,6 @@ $! End The Architecture Check.
 $!
 $ ENDIF
 $!
-$! Define some VMS specific symbols.
-$!
-$ @[-]vms_build_info
-$!
 $! Check To Make Sure We Have Valid Command Line Parameters.
 $!
 $ GOSUB CHECK_OPTIONS
@@ -94,15 +93,15 @@ $ WRITE SYS$OUTPUT "Compiling On A ",ARCH," Machine."
 $!
 $! Define The CRYPTO-LIB We Are To Use.
 $!
-$ CRYPTO_LIB := SYS$DISK:[-.'ARCH'.EXE.CRYPTO]LIBCRYPTO'build_bits'.OLB
+$ CRYPTO_LIB := SYS$DISK:[-.'ARCH'.EXE.CRYPTO]LIBCRYPTO'FILE_POINTER_SIZE'.OLB
 $!
 $! Define The RSAREF-LIB We Are To Use.
 $!
-$ RSAREF_LIB := SYS$DISK:[-.'ARCH'.EXE.RSAREF]LIBRSAGLUE'build_bits'.OLB
+$ RSAREF_LIB := SYS$DISK:[-.'ARCH'.EXE.RSAREF]LIBRSAGLUE'FILE_POINTER_SIZE'.OLB
 $!
 $! Define The SSL We Are To Use.
 $!
-$ SSL_LIB := SYS$DISK:[-.'ARCH'.EXE.SSL]LIBSSL'build_bits'.OLB
+$ SSL_LIB := SYS$DISK:[-.'ARCH'.EXE.SSL]LIBSSL'FILE_POINTER_SIZE'.OLB
 $!
 $! Define The OBJ Directory.
 $!
@@ -776,6 +775,64 @@ $ CCDISABLEWARNINGS = "LONGLONGTYPE,LONGLONGSUFX"
 $ IF F$TYPE(USER_CCDISABLEWARNINGS) .NES. "" THEN -
 	CCDISABLEWARNINGS = CCDISABLEWARNINGS + "," + USER_CCDISABLEWARNINGS
 $!
+$! On Alpha, pointers can be 32 or 64 bit wide.  Libraries for both variants
+$! can be built, and will then have "32" in the name for the 32-bit variant.
+$! On VAX as well as the 64-bit variant on Alpha, the name carries no extra
+$! information about pointer size (i.e., 64 bits is default on Alpha and 32
+$! bits is default on VAX).
+$!
+$ IF (P5.NES."32" .AND. P5.NES."64")
+$ THEN
+$!
+$!  Set The Default
+$!
+$   P5 = ""
+$!
+$! End of First Check Of P5
+$!
+$ ENDIF
+$!
+$! Check If P5 Isn't Set (Or Set Properly)
+$!
+$ IF (P5.EQS."" .OR. (P5.NES."32" .AND. ARCH.EQS."VAX"))
+$ THEN
+$!
+$!  Check If We're On A VAX
+$!
+$   IF ARCH.EQS."VAX"
+$   THEN
+$!
+$!    On VAX, We Force 32 Bit Pointers
+$!
+$     P5 = "32"
+$!
+$!    Else...
+$!
+$   ELSE
+$!
+$!    On Alpha, We Use 64 Bit Pointers By Default
+$!
+$     P5 = "64"
+$!
+$!    End Of Check For VAX
+$!
+$   ENDIF
+$!
+$! End Check Of P5
+$!
+$ ENDIF
+$!
+$! Set POINTER_SIZE
+$!
+$ POINTER_SIZE = P5
+$ QUAL_POINTER_SIZE = ""
+$ FILE_POINTER_SIZE = ""
+$ IF ARCH.EQS."AXP"
+$ THEN
+$   QUAL_POINTER_SIZE = "/POINTER_SIZE="+POINTER_SIZE
+$   IF POINTER_SIZE.EQS."32" THEN FILE_POINTER_SIZE = "32"
+$ ENDIF
+$!
 $!  Check To See If The User Entered A Valid Paramter.
 $!
 $ IF (P3.EQS."VAXC").OR.(P3.EQS."DECC").OR.(P3.EQS."GNUC")
@@ -920,6 +977,7 @@ $   ELSE
 $     CCDISABLEWARNINGS = ""
 $     CC4DISABLEWARNINGS = ""
 $   ENDIF
+$   CC = CC + QUAL_POINTER_SIZE
 $   CC = CC + "/DEFINE=(" + CCDEFS + ")" + CCDISABLEWARNINGS
 $!
 $!  Show user the result
@@ -1053,9 +1111,9 @@ $! Written By:  Richard Levitte
 $!              richard@levitte.org
 $!
 $!
-$! Check To See If We Have A Option For P5.
+$! Check To See If We Have A Option For P6.
 $!
-$ IF (P5.EQS."")
+$ IF (P6.EQS."")
 $ THEN
 $!
 $!  Get The Version Of VMS We Are Using.
@@ -1077,7 +1135,7 @@ $!  End The VMS Version Check.
 $!
 $   ENDIF
 $!
-$! End The P5 Check.
+$! End The P6 Check.
 $!
 $ ENDIF
 $!

@@ -1,14 +1,3 @@
-$ set verify
-$ set process/priv=all
-$!
-$ arch_name = f$getsyi("arch_name")
-$ node_name = f$getsyi("nodename")
-$ version = f$getsyi("version")
-$ cpu = f$getsyi("cpu")
-$!
-$ write sys$output " "
-$ write sys$output "   ", node_name, " is running ", version, " on a ", arch_name, "(CPU=", cpu, ")"
-$ write sys$output " "
 $!
 $! MAKEVMS.COM
 $! Original Author:  UNKNOWN
@@ -40,6 +29,7 @@ $!      SSL       Just build the "[.xxx.EXE.SSL]LIBSSL.OLB" library.
 $!      SSL_TASK  Just build the "[.xxx.EXE.SSL]SSL_TASK.EXE" program.
 $!      TEST      Just build the "[.xxx.EXE.TEST]" test programs for OpenSSL.
 $!      APPS      Just build the "[.xxx.EXE.APPS]" application programs for OpenSSL.
+$!      CERT_TOOL Just build the "[.xxx.EXE.CERT_TOOL]" application programs for OpenSSL.
 $!
 $!
 $! Specify RSAREF as P2 to compile using the RSAREF Library.
@@ -58,11 +48,11 @@ $! information.
 $!
 $! Specify which compiler at P4 to try to compile under.
 $!
-$!	  VAXC	 For VAX C.
-$!	  DECC	 For DEC C.
-$!	  GNUC	 For GNU C.
-$!	  LINK   To only link the programs from existing object files.
-$!               (not yet implemented)
+$!	VAXC	For VAX C.
+$!	DECC	For DEC C.
+$!	GNUC	For GNU C.
+$!	LINK	To only link the programs from existing object files.
+$!		(not yet implemented)
 $!
 $! If you don't speficy a compiler, it will try to determine which
 $! "C" compiler to use.
@@ -78,7 +68,10 @@ $!	NONE		to avoid specifying which TCP/IP implementation to
 $!			use at build time (this works with DEC C).  This is
 $!			the default.
 $!
-$! P6, if defined, sets a compiler thread NOT needed on OpenVMS 7.1 (and up)
+$! P6, if defined, sets the pointer size to build with.  The values can be
+$! be "32" or "64".  Any other value will default to "32"
+$!
+$! P7, if defined, sets a compiler thread NOT needed on OpenVMS 7.1 (and up)
 $!
 $!
 $!
@@ -95,10 +88,16 @@ $   SET DEF 'COMPATH'
 $ ENDIF
 $!
 $!
-$! Define USER_CCFLAGS
+$! Telling the user a bit about the system
 $!
-$ @vms_build_info.com
-$ WRITE SYS$OUTPUT " Using USER_CCFLAGS = ", USER_CCFLAGS
+$ arch_name = f$getsyi("arch_name")
+$ node_name = f$getsyi("nodename")
+$ version = f$getsyi("version")
+$ cpu = f$getsyi("cpu")
+$!
+$ write sys$output " "
+$ write sys$output "   Building OpenSSL on ", node_name, " running ", version, " on a ", arch_name, "(CPU=", cpu, ")"
+$ write sys$output " "
 $!
 $!
 $! Check Which Architecture We Are Using.
@@ -127,17 +126,9 @@ $!
 $ GOSUB CHECK_OPTIONS
 $!
 $!
-$! Determine the version number.
-$!
-$ GOSUB read_version_info
-$!
-$! Create the Ident options file.
-$!
-$ GOSUB CREATE_OPT_FILE
-$!
 $! Check To See What We Are To Do.
 $!
-$ IF (BUILDCOMMAND.EQS."ALL")
+$ IF (BUILDCOMMAND.EQS."ALL".OR.BUILDCOMMAND.EQS."CONFIGALL")
 $ THEN
 $!
 $!  Start with building the OpenSSL configuration file.
@@ -151,6 +142,14 @@ $!
 $!  Fix The Unix Softlinks.
 $!
 $   GOSUB SOFTLINKS
+$!
+$!  Determine the version number.
+$!
+$   GOSUB read_version_info
+$!
+$!  Create the Ident options file.
+$!
+$   GOSUB CREATE_OPT_FILE
 $!
 $ ENDIF
 $!
@@ -193,19 +192,19 @@ $   GOSUB APPS
 $!
 $!  Build The [.VMS.CERT_TOOL] OpenSSL Certificate Utility.
 $!
-$   GOSUB CERT_UTIL
-$!
-$!  Build the shareable images - LIBSSL & LIBCRYPTO.
-$!
-$ @mkshared
+$   GOSUB CERT_TOOL
 $!
 $! Else...
 $!
 $ ELSE
+$   IF (BUILDCOMMAND.NES."CONFIGALL")
+$   THEN
 $!
 $!    Build Just What The User Wants Us To Build.
 $!
 $     GOSUB 'BUILDCOMMAND'
+$!
+$   ENDIF
 $!
 $ ENDIF
 $!
@@ -570,11 +569,11 @@ $ SET DEFAULT SYS$DISK:[.CRYPTO]
 $!
 $! Build The [.xxx.EXE.CRYPTO]LIBCRYPTO.OLB Library.
 $!  
-$ @CRYPTO-LIB LIBRARY 'RSAREF' 'DEBUGGER' "''COMPILER'" "''TCPIP_TYPE'" "''ISSEVEN'" "''BUILDPART'"
+$ @CRYPTO-LIB LIBRARY 'RSAREF' 'DEBUGGER' "''COMPILER'" "''TCPIP_TYPE'" "''POINTER_SIZE'" "''ISSEVEN'" "''BUILDPART'"
 $!
 $! Build The [.xxx.EXE.CRYPTO]*.EXE Test Applications.
 $!  
-$ @CRYPTO-LIB APPS 'RSAREF' 'DEBUGGER' "''COMPILER'" "''TCPIP_TYPE'" 'ISSEVEN'
+$ @CRYPTO-LIB APPS 'RSAREF' 'DEBUGGER' "''COMPILER'" "''TCPIP_TYPE'" "''POINTER_SIZE'" 'ISSEVEN'
 $!
 $! Go Back To The Main Directory.
 $!
@@ -602,7 +601,7 @@ $ SET DEFAULT SYS$DISK:[.RSAREF]
 $!
 $! Build The [.xxx.EXE.RSAREF]LIBRSAGLUE.OLB Library.
 $!
-$ @RSAREF-LIB LIBRARY 'DEBUGGER' "''COMPILER'" 'ISSEVEN'
+$ @RSAREF-LIB LIBRARY 'DEBUGGER' "''COMPILER'" "''POINTER_SIZE'" 'ISSEVEN'
 $!
 $! Go Back To The Main Directory.
 $!
@@ -627,7 +626,7 @@ $ SET DEFAULT SYS$DISK:[.SSL]
 $!
 $! Build The [.xxx.EXE.SSL]LIBSSL.OLB Library.
 $!
-$ @SSL-LIB LIBRARY 'RSAREF' 'DEBUGGER' "''COMPILER'" "''TCPIP_TYPE'" 'ISSEVEN'
+$ @SSL-LIB LIBRARY 'RSAREF' 'DEBUGGER' "''COMPILER'" "''TCPIP_TYPE'" "''POINTER_SIZE'" 'ISSEVEN'
 $!
 $! Go Back To The Main Directory.
 $!
@@ -652,7 +651,7 @@ $ SET DEFAULT SYS$DISK:[.SSL]
 $!
 $! Build The [.xxx.EXE.SSL]SSL_TASK.EXE
 $!
-$ @SSL-LIB SSL_TASK 'RSAREF' 'DEBUGGER' "''COMPILER'" "''TCPIP_TYPE'" 'ISSEVEN'
+$ @SSL-LIB SSL_TASK 'RSAREF' 'DEBUGGER' "''COMPILER'" "''TCPIP_TYPE'" "''POINTER_SIZE'" 'ISSEVEN'
 $!
 $! Go Back To The Main Directory.
 $!
@@ -677,7 +676,7 @@ $ SET DEFAULT SYS$DISK:[.TEST]
 $!
 $! Build The Test Programs.
 $!
-$ @MAKETESTS 'RSAREF' 'DEBUGGER' "''COMPILER'" "''TCPIP_TYPE'" 'ISSEVEN'
+$ @MAKETESTS 'RSAREF' 'DEBUGGER' "''COMPILER'" "''TCPIP_TYPE'" "''POINTER_SIZE'" 'ISSEVEN'
 $!
 $! Go Back To The Main Directory.
 $!
@@ -702,11 +701,36 @@ $ SET DEFAULT SYS$DISK:[.APPS]
 $!
 $! Build The Application Programs.
 $!
-$ @MAKEAPPS 'RSAREF' 'DEBUGGER' "''COMPILER'" "''TCPIP_TYPE'" 'ISSEVEN'
+$ @MAKEAPPS 'RSAREF' 'DEBUGGER' "''COMPILER'" "''TCPIP_TYPE'" "''POINTER_SIZE'" 'ISSEVEN'
 $!
 $! Go Back To The Main Directory.
 $!
 $ SET DEFAULT [-]
+$!
+$! That's All, Time To RETURN.
+$!
+$ RETURN
+$!
+$! Build The OpenVMS Certicate Utility images.
+$!
+$ CERT_TOOL:
+$!
+$! Tell The User What We Are Doing.
+$!
+$ WRITE SYS$OUTPUT ""
+$ WRITE SYS$OUTPUT "Building OpenSSL [.",ARCH,".EXE.CERT_TOOL] Certificate Utility."
+$!
+$! Go To The [.CERT_TOOL] Directory.
+$!
+$ SET DEFAULT SYS$DISK:[.VMS.CERT_TOOL]
+$!
+$! Build The Application Programs.
+$!
+$ @MAKE_CERT_TOOL 'DEBUGGER' "''COMPILER'" "''TCPIP_TYPE'" "''POINTER_SIZE'"
+$!
+$! Go Back To The Main Directory.
+$!
+$ SET DEFAULT [--]
 $!
 $! That's All, Time To RETURN.
 $!
@@ -741,10 +765,12 @@ $ ELSE
 $!
 $!  Else, Check To See If P1 Has A Valid Arguement.
 $!
-$   IF (P1.EQS."CONFIG").OR.(P1.EQS."BUILDINF").OR.(P1.EQS."SOFTLINKS") -
+$   IF (P1.EQS."CONFIG").OR.(P1.EQS."BUILDCONFIG").OR.(P1.EQS."BUILDINF") -
+       .OR.(P1.EQS."SOFTLINKS") -
        .OR.(P1.EQS."BUILDALL") -
        .OR.(P1.EQS."CRYPTO").OR.(P1.EQS."SSL").OR.(P1.EQS."RSAREF") -
-       .OR.(P1.EQS."SSL_TASK").OR.(P1.EQS."TEST").OR.(P1.EQS."APPS")
+       .OR.(P1.EQS."SSL_TASK").OR.(P1.EQS."TEST").OR.(P1.EQS."APPS") -
+       .OR.(P1.EQS."CERT_TOOL")
 $   THEN
 $!
 $!    A Valid Arguement.
@@ -772,6 +798,7 @@ $     WRITE SYS$OUTPUT "    SSL      :  To Build Just The [.xxx.EXE.SSL]LIBSSL.O
 $     WRITE SYS$OUTPUT "    SSL_TASK :  To Build Just The [.xxx.EXE.SSL]SSL_TASK.EXE Program."
 $     WRITE SYS$OUTPUT "    TEST     :  To Build Just The OpenSSL Test Programs."
 $     WRITE SYS$OUTPUT "    APPS     :  To Build Just The OpenSSL Application Programs."
+$     WRITE SYS$OUTPUT "    CERT_TOOL:  To Build Just The OpenSSL Certificate Tool (VMS-unique)."
 $     WRITE SYS$OUTPUT ""
 $     WRITE SYS$OUTPUT " Where 'xxx' Stands For:"
 $     WRITE SYS$OUTPUT ""
@@ -1183,15 +1210,67 @@ $!  Done with TCP/IP libraries
 $!
 $ ENDIF
 $!
+$! On Alpha, pointers can be 32 or 64 bit wide.  Libraries for both variants
+$! can be built, and will then have "32" in the name for the 32-bit variant.
+$! On VAX as well as the 64-bit variant on Alpha, the name carries no extra
+$! information about pointer size (i.e., 64 bits is default on Alpha and 32
+$! bits is default on VAX).
+$!
+$ IF (P6.NES."32" .AND. P6.NES."64")
+$ THEN
+$!
+$!  Set The Default
+$!
+$   P6 = ""
+$!
+$! End of First Check Of P6
+$!
+$ ENDIF
+$!
+$! Check If P6 Isn't Set (Or Set Properly)
+$!
+$ IF (P6.EQS."" .OR. (P6.NES."32" .AND. ARCH.EQS."VAX"))
+$ THEN
+$!
+$!  Check If We're On A VAX
+$!
+$   IF ARCH.EQS."VAX"
+$   THEN
+$!
+$!    On VAX, We Force 32 Bit Pointers
+$!
+$     P6 = "32"
+$!
+$!    Else...
+$!
+$   ELSE
+$!
+$!    On Alpha, We Use 64 Bit Pointers By Default
+$!
+$     P6 = "64"
+$!
+$!    End Of Check For VAX
+$!
+$   ENDIF
+$!
+$! End Check Of P6
+$!
+$ ENDIF
+$!
+$! Set POINTER_SIZE
+$!
+$ POINTER_SIZE = P6
+$!
+$!
 $! Special Threads For OpenVMS v7.1 Or Later
 $!
 $! Written By:  Richard Levitte
 $!              richard@levitte.org
 $!
 $!
-$! Check To See If We Have A Option For P6.
+$! Check To See If We Have A Option For P7.
 $!
-$ IF (P6.EQS."")
+$ IF (P7.EQS."")
 $ THEN
 $!
 $!  Get The Version Of VMS We Are Using.
@@ -1213,41 +1292,11 @@ $!  End The VMS Version Check.
 $!
 $   ENDIF
 $!
-$! End The P6 Check.
+$! End The P7 Check.
 $!
 $ ENDIF
 $!
 $!  Time To RETURN...
-$!
-$ RETURN
-$!
-$! Build The OpenVMS Certicate Utility images.
-$!
-$ CERT_UTIL:
-$!
-$! Tell The User What We Are Doing.
-$!
-$ WRITE SYS$OUTPUT ""
-$ WRITE SYS$OUTPUT "Building OpenSSL Certificate Utility Applications."
-$!
-$! Go To The [.VMS.CERT_TOOL] Directory.
-$!
-$!
-$ SET DEFAULT SYS$DISK:[.VMS.CERT_TOOL]
-$!
-$! Build The Application Programs.
-$!
-$ CC HOSTADDR/PREFIX_LIBRARY_ENTRIES=(ALL_ENTRIES)
-$ LINK /EXE=SSL$HOSTADDR.EXE HOSTADDR, SYS$DISK:[--]SSL_IDENT/OPT
-$!
-$ CC HOSTNAME/PREFIX_LIBRARY_ENTRIES=(ALL_ENTRIES)
-$ LINK /EXE=SSL$HOSTNAME.EXE HOSTNAME, SYS$DISK:[--]SSL_IDENT/OPT
-$!
-$! Go Back To The Main Directory.
-$!
-$ SET DEFAULT [--]
-$!
-$! That's All, Time To RETURN.
 $!
 $ RETURN
 $!
@@ -1260,7 +1309,6 @@ $!
 $ CREATE_OPT_FILE:
 $ open/write opt_ident ssl_ident.opt
 $ write opt_ident "identification=""OpenSSL ",libverstr,"""
-$ write opt_ident "build_ident=""",build_ident,"_",build_platform,"_",build_bits,""" "
 $ write opt_ident "GSMATCH=",libvmatch,",",libver
 $ close opt_ident
 $ RETURN
@@ -1302,16 +1350,5 @@ $!
 $!
 $ CLEAN_UP_PATH:
 $!
-$ DEASSIGN/JOB OPENSSL_NO_IDEA
-$ DEASSIGN/JOB OPENSSL_NO_RC5
-$!
-$! Make sure that everyone can access the files.
-$!
-$ @set_acls
-$!
-$!
 $ EXIT_PATH:
-$!
-$ BUILD_IDENT = f$extract(f$locate(".BUILD",f$environment("default"))+1,10,f$environment("default"))
-$ MAIL nl: /SUB="OPENSSL ''build_ident' is done." smtp%"greaney@star.zko.dec.com",smtp%"Takaaki.Shinagawa@compaq.com"
 $!

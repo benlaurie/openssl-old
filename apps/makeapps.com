@@ -46,16 +46,13 @@ $!	UCX		for UCX
 $!	SOCKETSHR	for SOCKETSHR+NETLIB
 $!	TCPIP		for TCPIP (post UCX)
 $!
-$!  P5, if defined, sets a compiler thread NOT needed on OpenVMS 7.1 (and up)
+$! P5, if defined, sets the pointer size to build with.  The values can be
+$! be "32" or "64".  Any other value will default to "32"
 $!
-$!  P6, if defined, sets a choice of programs to compile.
+$! P6, if defined, sets a compiler thread NOT needed on OpenVMS 7.1 (and up)
 $!
+$! P7, if defined, sets a choice of programs to compile.
 $!
-$!
-$! Define USER_CCFLAGS
-$!
-$ @[-]vms_build_info.com
-$ WRITE SYS$OUTPUT " Using USER_CCFLAGS = ", USER_CCFLAGS
 $!
 $! Define A TCP/IP Library That We Will Need To Link To.
 $! (That Is, If We Need To Link To One.)
@@ -105,15 +102,15 @@ $ WRITE SYS$OUTPUT "Compiling On A ",ARCH," Machine."
 $!
 $! Define The CRYPTO Library.
 $!
-$ CRYPTO_LIB := SYS$DISK:[-.'ARCH'.EXE.CRYPTO]LIBCRYPTO'build_bits'.OLB
+$ CRYPTO_LIB := SYS$DISK:[-.'ARCH'.EXE.CRYPTO]LIBCRYPTO'FILE_POINTER_SIZE'.OLB
 $!
 $! Define The RSAREF Library.
 $!
-$ RSAREF_LIB := SYS$DISK:[-.'ARCH'.EXE.RSAREF]LIBRSAGLUE'build_bits'.OLB
+$ RSAREF_LIB := SYS$DISK:[-.'ARCH'.EXE.RSAREF]LIBRSAGLUE'FILE_POINTER_SIZE'.OLB
 $!
 $! Define The SSL Library.
 $!
-$ SSL_LIB := SYS$DISK:[-.'ARCH'.EXE.SSL]LIBSSL'build_bits'.OLB
+$ SSL_LIB := SYS$DISK:[-.'ARCH'.EXE.SSL]LIBSSL'FILE_POINTER_SIZE'.OLB
 $!
 $! Define The OBJ Directory.
 $!
@@ -206,6 +203,7 @@ $!
 $! Setup exceptional compilations
 $!
 $ COMPILEWITH_CC2 = ",S_SOCKET,S_SERVER,S_CLIENT,"
+$ COMPILEWITH_CC3 = ",TERM_SOCK,"
 $!
 $ PHASE := LIB
 $!
@@ -262,6 +260,10 @@ $! Create The Listing File Name.
 $!
 $ LIST_FILE = LIS_DIR + FILE_NAME + ".LIS"
 $!
+$! Create The MAP File Name.
+$!
+$ MAP_FILE = LIS_DIR + FILE_NAME + ".MAP"
+$!
 $! Create The Executable File Name.
 $!
 $ EXE_FILE = EXE_DIR + FILE_NAME + ".EXE"
@@ -298,11 +300,16 @@ $!
 $! Compile The File.
 $!
 $ ON ERROR THEN GOTO NEXT_FILE
-$ IF COMPILEWITH_CC2 - FILE_NAME .NES. COMPILEWITH_CC2
+$ IF COMPILEWITH_CC3 - FILE_NAME .NES. COMPILEWITH_CC3
 $ THEN
-$   CC2/OBJECT='OBJECT_FILE'/LIST='LIST_FILE'/MACHINE_CODE 'SOURCE_FILE'
+$   CC3/OBJECT='OBJECT_FILE'/LIST='LIST_FILE'/MACHINE_CODE 'SOURCE_FILE'
 $ ELSE
-$   CC/OBJECT='OBJECT_FILE'/LIST='LIST_FILE'/MACHINE_CODE 'SOURCE_FILE'
+$   IF COMPILEWITH_CC2 - FILE_NAME .NES. COMPILEWITH_CC2
+$   THEN
+$     CC2/OBJECT='OBJECT_FILE'/LIST='LIST_FILE'/MACHINE_CODE 'SOURCE_FILE'
+$   ELSE
+$     CC/OBJECT='OBJECT_FILE'/LIST='LIST_FILE'/MACHINE_CODE 'SOURCE_FILE'
+$   ENDIF
 $ ENDIF
 $!
 $ ON WARNING THEN GOTO NEXT_FILE
@@ -380,7 +387,6 @@ $       LINK/'DEBUGGER'/'TRACEBACK' /EXE='EXE_FILE' /MAP='MAP_FILE' /FULL/CROSS 
             'TCPIP_LIB', -
 	    'OPT_FILE'/OPTION, -
 	  SYS$DISK:[-]SSL_IDENT.OPT/OPTION
-
 $!
 $!  Else...
 $!
@@ -881,8 +887,7 @@ $     CC = "CC"
 $     IF ARCH.EQS."VAX" .AND. F$TRNLNM("DECC$CC_DEFAULT").NES."/DECC" -
 	 THEN CC = "CC/DECC"
 $     CC = CC + "/''CC_OPTIMIZE'/''DEBUGGER'/STANDARD=ANSI89" + -
-           "/PREFIX=ALL" + -
-	   "/INCLUDE=(SYS$DISK:[-])" + CCEXTRAFLAGS
+           "/PREFIX=ALL/INCLUDE=(SYS$DISK:[-])" + CCEXTRAFLAGS
 $!
 $!    Define The Linker Options File Name.
 $!
@@ -913,8 +918,8 @@ $	WRITE SYS$OUTPUT "There is no VAX C on Alpha!"
 $	EXIT
 $     ENDIF
 $     IF F$TRNLNM("DECC$CC_DEFAULT").EQS."/DECC" THEN CC = "CC/VAXC"
-$     CC = CC + "/''CC_OPTIMIZE'/''DEBUGGER'" + -
-	   "/INCLUDE=(SYS$DISK:[-])" + CCEXTRAFLAGS
+$     CC = CC + "/''CC_OPTIMIZE'/''DEBUGGER'/INCLUDE=(SYS$DISK:[-])" + -
+	   CCEXTRAFLAGS
 $     CCDEFS = CCDEFS + ",""VAXC"""
 $!
 $!    Define <sys> As SYS$COMMON:[SYSLIB]
@@ -1112,18 +1117,80 @@ $!  Done with TCP/IP libraries
 $!
 $ ENDIF
 $!
+$! On Alpha, pointers can be 32 or 64 bit wide.  Libraries for both variants
+$! can be built, and will then have "32" in the name for the 32-bit variant.
+$! On VAX as well as the 64-bit variant on Alpha, the name carries no extra
+$! information about pointer size (i.e., 64 bits is default on Alpha and 32
+$! bits is default on VAX).
+$!
+$ IF (P5.NES."32" .AND. P5.NES."64")
+$ THEN
+$!
+$!  Set The Default
+$!
+$   P5 = ""
+$!
+$! End of First Check Of P5
+$!
+$ ENDIF
+$!
+$! Check If P5 Isn't Set (Or Set Properly)
+$!
+$ IF (P5.EQS."" .OR. (P5.NES."32" .AND. ARCH.EQS."VAX"))
+$ THEN
+$!
+$!  Check If We're On A VAX
+$!
+$   IF ARCH.EQS."VAX"
+$   THEN
+$!
+$!    On VAX, We Force 32 Bit Pointers
+$!
+$     P5 = "32"
+$!
+$!    Else...
+$!
+$   ELSE
+$!
+$!    On Alpha, We Use 64 Bit Pointers By Default
+$!
+$     P5 = "64"
+$!
+$!    End Of Check For VAX
+$!
+$   ENDIF
+$!
+$! End Check Of P5
+$!
+$ ENDIF
+$!
+$! Set POINTER_SIZE
+$!
+$ POINTER_SIZE = P5
+$ QUAL_POINTER_SIZE = ""
+$ FILE_POINTER_SIZE = ""
+$ IF ARCH.EQS."AXP"
+$ THEN
+$   QUAL_POINTER_SIZE = "/POINTER_SIZE="+POINTER_SIZE
+$   IF POINTER_SIZE.EQS."32" THEN FILE_POINTER_SIZE = "32"
+$ ENDIF
+$!
+$!
 $! Finish up the definition of CC.
 $!
 $ IF COMPILER .EQS. "DECC"
 $ THEN
 $   IF CCDISABLEWARNINGS .NES. ""
 $   THEN
+$     CC3DISABLEWARNINGS = "/WARNING=(DISABLE=(DOLLARID," + CCDISABLEWARNINGS + "))"
 $     CCDISABLEWARNINGS = "/WARNING=(DISABLE=(" + CCDISABLEWARNINGS + "))"
 $   ENDIF
 $ ELSE
 $   CCDISABLEWARNINGS = ""
 $ ENDIF
+$ CC = CC + QUAL_POINTER_SIZE
 $ CC2 = CC + "/DEFINE=(" + CCDEFS + ",_POSIX_C_SOURCE)" + CCDISABLEWARNINGS
+$ CC3 = CC + "/DEFINE=(" + CCDEFS + ",_POSIX_C_SOURCE,_XOPEN_SOURCE)" + CC3DISABLEWARNINGS
 $ CC = CC + "/DEFINE=(" + CCDEFS + ")" + CCDISABLEWARNINGS
 $!
 $! Show user the result
@@ -1136,9 +1203,9 @@ $! Written By:  Richard Levitte
 $!              richard@levitte.org
 $!
 $!
-$! Check To See If We Have A Option For P5.
+$! Check To See If We Have A Option For P6.
 $!
-$ IF (P5.EQS."")
+$ IF (P6.EQS."")
 $ THEN
 $!
 $!  Get The Version Of VMS We Are Using.
@@ -1160,15 +1227,15 @@ $!  End The VMS Version Check.
 $!
 $   ENDIF
 $!
-$! End The P5 Check.
+$! End The P6 Check.
 $!
 $ ENDIF
 $!
 $! Check if the user wanted to compile just a subset of all the programs.
 $!
-$ IF P6 .NES. ""
+$ IF P7 .NES. ""
 $ THEN
-$   PROGRAMS = P6
+$   PROGRAMS = P7
 $ ENDIF
 $!
 $!  Time To RETURN...

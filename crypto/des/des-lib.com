@@ -37,17 +37,15 @@ $!
 $!  If you don't speficy a compiler, it will try to determine which
 $!  "C" compiler to try to use.
 $!
-$!  P4, if defined, sets a compiler thread NOT needed on OpenVMS 7.1 (and up)
+$!  P4, if defined, sets the pointer size to build with.  The values can be
+$!  be "32" or "64".  Any other value will default to "32"
 $!
+$!  P5, if defined, sets a compiler thread NOT needed on OpenVMS 7.1 (and up)
 $!
-$! Define USER_CCFLAGS
 $!
 $ write sys$output " "
 $ write sys$output " Now running in DES-LIB.COM. "
 $ write sys$output " "
-$!
-$ @[-]vms_build_info.com
-$ WRITE SYS$OUTPUT " Using USER_CCFLAGS = ", USER_CCFLAGS
 $!
 $!
 $! Make sure we know what architecture we run on.
@@ -135,7 +133,7 @@ $ ENDIF
 $!
 $! Define The Library Name.
 $!
-$ LIB_NAME := 'EXE_DIR'LIBDES'build_bits'.OLB
+$ LIB_NAME := 'EXE_DIR'LIBDES'FILE_POINTER_SIZE'.OLB
 $!
 $! Check To See What We Are To Do.
 $!
@@ -834,9 +832,9 @@ $! Written By:  Richard Levitte
 $!              richard@levitte.org
 $!
 $!
-$! Check To See If We Have A Option For P4.
+$! Check To See If We Have A Option For P5.
 $!
-$ IF (P4.EQS."")
+$ IF (P5.EQS."")
 $ THEN
 $!
 $!  Get The Version Of VMS We Are Using.
@@ -858,7 +856,7 @@ $!  End The VMS Version Check.
 $!
 $   ENDIF
 $!
-$! End The P4 Check.
+$! End The P5 Check.
 $!
 $ ENDIF
 $!
@@ -918,9 +916,67 @@ $ CCDEFS = ""
 $ IF F$TYPE(USER_CCDEFS) .NES. "" THEN CCDEFS = USER_CCDEFS
 $ CCEXTRAFLAGS = ""
 $ IF F$TYPE(USER_CCFLAGS) .NES. "" THEN CCEXTRAFLAGS = USER_CCFLAGS
-$ CCDISABLEWARNINGS = "LONGLONGTYPE,LONGLONGSUFX,DOLLARID"
+$ CCDISABLEWARNINGS = "LONGLONGTYPE,LONGLONGSUFX"
 $ IF F$TYPE(USER_CCDISABLEWARNINGS) .NES. "" THEN -
 	CCDISABLEWARNINGS = USER_CCDISABLEWARNINGS
+$!
+$! On Alpha, pointers can be 32 or 64 bit wide.  Libraries for both variants
+$! can be built, and will then have "32" in the name for the 32-bit variant.
+$! On VAX as well as the 64-bit variant on Alpha, the name carries no extra
+$! information about pointer size (i.e., 64 bits is default on Alpha and 32
+$! bits is default on VAX).
+$!
+$ IF (P4.NES."32" .AND. P4.NES."64")
+$ THEN
+$!
+$!  Set The Default
+$!
+$   P4 = ""
+$!
+$! End of First Check Of P4
+$!
+$ ENDIF
+$!
+$! Check If P4 Isn't Set (Or Set Properly)
+$!
+$ IF (P4.EQS."" .OR. (P4.NES."32" .AND. ARCH.EQS."VAX"))
+$ THEN
+$!
+$!  Check If We're On A VAX
+$!
+$   IF ARCH.EQS."VAX"
+$   THEN
+$!
+$!    On VAX, We Force 32 Bit Pointers
+$!
+$     P4 = "32"
+$!
+$!    Else...
+$!
+$   ELSE
+$!
+$!    On Alpha, We Use 64 Bit Pointers By Default
+$!
+$     P4 = "64"
+$!
+$!    End Of Check For VAX
+$!
+$   ENDIF
+$!
+$! End Check Of P4
+$!
+$ ENDIF
+$!
+$! Set POINTER_SIZE
+$!
+$ POINTER_SIZE = P4
+$ QUAL_POINTER_SIZE = ""
+$ FILE_POINTER_SIZE = ""
+$ IF ARCH.EQS."AXP"
+$ THEN
+$   QUAL_POINTER_SIZE = "/POINTER_SIZE="+POINTER_SIZE
+$   IF POINTER_SIZE.EQS."32" THEN FILE_POINTER_SIZE = "32"
+$ ENDIF
 $!
 $!  Check To See If The User Entered A Valid Paramter.
 $!
@@ -1038,7 +1094,10 @@ $   ELSE
 $     CCDISABLEWARNINGS = ""
 $     CC4DISABLEWARNINGS = ""
 $   ENDIF
-$   CC = CC + "/DEFINE=(" + CCDEFS + ")" + CCDISABLEWARNINGS
+$   CC = CC + QUAL_POINTER_SIZE
+$   CC = CC + "/DEFINE=(" + CCDEFS + ")"
+$   CC4 = CC + CC4DISABLEWARNINGS
+$   CC = CC + CCDISABLEWARNINGS
 $!
 $!  Show user the result
 $!

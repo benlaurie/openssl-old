@@ -109,6 +109,10 @@
 
   WISHES
 
+    o  Add variants of DH_generate_parameters() and BN_generate_prime() [etc?]
+       where the callback function can request that the function be aborted.
+       [Gregory Stark <ghstark@pobox.com>, <rayyang2000@yahoo.com>]
+
     o  SRP in TLS.
        [wished by:
         Dj <derek@yo.net>, Tom Wu <tom@arcot.com>,

@@ -51,6 +51,8 @@
 
   NEEDS PATCH
 
+    o  'openssl speed' should include AES support (0.9.7-dev)
+
     o  apps/ca.c: "Sign the certificate?" - "n" creates empty certificate file
 
     o  OpenSSL_0_9_6-stable:

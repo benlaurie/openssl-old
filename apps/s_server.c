@@ -1089,15 +1089,13 @@ static int sv_body(char *hostname, int s, unsigned char *context)
 		if (!read_from_sslcon)
 			{
 			FD_ZERO(&readfds);
-<<<<<<< s_server.c
 #ifndef OPENSSL_SYS_WINDOWS
 #ifdef OPENSSL_SYS_VMS
                         FD_SET(stdin_sock,&readfds);
 #else
-=======
 #if !defined(OPENSSL_SYS_WINDOWS) && !defined(OPENSSL_SYS_MSDOS) && !defined(OPENSSL_SYS_NETWARE)
->>>>>>> 1.87
 			FD_SET(fileno(stdin),&readfds);
+#endif
 #endif
 #endif
 			FD_SET(s,&readfds);

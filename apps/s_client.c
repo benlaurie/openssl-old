@@ -788,13 +788,8 @@ re_start:
 				goto shut;
 				}
 			}
-<<<<<<< s_client.c
-#if defined(OPENSSL_SYS_WINDOWS) || defined(OPENSSL_SYS_MSDOS) || defined(OPENSSL_SYS_VMS)
-		/* Assume Windows/DOS and VMS can always write */
-=======
-#if defined(OPENSSL_SYS_WINDOWS) || defined(OPENSSL_SYS_MSDOS) || defined(OPENSSL_SYS_NETWARE)
+#if defined(OPENSSL_SYS_WINDOWS) || defined(OPENSSL_SYS_MSDOS) || defined(OPENSSL_SYS_VMS) || defined(OPENSSL_SYS_NETWARE)
 		/* Assume Windows/DOS can always write */
->>>>>>> 1.67
 		else if (!ssl_pending && write_tty)
 #else
 		else if (!ssl_pending && FD_ISSET(fileno(stdout),&writefds))

@@ -950,7 +950,7 @@ end:
         TerminalSocket (TERM_SOCK_DELETE, &stdin_sock);
 #endif
 	apps_shutdown();
-	EXIT(ret);
+	OPENSSL_EXIT(ret);
 	}
 
 

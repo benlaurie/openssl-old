@@ -57,6 +57,12 @@
  * [including the GNU Public Licence.]
  */
 
+/* Until the key-gen callbacks are modified to use newer prototypes, we allow
+ * deprecated functions for openssl-internal code */
+#ifdef OPENSSL_NO_DEPRECATED
+#undef OPENSSL_NO_DEPRECATED
+#endif
+
 #ifndef OPENSSL_NO_DH
 #include <stdio.h>
 #include <string.h>
@@ -198,7 +204,7 @@ end:
 	if (out != NULL) BIO_free_all(out);
 	if (dh != NULL) DH_free(dh);
 	apps_shutdown();
-	EXIT(ret);
+	OPENSSL_EXIT(ret);
 	}
 
 static void MS_CALLBACK dh_cb(int p, int n, void *arg)

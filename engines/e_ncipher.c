@@ -559,15 +559,23 @@ static int hwcrhk_init(ENGINE *e)
 
 	/* Check if the application decided to support dynamic locks,
 	   and if it does, use them. */
-	if (disable_mutex_callbacks == 0 &&
-		CRYPTO_get_dynlock_create_callback() != NULL &&
-		CRYPTO_get_dynlock_lock_callback() != NULL &&
-		CRYPTO_get_dynlock_destroy_callback() != NULL)
+	if (disable_mutex_callbacks == 0)
 		{
-		hwcrhk_globals.mutex_init = hwcrhk_mutex_init;
-		hwcrhk_globals.mutex_acquire = hwcrhk_mutex_lock;
-		hwcrhk_globals.mutex_release = hwcrhk_mutex_unlock;
-		hwcrhk_globals.mutex_destroy = hwcrhk_mutex_destroy;
+		if (CRYPTO_get_dynlock_create_callback() != NULL &&
+			CRYPTO_get_dynlock_lock_callback() != NULL &&
+			CRYPTO_get_dynlock_destroy_callback() != NULL)
+			{
+			hwcrhk_globals.mutex_init = hwcrhk_mutex_init;
+			hwcrhk_globals.mutex_acquire = hwcrhk_mutex_lock;
+			hwcrhk_globals.mutex_release = hwcrhk_mutex_unlock;
+			hwcrhk_globals.mutex_destroy = hwcrhk_mutex_destroy;
+			}
+		else if (CRYPTO_get_locking_callback() != NULL)
+			{
+			HWCRHKerr(HWCRHK_F_HWCRHK_INIT,HWCRHK_R_LOCKING_MISSING);
+			ERR_add_error_data(1,"You HAVE to add dynamic locking callbacks via CRYPTO_set_dynlock_{create,lock,destroy}_callback()");
+			goto err;
+			}
 		}
 
 	/* Try and get a context - if not, we may have a DSO but no
@@ -1021,7 +1029,7 @@ static int hwcrhk_rsa_mod_exp(BIGNUM *r, const BIGNUM *I, RSA *rsa)
 
 		/* Perform the operation */
 		ret = p_hwcrhk_ModExpCRT(hwcrhk_context, m_a, m_p, m_q,
-			m_dmp1, m_dmq1, m_iqmp, &m_r, NULL);
+			m_dmp1, m_dmq1, m_iqmp, &m_r, &rmsg);
 
 		/* Convert the response */
 		r->top = m_r.size / sizeof(BN_ULONG);
@@ -1319,7 +1327,7 @@ static void hwcrhk_log_message(void *logstr, const char *message)
 		lstream=*(BIO **)logstr;
 	if (lstream)
 		{
-		BIO_write(lstream, message, strlen(message));
+		BIO_printf(lstream, "%s\n", message);
 		}
 	CRYPTO_w_unlock(CRYPTO_LOCK_BIO);
 	}

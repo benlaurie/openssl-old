@@ -56,6 +56,12 @@
  * [including the GNU Public Licence.]
  */
 
+/* Until the key-gen callbacks are modified to use newer prototypes, we allow
+ * deprecated functions for openssl-internal code */
+#ifdef OPENSSL_NO_DEPRECATED
+#undef OPENSSL_NO_DEPRECATED
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -222,6 +228,7 @@ end:
 static int cb_exit(int ec)
 	{
 	EXIT(ec);
+	return(0);		/* To keep some compilers quiet */
 	}
 
 static void MS_CALLBACK dsa_cb(int p, int n, void *arg)

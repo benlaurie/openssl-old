@@ -1,5 +1,6 @@
+#include <openssl/opensslconf.h>
 
-#ifdef VMS
+#ifdef OPENSSL_SYS_VMS
 #pragma module HOSTADDR "X-1"
 
 /*
@@ -71,7 +72,14 @@
 #include <descrip>
 #include <stdlib>
 #include <string>
+char *strdup(__const_char_ptr64);
 #include <stdio>
+#include <unistd>
+#include <types>
+#include <if>
+#include <socket>
+#include <types>
+#include <socket>
 #include <netdb>
 #include <in>
 
@@ -124,13 +132,12 @@ Usage ();
 **
 **  Usage:
 **
-**      main argc, argv, envp
+**      main argc, argv
 **
 **  Formal parameters:
 **
 **      argc 		- (IN) argument count
 **      argv         	- (IN) address of an argument array 
-**      envp         	- (IN) address of an environment string 
 **
 **  Implicit Parameters:
 **
@@ -148,8 +155,7 @@ Usage ();
 int
 main (
     int		argc,
-    char	*argv[],
-    char	*envp[]
+    char	*argv[]
     )
 {
 struct in_addr *addr_ptr;
@@ -419,6 +425,7 @@ SetSymName (
 struct dsc$descriptor_s sym_nam_desc = {0, DSC$K_DTYPE_T, DSC$K_CLASS_S, 0};
 struct dsc$descriptor_s sym_val_desc = {0, DSC$K_DTYPE_T, DSC$K_CLASS_S, 0};
 int status;
+int lib$k_cli_local_sym = LIB$K_CLI_LOCAL_SYM;
 
 /*
 ** Setup the symbol name & value descriptors
@@ -431,7 +438,7 @@ sym_val_desc.dsc$a_pointer = SymValue;
 /*
 ** Set the symbol name & value
 */
-status = lib$set_symbol (&sym_nam_desc, &sym_val_desc, &LIB$K_CLI_LOCAL_SYM);
+status = lib$set_symbol (&sym_nam_desc, &sym_val_desc, &lib$k_cli_local_sym);
 if (! (status & 1))
     exit (status);
 
@@ -474,4 +481,4 @@ Usage ()
 fprintf (stdout, "Usage: HOSTADDR [-l log-name] [-s sym-name] [host-name]\n");
 
 }
-#endif    /* #ifdef VMS */
+#endif    /* #ifdef OPENSSL_SYS_VMS */

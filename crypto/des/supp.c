@@ -94,7 +94,7 @@
 #include "des_locl.h"
 
 void des_cblock_print_file(cb, fp)
-	des_cblock *cb;
+	const des_cblock cb;
 	FILE *fp;
 {
 	int i;

@@ -640,9 +640,8 @@ const BIGNUM *BN_get0_nist_prime_521(void);
 #define bn_wexpand(a,words) (((words) <= (a)->dmax)?(a):bn_expand2((a),(words)))
 BIGNUM *bn_expand2(BIGNUM *a, size_t words);
 #ifndef OPENSSL_NO_DEPRECATED
-BIGNUM *bn_dup_expand(const BIGNUM *a, size_t words);
+BIGNUM *bn_dup_expand(const BIGNUM *a, size_t words); /* unused */
 #endif
->>>>>>> 1.88
 
 /* Bignum consistency macros
  * There is one "API" macro, bn_fix_top(), for stripping leading zeroes from

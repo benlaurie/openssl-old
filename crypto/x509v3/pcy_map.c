@@ -62,9 +62,9 @@
 
 #include "pcy_int.h"
 
-static int ref_cmp(void *pa, void *pb)
+static int ref_cmp(const X509_POLICY_REF * const *a,
+			const X509_POLICY_REF * const *b)
 	{
-	X509_POLICY_REF **a = pa; X509_POLICY_REF **b = pb;
 	return OBJ_cmp((*a)->subjectDomainPolicy, (*b)->subjectDomainPolicy);
 	}
 
@@ -75,7 +75,7 @@ static void policy_map_free(X509_POLICY_REF *map)
 	OPENSSL_free(map);
 	}
 
-X509_POLICY_REF *policy_map_find(X509_POLICY_CACHE *cache, ASN1_OBJECT *id)
+static X509_POLICY_REF *policy_map_find(X509_POLICY_CACHE *cache, ASN1_OBJECT *id)
 	{
 	X509_POLICY_REF tmp;
 	int idx;

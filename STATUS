@@ -18,6 +18,8 @@
 
   RELEASE SHOWSTOPPERS
 
+    o BIGNUM library failures on 64-bit platforms (0.9.7-dev)
+
   AVAILABLE PATCHES
 
     o IA-64 (a.k.a. Intel Itanium) public-key operation performance 

@@ -23,7 +23,6 @@
     o exptest and rsa_oaep_test fail with irix64-*
       (Don Badrak <dbadrak@geo.census.gov>: "Re: Problems to compile openssl
 	  on IRIX 6.2", openssl-users)
-    o const des_cblock problem
 
   AVAILABLE PATCHES
 

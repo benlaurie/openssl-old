@@ -120,5 +120,4 @@
 
   WISHES
 
-    o Support optional q component in DH parameters to speed up
-      SSL ciphersuites with ephemeral DH.
+    o 

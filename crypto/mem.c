@@ -70,32 +70,45 @@ static int allow_customize_debug = 1;/* exchanging memory-related functions at
                                       * problems when malloc/free pairs
                                       * don't match etc. */
 
-
+/* Because VMS defines two pointer sizes and mixes them, we need to provide
+   wrapper functions to avoid pointer size clashes */
+static void *ossl_malloc(size_t s)
+        {                        
+        return malloc(s);
+        }
+static void *ossl_realloc(void *p, size_t s)
+        {
+        return realloc(p, s);
+        }
+static void ossl_free(void *p)
+        {
+        free(p);
+        }
 
 /* the following pointers may be changed as long as 'allow_customize' is set */
 
-static void *(*malloc_func)(size_t)         = malloc;
+static void *(*malloc_func)(size_t)         = ossl_malloc;
 static void *default_malloc_ex(size_t num, const char *file, int line)
 	{ return malloc_func(num); }
 static void *(*malloc_ex_func)(size_t, const char *file, int line)
         = default_malloc_ex;
 
-static void *(*realloc_func)(void *, size_t)= realloc;
+static void *(*realloc_func)(void *, size_t)= ossl_realloc;
 static void *default_realloc_ex(void *str, size_t num,
         const char *file, int line)
 	{ return realloc_func(str,num); }
 static void *(*realloc_ex_func)(void *, size_t, const char *file, int line)
         = default_realloc_ex;
 
-static void (*free_func)(void *)            = free;
+static void (*free_func)(void *)            = ossl_free;
 
-static void *(*malloc_locked_func)(size_t)  = malloc;
+static void *(*malloc_locked_func)(size_t)  = ossl_malloc;
 static void *default_malloc_locked_ex(size_t num, const char *file, int line)
 	{ return malloc_locked_func(num); }
 static void *(*malloc_locked_ex_func)(size_t, const char *file, int line)
         = default_malloc_locked_ex;
 
-static void (*free_locked_func)(void *)     = free;
+static void (*free_locked_func)(void *)     = ossl_free;
 
 
 

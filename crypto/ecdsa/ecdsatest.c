@@ -124,7 +124,7 @@ int change_rand(void)
 	fake_rand.status  = old_rand->status;
 	/* use own random function */
 	fake_rand.bytes      = fbytes;
-	fake_rand.pseudorand = fbytes;
+	fake_rand.pseudorand = old_rand->bytes;
 	/* set new RAND_METHOD */
 	if (!RAND_set_rand_method(&fake_rand))
 		return 0;
@@ -328,7 +328,11 @@ int test_builtin(BIO *out)
 	/* now create and verify a signature for every curve */
 	for (n = 0; n < crv_len; n++)
 		{
+		unsigned char dirt, offset;
+
 		nid = curves[n].nid;
+		if (nid == NID_ipsec4)
+			continue;
 		/* create new ecdsa key (== EC_KEY) */
 		if ((eckey = EC_KEY_new()) == NULL)
 			goto builtin_err;
@@ -406,9 +410,10 @@ int test_builtin(BIO *out)
 			}
 		BIO_printf(out, ".");
 		BIO_flush(out);
-		/* modify signature */
-		signature[((int)signature[0])%sig_len] ^= 
-			signature[((int)signature[1])%sig_len];
+		/* modify a single byte of the signature */
+		offset = signature[10] % sig_len;
+		dirt   = signature[11];
+		signature[offset] ^= dirt ? dirt : 1; 
 		if (ECDSA_verify(0, digest, 20, signature, sig_len, eckey) == 1)
 			{
 			BIO_printf(out, " failed\n");

@@ -124,6 +124,7 @@ int BN_mod_exp2_mont(BIGNUM *rr, const BIGNUM *a1, const BIGNUM *p1,
 	unsigned int i,j;
 	BIGNUM *d,*r;
 	const BIGNUM *a_mod_m;
+	/* TODO: BN_CTX??? */
 	BIGNUM val1[TABLE_SIZE], val2[TABLE_SIZE];
 	BN_MONT_CTX *mont=NULL;
 
@@ -310,5 +311,6 @@ err:
 		BN_clear_free(&(val1[i]));
 	for (i=0; i<ts2; i++)
 		BN_clear_free(&(val2[i]));
+	bn_check_top(rr);
 	return(ret);
 	}

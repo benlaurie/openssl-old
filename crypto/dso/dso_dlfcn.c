@@ -128,7 +128,11 @@ DSO_METHOD *DSO_METHOD_dlfcn(void)
 #		endif
 #	endif
 #else
-#	define DLOPEN_FLAG RTLD_NOW /* Hope this works everywhere else */
+#	ifdef OPENSSL_SYS_SUNOS
+#		define DLOPEN_FLAG 1
+#	else
+#		define DLOPEN_FLAG RTLD_NOW /* Hope this works everywhere else */
+#	endif
 #endif
 
 /* For this DSO_METHOD, our meth_data STACK will contain;
@@ -140,13 +144,19 @@ static int dlfcn_load(DSO *dso)
 	void *ptr = NULL;
 	/* See applicable comments in dso_dl.c */
 	char *filename = DSO_convert_filename(dso, NULL);
+	int flags = DLOPEN_FLAG;
 
 	if(filename == NULL)
 		{
 		DSOerr(DSO_F_DLFCN_LOAD,DSO_R_NO_FILENAME);
 		goto err;
 		}
-	ptr = dlopen(filename, DLOPEN_FLAG);
+
+#ifdef RTLD_GLOBAL
+	if (dso->flags & DSO_FLAG_GLOBAL_SYMBOLS)
+		flags |= RTLD_GLOBAL;
+#endif
+	ptr = dlopen(filename, flags);
 	if(ptr == NULL)
 		{
 		DSOerr(DSO_F_DLFCN_LOAD,DSO_R_LOAD_FAILED);

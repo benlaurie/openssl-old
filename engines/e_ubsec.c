@@ -82,7 +82,7 @@
 static int ubsec_destroy(ENGINE *e);
 static int ubsec_init(ENGINE *e);
 static int ubsec_finish(ENGINE *e);
-static int ubsec_ctrl(ENGINE *e, int cmd, long i, void *p, void (*f)());
+static int ubsec_ctrl(ENGINE *e, int cmd, long i, void *p, void (*f)(void));
 static int ubsec_mod_exp(BIGNUM *r, const BIGNUM *a, const BIGNUM *p,
 		const BIGNUM *m, BN_CTX *ctx);
 static int ubsec_mod_exp_crt(BIGNUM *r, const BIGNUM *a, const BIGNUM *p,
@@ -518,7 +518,7 @@ static int ubsec_finish(ENGINE *e)
 	return 1;
 	}
 
-static int ubsec_ctrl(ENGINE *e, int cmd, long i, void *p, void (*f)())
+static int ubsec_ctrl(ENGINE *e, int cmd, long i, void *p, void (*f)(void))
 	{
 	int initialised = ((ubsec_dso == NULL) ? 0 : 1);
 	switch(cmd)
@@ -566,7 +566,6 @@ static int ubsec_mod_exp(BIGNUM *r, const BIGNUM *a, const BIGNUM *p,
 		UBSECerr(UBSEC_F_UBSEC_MOD_EXP, UBSEC_R_BN_EXPAND_FAIL);
 		return 0;
 	}
-	memset(r->d, 0, BN_num_bytes(m));
 
 	if ((fd = p_UBSEC_ubsec_open(UBSEC_KEY_DEVICE_NAME)) <= 0) {
 		fd = 0;

@@ -158,6 +158,7 @@ int EC_GROUP_get_curve_GFp(const EC_GROUP *, BIGNUM *p, BIGNUM *a, BIGNUM *b, BN
 int EC_GROUP_set_curve_GF2m(EC_GROUP *, const BIGNUM *p, const BIGNUM *a, const BIGNUM *b, BN_CTX *);
 int EC_GROUP_get_curve_GF2m(const EC_GROUP *, BIGNUM *p, BIGNUM *a, BIGNUM *b, BN_CTX *);
 
+/* returns the number of bits needed to represent a field element */
 int EC_GROUP_get_degree(const EC_GROUP *);
 
 /* EC_GROUP_check() returns 1 if 'group' defines a valid group, 0 otherwise */
@@ -165,6 +166,9 @@ int EC_GROUP_check(const EC_GROUP *group, BN_CTX *ctx);
 /* EC_GROUP_check_discriminant() returns 1 if the discriminant of the
  * elliptic curve is not zero, 0 otherwise */
 int EC_GROUP_check_discriminant(const EC_GROUP *, BN_CTX *);
+
+/* EC_GROUP_cmp() returns 0 if both groups are equal and 1 otherwise */
+int EC_GROUP_cmp(const EC_GROUP *, const EC_GROUP *, BN_CTX *);
 
 /* EC_GROUP_new_GF*() calls EC_GROUP_new() and EC_GROUP_set_GF*()
  * after choosing an appropriate EC_METHOD */

@@ -709,7 +709,7 @@ void bn_mul_part_recursive(BN_ULONG *r, BN_ULONG *a, BN_ULONG *b, size_t n,
 
 		/* The overflow will stop before we over write
 		 * words we should not overwrite */
-		if (ln < c1)
+		if (ln < (BN_ULONG)c1)
 			{
 			do	{
 				p++;
@@ -1095,11 +1095,12 @@ int BN_mul(BIGNUM *r, const BIGNUM *a, const BIGNUM *b, BN_CTX *ctx)
 #if defined(BN_MUL_COMBA) || defined(BN_RECURSION)
 end:
 #endif
-	bn_fix_top(rr);
+	bn_correct_top(rr);
 	if (r != rr) BN_copy(r,rr);
 	ret=1;
 err:
 	BN_CTX_end(ctx);
+	bn_check_top(r);
 	return(ret);
 	}
 

@@ -119,9 +119,10 @@
  *		  require.  This format is wrong
  */
 
-static int make_REQ(X509_REQ *req,EVP_PKEY *pkey,char *dn,int attribs,
-		unsigned long chtype);
-static int build_subject(X509_REQ *req, char *subj, unsigned long chtype);
+static int make_REQ(X509_REQ *req,EVP_PKEY *pkey,char *dn,int mutlirdn,
+		int attribs,unsigned long chtype);
+static int build_subject(X509_REQ *req, char *subj, unsigned long chtype,
+		int multirdn);
 static int prompt_info(X509_REQ *req,
 		STACK_OF(CONF_VALUE) *dn_sk, char *dn_sect,
 		STACK_OF(CONF_VALUE) *attr_sk, char *attr_sect, int attribs,
@@ -135,7 +136,7 @@ static int add_attribute_object(X509_REQ *req, char *text,
 static int add_DN_object(X509_NAME *n, char *text, char *def, char *value,
 	int nid,int n_min,int n_max, unsigned long chtype, int mval);
 #ifndef OPENSSL_NO_RSA
-static void MS_CALLBACK req_cb(int p,int n,void *arg);
+static int MS_CALLBACK req_cb(int p, int n, BN_GENCB *cb);
 #endif
 static int req_check_len(int len,int n_min,int n_max);
 static int check_end(char *str, char *end);
@@ -185,6 +186,7 @@ int MAIN(int argc, char **argv)
 	char *passin = NULL, *passout = NULL;
 	char *p;
 	char *subj = NULL;
+	int multirdn = 0;
 	const EVP_MD *md_alg=NULL,*digest=EVP_md5();
 	unsigned long chtype = MBSTRING_ASC;
 #ifndef MONOLITH
@@ -440,6 +442,8 @@ int MAIN(int argc, char **argv)
 			if (--argc < 1) goto bad;
 			subj= *(++argv);
 			}
+		else if (strcmp(*argv,"-multivalue-rdn") == 0)
+			multirdn=1;
 		else if (strcmp(*argv,"-days") == 0)
 			{
 			if (--argc < 1) goto bad;
@@ -511,6 +515,7 @@ bad:
 		BIO_printf(bio_err," -[digest]      Digest to sign with (md5, sha1, md2, mdc2, md4)\n");
 		BIO_printf(bio_err," -config file   request template file.\n");
 		BIO_printf(bio_err," -subj arg      set or modify request subject\n");
+		BIO_printf(bio_err," -multivalue-rdn enable support for multivalued RDNs\n");
 		BIO_printf(bio_err," -new           new request.\n");
 		BIO_printf(bio_err," -batch         do not ask anything during request generation\n");
 		BIO_printf(bio_err," -x509          output a x509 structure instead of a cert. req.\n");
@@ -712,6 +717,7 @@ bad:
 
 	if (newreq && (pkey == NULL))
 		{
+		BN_GENCB cb;
 		char *randfile = NCONF_get_string(req_conf,SECTION,"RANDFILE");
 		if (randfile == NULL)
 			ERR_clear_error();
@@ -738,12 +744,16 @@ bad:
 		if ((pkey=EVP_PKEY_new()) == NULL) goto end;
 
 #ifndef OPENSSL_NO_RSA
+		BN_GENCB_set(&cb, req_cb, bio_err);
 		if (pkey_type == TYPE_RSA)
 			{
-			if (!EVP_PKEY_assign_RSA(pkey,
-				RSA_generate_key(newkey,0x10001,
-					req_cb,bio_err)))
+			RSA *rsa = RSA_new();
+			if(!rsa || !RSA_generate_key_ex(rsa, newkey, 0x10001, &cb) ||
+					!EVP_PKEY_assign_RSA(pkey, rsa))
+				{
+				if(rsa) RSA_free(rsa);
 				goto end;
+				}
 			}
 		else
 #endif
@@ -882,7 +892,7 @@ loop:
 				goto end;
 				}
 
-			i=make_REQ(req,pkey,subj,!x509, chtype);
+			i=make_REQ(req,pkey,subj,multirdn,!x509, chtype);
 			subj=NULL; /* done processing '-subj' option */
 			if ((kludge > 0) && !sk_X509_ATTRIBUTE_num(req->req_info->attributes))
 				{
@@ -902,7 +912,7 @@ loop:
 			if ((x509ss=X509_new()) == NULL) goto end;
 
 			/* Set version to V3 */
-			if(!X509_set_version(x509ss, 2)) goto end;
+			if(extensions && !X509_set_version(x509ss, 2)) goto end;
 			if (serial)
 				{
 				if (!X509_set_serialNumber(x509ss, serial)) goto end;
@@ -975,7 +985,7 @@ loop:
 			print_name(bio_err, "old subject=", X509_REQ_get_subject_name(req), nmflag);
 			}
 
-		if (build_subject(req, subj, chtype) == 0)
+		if (build_subject(req, subj, chtype, multirdn) == 0)
 			{
 			BIO_printf(bio_err, "ERROR: cannot modify subject\n");
 			ex=1;
@@ -1166,8 +1176,8 @@ end:
 	OPENSSL_EXIT(ex);
 	}
 
-static int make_REQ(X509_REQ *req, EVP_PKEY *pkey, char *subj, int attribs,
-			unsigned long chtype)
+static int make_REQ(X509_REQ *req, EVP_PKEY *pkey, char *subj, int multirdn,
+			int attribs, unsigned long chtype)
 	{
 	int ret=0,i;
 	char no_prompt = 0;
@@ -1217,7 +1227,7 @@ static int make_REQ(X509_REQ *req, EVP_PKEY *pkey, char *subj, int attribs,
 	else 
 		{
 		if (subj)
-			i = build_subject(req, subj, chtype);
+			i = build_subject(req, subj, chtype, multirdn);
 		else
 			i = prompt_info(req, dn_sk, dn_sect, attr_sk, attr_sect, attribs, chtype);
 		}
@@ -1234,11 +1244,11 @@ err:
  * subject is expected to be in the format /type0=value0/type1=value1/type2=...
  * where characters may be escaped by \
  */
-static int build_subject(X509_REQ *req, char *subject, unsigned long chtype)
+static int build_subject(X509_REQ *req, char *subject, unsigned long chtype, int multirdn)
 	{
 	X509_NAME *n;
 
-	if (!(n = do_subject(subject, chtype)))
+	if (!(n = parse_name(subject, chtype, multirdn)))
 		return 0;
 
 	if (!X509_REQ_set_subject_name(req, n))
@@ -1311,34 +1321,34 @@ start:		for (;;)
 				mval = 0;
 			/* If OBJ not recognised ignore it */
 			if ((nid=OBJ_txt2nid(type)) == NID_undef) goto start;
-
-			if(strlen(v->name) > sizeof buf-9)
+			if (BIO_snprintf(buf,sizeof buf,"%s_default",v->name)
+				>= sizeof buf)
 			   {
 			   BIO_printf(bio_err,"Name '%s' too long\n",v->name);
 			   return 0;
 			   }
 
-			sprintf(buf,"%s_default",v->name);
 			if ((def=NCONF_get_string(req_conf,dn_sect,buf)) == NULL)
 				{
 				ERR_clear_error();
 				def="";
 				}
-			sprintf(buf,"%s_value",v->name);
+				
+			BIO_snprintf(buf,sizeof buf,"%s_value",v->name);
 			if ((value=NCONF_get_string(req_conf,dn_sect,buf)) == NULL)
 				{
 				ERR_clear_error();
 				value=NULL;
 				}
 
-			sprintf(buf,"%s_min",v->name);
+			BIO_snprintf(buf,sizeof buf,"%s_min",v->name);
 			if (!NCONF_get_number(req_conf,dn_sect,buf, &n_min))
 				{
 				ERR_clear_error();
 				n_min = -1;
 				}
 
-			sprintf(buf,"%s_max",v->name);
+			BIO_snprintf(buf,sizeof buf,"%s_max",v->name);
 			if (!NCONF_get_number(req_conf,dn_sect,buf, &n_max))
 				{
 				ERR_clear_error();
@@ -1376,13 +1386,13 @@ start2:			for (;;)
 				if ((nid=OBJ_txt2nid(type)) == NID_undef)
 					goto start2;
 
-				if(strlen(v->name) > sizeof buf-9)
+				if (BIO_snprintf(buf,sizeof buf,"%s_default",type)
+					>= sizeof buf)
 				   {
 				   BIO_printf(bio_err,"Name '%s' too long\n",v->name);
 				   return 0;
 				   }
 
-				sprintf(buf,"%s_default",type);
 				if ((def=NCONF_get_string(req_conf,attr_sect,buf))
 					== NULL)
 					{
@@ -1391,7 +1401,7 @@ start2:			for (;;)
 					}
 				
 				
-				sprintf(buf,"%s_value",type);
+				BIO_snprintf(buf,sizeof buf,"%s_value",type);
 				if ((value=NCONF_get_string(req_conf,attr_sect,buf))
 					== NULL)
 					{
@@ -1399,11 +1409,11 @@ start2:			for (;;)
 					value=NULL;
 					}
 
-				sprintf(buf,"%s_min",type);
+				BIO_snprintf(buf,sizeof buf,"%s_min",type);
 				if (!NCONF_get_number(req_conf,attr_sect,buf, &n_min))
 					n_min = -1;
 
-				sprintf(buf,"%s_max",type);
+				BIO_snprintf(buf,sizeof buf,"%s_max",type);
 				if (!NCONF_get_number(req_conf,attr_sect,buf, &n_max))
 					n_max = -1;
 
@@ -1497,9 +1507,8 @@ start:
 	(void)BIO_flush(bio_err);
 	if(value != NULL)
 		{
-		OPENSSL_assert(strlen(value) < sizeof buf-2);
-		strcpy(buf,value);
-		strcat(buf,"\n");
+		BUF_strlcpy(buf,value,sizeof buf);
+		BUF_strlcat(buf,"\n",sizeof buf);
 		BIO_printf(bio_err,"%s\n",value);
 		}
 	else
@@ -1521,8 +1530,8 @@ start:
 		{
 		if ((def == NULL) || (def[0] == '\0'))
 			return(1);
-		strcpy(buf,def);
-		strcat(buf,"\n");
+		BUF_strlcpy(buf,def,sizeof buf);
+		BUF_strlcat(buf,"\n",sizeof buf);
 		}
 	else if ((buf[0] == '.') && (buf[1] == '\n')) return(1);
 
@@ -1556,9 +1565,8 @@ start:
 	(void)BIO_flush(bio_err);
 	if (value != NULL)
 		{
-		OPENSSL_assert(strlen(value) < sizeof buf-2);
-		strcpy(buf,value);
-		strcat(buf,"\n");
+		BUF_strlcpy(buf,value,sizeof buf);
+		BUF_strlcat(buf,"\n",sizeof buf);
 		BIO_printf(bio_err,"%s\n",value);
 		}
 	else
@@ -1580,8 +1588,8 @@ start:
 		{
 		if ((def == NULL) || (def[0] == '\0'))
 			return(1);
-		strcpy(buf,def);
-		strcat(buf,"\n");
+		BUF_strlcpy(buf,def,sizeof buf);
+		BUF_strlcat(buf,"\n",sizeof buf);
 		}
 	else if ((buf[0] == '.') && (buf[1] == '\n')) return(1);
 
@@ -1610,7 +1618,7 @@ err:
 	}
 
 #ifndef OPENSSL_NO_RSA
-static void MS_CALLBACK req_cb(int p, int n, void *arg)
+static int MS_CALLBACK req_cb(int p, int n, BN_GENCB *cb)
 	{
 	char c='*';
 
@@ -1618,11 +1626,12 @@ static void MS_CALLBACK req_cb(int p, int n, void *arg)
 	if (p == 1) c='+';
 	if (p == 2) c='*';
 	if (p == 3) c='\n';
-	BIO_write((BIO *)arg,&c,1);
-	(void)BIO_flush((BIO *)arg);
+	BIO_write(cb->arg,&c,1);
+	(void)BIO_flush(cb->arg);
 #ifdef LINT
 	p=n;
 #endif
+	return 1;
 	}
 #endif
 

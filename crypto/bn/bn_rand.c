@@ -205,6 +205,7 @@ err:
 		OPENSSL_cleanse(buf,bytes);
 		OPENSSL_free(buf);
 		}
+	bn_check_top(rnd);
 	return(ret);
 	}
 
@@ -291,6 +292,7 @@ static int bn_rand_range(int pseudo, BIGNUM *r, BIGNUM *range)
 		while (BN_cmp(r, range) >= 0);
 		}
 
+	bn_check_top(r);
 	return 1;
 	}
 

@@ -87,6 +87,7 @@ BIGNUM *BN_mod_sqrt(BIGNUM *in, const BIGNUM *a, const BIGNUM *p, BN_CTX *ctx)
 				BN_free(ret);
 				return NULL;
 				}
+			bn_check_top(ret);
 			return ret;
 			}
 
@@ -105,6 +106,7 @@ BIGNUM *BN_mod_sqrt(BIGNUM *in, const BIGNUM *a, const BIGNUM *p, BN_CTX *ctx)
 			BN_free(ret);
 			return NULL;
 			}
+		bn_check_top(ret);
 		return ret;
 		}
 
@@ -385,5 +387,6 @@ BIGNUM *BN_mod_sqrt(BIGNUM *in, const BIGNUM *a, const BIGNUM *p, BN_CTX *ctx)
 		ret = NULL;
 		}
 	BN_CTX_end(ctx);
+	bn_check_top(ret);
 	return ret;
 	}

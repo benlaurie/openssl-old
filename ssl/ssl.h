@@ -1198,6 +1198,11 @@ int	SSL_CIPHER_get_bits(SSL_CIPHER *c,int *alg_bits);
 char *	SSL_CIPHER_get_version(SSL_CIPHER *c);
 const char *	SSL_CIPHER_get_name(SSL_CIPHER *c);
 
+const COMP_METHOD *SSL_get_current_compression(SSL *s);
+const COMP_METHOD *SSL_get_current_expansion(SSL *s);
+const char *SSL_COMP_get_name(const COMP_METHOD *comp);
+STACK_OF(SSL_COMP) *SSL_COMP_get_compression_methods(void);
+
 int	SSL_get_fd(SSL *s);
 int	SSL_get_rfd(SSL *s);
 int	SSL_get_wfd(SSL *s);
@@ -1372,8 +1377,8 @@ const char *SSL_alert_type_string(int value);
 const char *SSL_alert_desc_string_long(int value);
 const char *SSL_alert_desc_string(int value);
 
-void SSL_set_client_CA_list(SSL *s, STACK_OF(X509_NAME) *list);
-void SSL_CTX_set_client_CA_list(SSL_CTX *ctx, STACK_OF(X509_NAME) *list);
+void SSL_set_client_CA_list(SSL *s, STACK_OF(X509_NAME) *name_list);
+void SSL_CTX_set_client_CA_list(SSL_CTX *ctx, STACK_OF(X509_NAME) *name_list);
 STACK_OF(X509_NAME) *SSL_get_client_CA_list(SSL *s);
 STACK_OF(X509_NAME) *SSL_CTX_get_client_CA_list(SSL_CTX *s);
 int SSL_add_client_CA(SSL *ssl,X509 *x);
@@ -1485,8 +1490,10 @@ void SSL_set_tmp_ecdh_callback(SSL *ssl,
 #endif
 
 #ifndef OPENSSL_NO_COMP
+STACK_OF(SSL_COMP) *SSL_COMP_get_compression_method(void);
 int SSL_COMP_add_compression_method(int id,COMP_METHOD *cm);
 #else
+void *SSL_COMP_get_compression_method(void);
 int SSL_COMP_add_compression_method(int id,char *cm);
 #endif
 
@@ -1701,6 +1708,7 @@ void ERR_load_SSL_strings(void);
 #define SSL_R_DECRYPTION_FAILED_OR_BAD_RECORD_MAC	 1109
 #define SSL_R_DH_PUBLIC_VALUE_LENGTH_IS_WRONG		 148
 #define SSL_R_DIGEST_CHECK_FAILED			 149
+#define SSL_R_DUPLICATE_COMPRESSION_ID			 1121
 #define SSL_R_ECGROUP_TOO_LARGE_FOR_CIPHER		 1119
 #define SSL_R_ENCRYPTED_LENGTH_TOO_LONG			 150
 #define SSL_R_ERROR_GENERATING_TMP_RSA_KEY		 1092

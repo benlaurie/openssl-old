@@ -124,11 +124,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/types.h>
+
 #include <sys/stat.h>
 #include <openssl/e_os2.h>
 #ifdef OPENSSL_NO_STDIO
 #define APPS_WIN16
+#endif
+
+#if !defined(OPENSSL_SYS_NETWARE)  /* conflicts with winsock2 stuff on netware */
+#include <sys/types.h>
 #endif
 
 /* With IPv6, it looks like Digital has mixed up the proper order of
@@ -150,10 +154,6 @@ typedef unsigned int u_int;
 #include <openssl/ssl.h>
 #include <openssl/rand.h>
 #include "s_apps.h"
-
-#ifdef OPENSSL_SYS_WINDOWS
-#include <conio.h>
-#endif
 
 #ifdef OPENSSL_SYS_WINCE
 /* Windows CE incorrectly defines fileno as returning void*, so to avoid problems below... */
@@ -1001,7 +1001,7 @@ static int sv_body(char *hostname, int s, unsigned char *context)
 	unsigned long l;
 	SSL *con=NULL;
 	BIO *sbio;
-#ifdef OPENSSL_SYS_WINDOWS
+#if defined(OPENSSL_SYS_WINDOWS) || defined(OPENSSL_SYS_MSDOS) || defined(OPENSSL_SYS_NETWARE)
 	struct timeval tv;
 #endif
 
@@ -1075,7 +1075,7 @@ static int sv_body(char *hostname, int s, unsigned char *context)
 		if (!read_from_sslcon)
 			{
 			FD_ZERO(&readfds);
-#ifndef OPENSSL_SYS_WINDOWS
+#if !defined(OPENSSL_SYS_WINDOWS) && !defined(OPENSSL_SYS_MSDOS) && !defined(OPENSSL_SYS_NETWARE)
 			FD_SET(fileno(stdin),&readfds);
 #endif
 			FD_SET(s,&readfds);
@@ -1085,8 +1085,8 @@ static int sv_body(char *hostname, int s, unsigned char *context)
 			 * the compiler: if you do have a cast then you can either
 			 * go for (int *) or (void *).
 			 */
-#ifdef OPENSSL_SYS_WINDOWS
-			/* Under Windows we can't select on stdin: only
+#if defined(OPENSSL_SYS_WINDOWS) || defined(OPENSSL_SYS_MSDOS) || defined(OPENSSL_SYS_NETWARE)
+                        /* Under DOS (non-djgpp) and Windows we can't select on stdin: only
 			 * on sockets. As a workaround we timeout the select every
 			 * second and check for any keypress. In a proper Windows
 			 * application we wouldn't do this because it is inefficient.
@@ -1347,7 +1347,13 @@ static int init_ssl_connection(SSL *con)
 	if (SSL_ctrl(con,SSL_CTRL_GET_FLAGS,0,NULL) &
 		TLS1_FLAGS_TLS_PADDING_BUG)
 		BIO_printf(bio_s_out,"Peer has incorrect TLSv1 block padding\n");
-
+#ifndef OPENSSL_NO_KRB5
+	if (con->kssl_ctx->client_princ != NULL)
+		{
+		BIO_printf(bio_s_out,"Kerberos peer principal is %s\n",
+			con->kssl_ctx->client_princ);
+		}
+#endif /* OPENSSL_NO_KRB5 */
 	return(1);
 	}
 
@@ -1499,7 +1505,9 @@ static int www_body(char *hostname, int s, unsigned char *context)
 			else
 				{
 				BIO_printf(bio_s_out,"read R BLOCK\n");
-#if !defined(OPENSSL_SYS_MSDOS) && !defined(__DJGPP__)
+#if defined(OPENSSL_SYS_NETWARE)
+            delay(1000);
+#elif !defined(OPENSSL_SYS_MSDOS) && !defined(__DJGPP__)
 				sleep(1);
 #endif
 				continue;
@@ -1783,7 +1791,12 @@ static RSA MS_CALLBACK *tmp_rsa_cb(SSL *s, int is_export, int keylength)
 			BIO_printf(bio_err,"Generating temp (%d bit) RSA key...",keylength);
 			(void)BIO_flush(bio_err);
 			}
-		rsa_tmp=RSA_generate_key(keylength,RSA_F4,NULL,NULL);
+		if(((rsa_tmp = RSA_new()) == NULL) || !RSA_generate_key_ex(
+					rsa_tmp, keylength,RSA_F4,NULL))
+			{
+			if(rsa_tmp) RSA_free(rsa_tmp);
+			rsa_tmp = NULL;
+			}
 		if (!s_quiet)
 			{
 			BIO_printf(bio_err,"\n");

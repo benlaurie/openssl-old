@@ -54,9 +54,10 @@
  *
  */
 
-#ifndef BN_CTX_DEBUG
-# undef NDEBUG /* avoid conflicting definitions */
-# define NDEBUG
+#if !defined(BN_CTX_DEBUG) && !defined(BN_DEBUG)
+#ifndef NDEBUG
+#define NDEBUG
+#endif
 #endif
 
 #include <stdio.h>
@@ -65,6 +66,37 @@
 #include "cryptlib.h"
 #include "bn_lcl.h"
 
+/* BN_CTX structure details */
+#define BN_CTX_NUM	32
+#define BN_CTX_NUM_POS	12
+struct bignum_ctx
+	{
+	int tos;
+	BIGNUM bn[BN_CTX_NUM];
+	int flags;
+	int depth;
+	int pos[BN_CTX_NUM_POS];
+	int too_many;
+	};
+
+#ifndef OPENSSL_NO_DEPRECATED
+void BN_CTX_init(BN_CTX *ctx)
+#else
+static void BN_CTX_init(BN_CTX *ctx)
+#endif
+	{
+#if 0 /* explicit version */
+	int i;
+	ctx->tos = 0;
+	ctx->flags = 0;
+	ctx->depth = 0;
+	ctx->too_many = 0;
+	for (i = 0; i < BN_CTX_NUM; i++)
+		BN_init(&(ctx->bn[i]));
+#else
+	memset(ctx, 0, sizeof *ctx);
+#endif
+	}
 
 BN_CTX *BN_CTX_new(void)
 	{
@@ -82,21 +114,6 @@ BN_CTX *BN_CTX_new(void)
 	return(ret);
 	}
 
-void BN_CTX_init(BN_CTX *ctx)
-	{
-#if 0 /* explicit version */
-	int i;
-	ctx->tos = 0;
-	ctx->flags = 0;
-	ctx->depth = 0;
-	ctx->too_many = 0;
-	for (i = 0; i < BN_CTX_NUM; i++)
-		BN_init(&(ctx->bn[i]));
-#else
-	memset(ctx, 0, sizeof *ctx);
-#endif
-	}
-
 void BN_CTX_free(BN_CTX *ctx)
 	{
 	int i;
@@ -104,8 +121,10 @@ void BN_CTX_free(BN_CTX *ctx)
 	if (ctx == NULL) return;
 	assert(ctx->depth == 0);
 
-	for (i=0; i < BN_CTX_NUM; i++)
+	for (i=0; i < BN_CTX_NUM; i++) {
+		bn_check_top(&(ctx->bn[i]));
 		BN_clear_free(&(ctx->bn[i]));
+	}
 	if (ctx->flags & BN_FLG_MALLOCED)
 		OPENSSL_free(ctx);
 	}
@@ -135,6 +154,7 @@ BIGNUM *BN_CTX_get(BN_CTX *ctx)
 			}
 		return NULL;
 		}
+	bn_check_top(&(ctx->bn[ctx->tos]));
 	return (&(ctx->bn[ctx->tos++]));
 	}
 
@@ -150,6 +170,19 @@ void BN_CTX_end(BN_CTX *ctx)
 
 	ctx->too_many = 0;
 	ctx->depth--;
+	/* It appears some "scrapbook" uses of BN_CTX result in BIGNUMs being
+	 * left in an inconsistent state when they are released (eg. BN_div).
+	 * These can trip us up when they get reused, so the safest fix is to
+	 * make sure the BIGNUMs are made sane when the context usage is
+	 * releasing them. */
 	if (ctx->depth < BN_CTX_NUM_POS)
+#if 0
 		ctx->tos = ctx->pos[ctx->depth];
+#else
+		{
+		while(ctx->tos > ctx->pos[ctx->depth])
+			/* This ensures the BIGNUM is sane(r) for reuse. */
+			ctx->bn[--(ctx->tos)].top = 0;
+		}
+#endif
 	}

@@ -75,12 +75,15 @@ $ ENDIF
 $!
 $! Define The Different Encryption Types.
 $!
-$ ENCRYPT_TYPES = "Basic,MD2,MD4,MD5,SHA,MDC2,HMAC,RIPEMD,"+ -
+$ ENCRYPT_TYPES = "Basic,"+ -
+		  "OBJECTS,"+ -
+		  "MD2,MD4,MD5,SHA,MDC2,HMAC,RIPEMD,"+ -
 		  "DES,RC2,RC4,RC5,IDEA,BF,CAST,"+ -
 		  "BN,EC,RSA,DSA,ECDSA,DH,ECDH,DSO,ENGINE,AES,"+ -
-		  "BUFFER,BIO,STACK,LHASH,RAND,ERR,OBJECTS,"+ -
+		  "BUFFER,BIO,STACK,LHASH,RAND,ERR,"+ -
 		  "EVP,EVP_2,ASN1,ASN1_2,PEM,X509,X509V3,"+ -
-		  "CONF,TXT_DB,PKCS7,PKCS12,COMP,OCSP,UI,KRB5"
+		  "CONF,TXT_DB,PKCS7,PKCS12,COMP,OCSP,UI,KRB5,"+ -
+		  "STORE"
 $!
 $! Check To Make Sure We Have Valid Command Line Parameters.
 $!
@@ -158,7 +161,7 @@ $!
 $ APPS_DES = "DES/DES,CBC3_ENC"
 $ APPS_PKCS7 = "ENC/ENC;DEC/DEC;SIGN/SIGN;VERIFY/VERIFY,EXAMPLE"
 $
-$ LIB_ = "cryptlib,mem,mem_clr,mem_dbg,cversion,ex_data,tmdiff,cpt_err,ebcdic,uid,o_time"
+$ LIB_ = "cryptlib,mem,mem_clr,mem_dbg,cversion,ex_data,tmdiff,cpt_err,ebcdic,uid,o_time,o_str"
 $ LIB_MD2 = "md2_dgst,md2_one"
 $ LIB_MD4 = "md4_dgst,md4_one"
 $ LIB_MD5 = "md5_dgst,md5_one"
@@ -201,7 +204,8 @@ $ LIB_DSO = "dso_dl,dso_dlfcn,dso_err,dso_lib,dso_null,"+ -
 	"dso_openssl,dso_win32,dso_vms"
 $ LIB_ENGINE = "eng_err,eng_lib,eng_list,eng_init,eng_ctrl,"+ -
 	"eng_table,eng_pkey,eng_fat,eng_all,"+ -
-	"tb_rsa,tb_dsa,tb_ecdsa,tb_dh,tb_rand,tb_cipher,tb_digest,tb_ecdh,"+ -
+	"tb_rsa,tb_dsa,tb_ecdsa,tb_dh,tb_ecdh,tb_rand,tb_store,"+ -
+	"tb_cipher,tb_digest,"+ -
 	"eng_openssl,eng_dyn,eng_cnf,eng_cryptodev"
 $ LIB_AES = "aes_core,aes_misc,aes_ecb,aes_cbc,aes_cfb,aes_ofb,aes_ctr"
 $ LIB_BUFFER = "buffer,buf_err"
@@ -265,6 +269,7 @@ $ LIB_OCSP = "ocsp_asn,ocsp_ext,ocsp_ht,ocsp_lib,ocsp_cl,"+ -
 $ LIB_UI_COMPAT = ",ui_compat"
 $ LIB_UI = "ui_err,ui_lib,ui_openssl,ui_util"+LIB_UI_COMPAT
 $ LIB_KRB5 = "krb5_asn"
+$ LIB_STORE = "str_err,str_lib,str_meth,str_mem"
 $!
 $! Setup exceptional compilations
 $!

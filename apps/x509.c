@@ -92,7 +92,9 @@ static char *x509_usage[]={
 " -out arg        - output file - default stdout\n",
 " -passin arg     - private key password source\n",
 " -serial         - print serial number value\n",
-" -hash           - print hash value\n",
+" -subject_hash   - print subject hash value\n",
+" -issuer_hash    - print issuer hash value\n",
+" -hash           - synonym for -subject_hash\n",
 " -subject        - print subject DN\n",
 " -issuer         - print issuer DN\n",
 " -email          - print email address(es)\n",
@@ -167,8 +169,8 @@ int MAIN(int argc, char **argv)
 	char *infile=NULL,*outfile=NULL,*keyfile=NULL,*CAfile=NULL;
 	char *CAkeyfile=NULL,*CAserial=NULL;
 	char *alias=NULL;
-	int text=0,serial=0,hash=0,subject=0,issuer=0,startdate=0,enddate=0;
-	int ocspid=0;
+	int text=0,serial=0,subject=0,issuer=0,startdate=0,enddate=0;
+	int subject_hash=0,issuer_hash=0,ocspid=0;
 	int noout=0,sign_flag=0,CA_flag=0,CA_createserial=0,email=0;
 	int trustout=0,clrtrust=0,clrreject=0,aliasout=0,clrext=0;
 	int C=0;
@@ -379,8 +381,11 @@ int MAIN(int argc, char **argv)
 			x509req= ++num;
 		else if (strcmp(*argv,"-text") == 0)
 			text= ++num;
-		else if (strcmp(*argv,"-hash") == 0)
-			hash= ++num;
+		else if (strcmp(*argv,"-hash") == 0
+			|| strcmp(*argv,"-subject_hash") == 0)
+			subject_hash= ++num;
+		else if (strcmp(*argv,"-issuer_hash") == 0)
+			issuer_hash= ++num;
 		else if (strcmp(*argv,"-subject") == 0)
 			subject= ++num;
 		else if (strcmp(*argv,"-issuer") == 0)
@@ -707,9 +712,13 @@ bad:
 				if (alstr) BIO_printf(STDout,"%s\n", alstr);
 				else BIO_puts(STDout,"<No Alias>\n");
 				}
-			else if (hash == i)
+			else if (subject_hash == i)
 				{
 				BIO_printf(STDout,"%08lx\n",X509_subject_name_hash(x));
+				}
+			else if (issuer_hash == i)
+				{
+				BIO_printf(STDout,"%08lx\n",X509_issuer_name_hash(x));
 				}
 			else if (pprint == i)
 				{
@@ -1039,24 +1048,26 @@ static ASN1_INTEGER *x509_load_serial(char *CAfile, char *serialfile, int create
 	char *buf = NULL, *p;
 	ASN1_INTEGER *bs = NULL;
 	BIGNUM *serial = NULL;
+	size_t len;
 
-	buf=OPENSSL_malloc( ((serialfile == NULL)
-			?(strlen(CAfile)+strlen(POSTFIX)+1)
-			:(strlen(serialfile)))+1);
+	len = ((serialfile == NULL)
+		?(strlen(CAfile)+strlen(POSTFIX)+1)
+		:(strlen(serialfile)))+1;
+	buf=OPENSSL_malloc(len);
 	if (buf == NULL) { BIO_printf(bio_err,"out of mem\n"); goto end; }
 	if (serialfile == NULL)
 		{
-		strcpy(buf,CAfile);
+		BUF_strlcpy(buf,CAfile,len);
 		for (p=buf; *p; p++)
 			if (*p == '.')
 				{
 				*p='\0';
 				break;
 				}
-		strcat(buf,POSTFIX);
+		BUF_strlcat(buf,POSTFIX,len);
 		}
 	else
-		strcpy(buf,serialfile);
+		BUF_strlcpy(buf,serialfile,len);
 
 	serial = load_serial(buf, create, NULL);
 	if (serial == NULL) goto end;
@@ -1094,7 +1105,7 @@ static int x509_certify(X509_STORE *ctx, char *CAfile, const EVP_MD *digest,
 	else if (!(bs = x509_load_serial(CAfile, serialfile, create)))
 		goto end;
 
-	if (!X509_STORE_add_cert(ctx,x)) goto end;
+/*	if (!X509_STORE_add_cert(ctx,x)) goto end;*/
 
 	/* NOTE: this certificate can/should be self signed, unless it was
 	 * a certificate request in which case it is not. */

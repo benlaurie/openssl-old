@@ -141,12 +141,6 @@ long app_RAND_load_files(char *file); /* `file' is a list of files to read,
 int WIN32_rename(char *oldname,char *newname);
 #endif
 
-/* VMS below version 7.0 doesn't have strcasecmp() */
-#ifdef OPENSSL_SYS_VMS
-#define strcasecmp(str1,str2) VMS_strcasecmp((str1),(str2))
-int VMS_strcasecmp(const char *str1, const char *str2);
-#endif
-
 #ifndef MONOLITH
 
 #define MAIN(a,v)	main(a,v)
@@ -168,7 +162,9 @@ extern BIO *bio_err;
 
 #endif
 
+#ifndef OPENSSL_SYS_NETWARE
 #include <signal.h>
+#endif
 
 #ifdef SIGPIPE
 #define do_pipe_sig()	signal(SIGPIPE,SIG_IGN)
@@ -319,8 +315,9 @@ int save_index(char *dbfile, char *suffix, CA_DB *db);
 int rotate_index(char *dbfile, char *new_suffix, char *old_suffix);
 void free_index(CA_DB *db);
 int index_name_cmp(const char **a, const char **b);
+int parse_yesno(char *str, int def);
 
-X509_NAME *do_subject(char *str, long chtype);
+X509_NAME *parse_name(char *str, long chtype, int multirdn);
 
 #define FORMAT_UNDEF    0
 #define FORMAT_ASN1     1

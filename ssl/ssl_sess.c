@@ -60,7 +60,6 @@
 #include <openssl/lhash.h>
 #include <openssl/rand.h>
 #include "ssl_locl.h"
-#include "cryptlib.h"
 
 static void SSL_SESSION_list_remove(SSL_CTX *ctx, SSL_SESSION *s);
 static void SSL_SESSION_list_add(SSL_CTX *ctx,SSL_SESSION *s);
@@ -79,11 +78,11 @@ SSL_SESSION *SSL_get1_session(SSL *ssl)
 	/* Need to lock this all up rather than just use CRYPTO_add so that
 	 * somebody doesn't free ssl->session between when we check it's
 	 * non-null and when we up the reference count. */
-	CRYPTO_r_lock(CRYPTO_LOCK_SSL_SESSION);
+	CRYPTO_w_lock(CRYPTO_LOCK_SSL_SESSION);
 	sess = ssl->session;
 	if(sess)
 		sess->references++;
-	CRYPTO_r_unlock(CRYPTO_LOCK_SSL_SESSION);
+	CRYPTO_w_unlock(CRYPTO_LOCK_SSL_SESSION);
 	return(sess);
 	}
 

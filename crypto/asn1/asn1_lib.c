@@ -104,10 +104,12 @@ int ASN1_get_object(unsigned char **pp, long *plength, int *ptag, int *pclass,
 			l<<=7L;
 			l|= *(p++)&0x7f;
 			if (--max == 0) goto err;
+			if (l > (INT_MAX >> 7L)) goto err;
 			}
 		l<<=7L;
 		l|= *(p++)&0x7f;
 		tag=(int)l;
+		if (--max == 0) goto err;
 		}
 	else
 		{ 
@@ -143,7 +145,7 @@ static int asn1_get_length(unsigned char **pp, int *inf, long *rl, int max)
 	{
 	unsigned char *p= *pp;
 	unsigned long ret=0;
-	int i;
+	unsigned int i;
 
 	if (max-- < 1) return(0);
 	if (*p == 0x80)
@@ -421,8 +423,8 @@ void asn1_add_error(unsigned char *address, int offset)
 	{
 	char buf1[DECIMAL_SIZE(address)+1],buf2[DECIMAL_SIZE(offset)+1];
 
-	sprintf(buf1,"%lu",(unsigned long)address);
-	sprintf(buf2,"%d",offset);
+	BIO_snprintf(buf1,sizeof buf1,"%lu",(unsigned long)address);
+	BIO_snprintf(buf2,sizeof buf2,"%d",offset);
 	ERR_add_error_data(4,"address=",buf1," offset=",buf2);
 	}
 

@@ -85,7 +85,7 @@
 #include OPENSSL_UNISTD
 #endif
 
-#if !defined(OPENSSL_SYS_MSDOS) && !defined(OPENSSL_SYS_VXWORKS) && (!defined(OPENSSL_SYS_VMS) || defined(__DECC))
+#if !defined(OPENSSL_SYS_NETWARE) && !defined(OPENSSL_SYS_MSDOS) && !defined(OPENSSL_SYS_VXWORKS) && (!defined(OPENSSL_SYS_VMS) || defined(__DECC))
 #define TIMES
 #endif
 
@@ -105,7 +105,7 @@
 #undef TIMES
 #endif
 
-#if !defined(TIMES) && !defined(OPENSSL_SYS_VXWORKS)
+#if !defined(TIMES) && !defined(OPENSSL_SYS_VXWORKS) && !defined(OPENSSL_SYS_NETWARE)
 #include <sys/timeb.h>
 #endif
 
@@ -384,6 +384,20 @@ static double tm_Time_F(int s)
 		ret=((double)(tend.tms_utime-tstart.tms_utime))/HZ;
 		return((ret == 0.0)?1e-6:ret);
 	}
+#elif defined(OPENSSL_SYS_NETWARE)
+    static clock_t tstart,tend;
+
+    if (s == START)
+    {
+        tstart=clock();
+        return(0);
+    }
+    else
+    {
+        tend=clock();
+        ret=(double)((double)(tend)-(double)(tstart));
+        return((ret < 0.001)?0.001:ret);
+    }
 #elif defined(OPENSSL_SYS_VXWORKS)
         {
 	static unsigned long tick_start, tick_end;
@@ -502,7 +516,7 @@ int MAIN(int argc, char **argv)
 
 		if (s_www_path != NULL)
 			{
-			sprintf(buf,"GET %s HTTP/1.0\r\n\r\n",s_www_path);
+			BIO_snprintf(buf,sizeof buf,"GET %s HTTP/1.0\r\n\r\n",s_www_path);
 			SSL_write(scon,buf,strlen(buf));
 			while ((i=SSL_read(scon,buf,sizeof(buf))) > 0)
 				bytes_read+=i;
@@ -557,7 +571,7 @@ next:
 
 	if (s_www_path != NULL)
 		{
-		sprintf(buf,"GET %s HTTP/1.0\r\n\r\n",s_www_path);
+		BIO_snprintf(buf,sizeof buf,"GET %s HTTP/1.0\r\n\r\n",s_www_path);
 		SSL_write(scon,buf,strlen(buf));
 		while (SSL_read(scon,buf,sizeof(buf)) > 0)
 			;
@@ -595,7 +609,7 @@ next:
 
 		if (s_www_path)
 			{
-			sprintf(buf,"GET %s HTTP/1.0\r\n\r\n",s_www_path);
+			BIO_snprintf(buf,sizeof buf,"GET %s HTTP/1.0\r\n\r\n",s_www_path);
 			SSL_write(scon,buf,strlen(buf));
 			while ((i=SSL_read(scon,buf,sizeof(buf))) > 0)
 				bytes_read+=i;

@@ -337,6 +337,7 @@ static void xsyslog(BIO *bp, int priority, const char *string)
         struct opcdef *opcdef_p;
         typedef char * char_32p;
         typedef struct opcdef * OPCDEF_TYPE_P;
+	void *_malloc32(size_t);
 #if __INITIAL_POINTER_SIZE == 64
 #pragma __required_pointer_size __restore
 #endif

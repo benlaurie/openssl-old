@@ -65,7 +65,7 @@
 #include <openssl/err.h>
 
 static int asn1_check_eoc(unsigned char **in, long len);
-static int asn1_collect(BUF_MEM *buf, unsigned char **in, long len, char inf, int tag);
+static int asn1_collect(BUF_MEM *buf, unsigned char **in, long len, char inf, int tag, int aclass);
 static int collect_data(BUF_MEM *buf, unsigned char **p, long plen);
 static int asn1_check_tlen(long *olen, int *otag, unsigned char *oclass, char *inf, char *cst,
 			unsigned char **in, long len, int exptag, int expclass, char opt, ASN1_TLC *ctx);
@@ -543,25 +543,35 @@ static int asn1_d2i_ex_primitive(ASN1_VALUE **pval, unsigned char **in, long inl
 		ASN1err(ASN1_F_ASN1_D2I_EX_PRIMITIVE, ERR_R_NESTED_ASN1_ERROR);
 		return 0;
 	} else if(ret == -1) return -1;
-	/* SEQUENCE and SET must be constructed */
-	if((utype == V_ASN1_SEQUENCE) || (utype == V_ASN1_SET)) {
-		if(!cst) {
+	/* SEQUENCE, SET and "OTHER" are left in encoded form */
+	if((utype == V_ASN1_SEQUENCE) || (utype == V_ASN1_SET) || (utype == V_ASN1_OTHER)) {
+		/* SEQUENCE and SET must be constructed */
+		if((utype != V_ASN1_OTHER) && !cst) {
 			ASN1err(ASN1_F_ASN1_D2I_EX_PRIMITIVE, ASN1_R_TYPE_NOT_CONSTRUCTED);
 			return 0;
 		}
-		/* FIXME: if it is indefinite length constructed need to work out
-		 * actual length.
-		 */
 
 		cont = *in;
-		len = p - cont + plen;
-		p += plen;
-		buf.data = NULL;
+		/* If indefinite length constructed find the real end */
+		if(inf) {
+			asn1_collect(NULL, &p, plen, inf, -1, -1);
+			len = p - cont;
+		} else {
+			len = p - cont + plen;
+			p += plen;
+			buf.data = NULL;
+		}
 	} else if(cst) {
 		buf.length = 0;
 		buf.max = 0;
 		buf.data = NULL;
-		asn1_collect(&buf, &p, plen, inf, -1);
+		/* Should really check the internal tags are correct but
+		 * some things may get this wrong. The relevant specs
+		 * say that constructed string types should be OCTET STRINGs
+		 * internally irrespective of the type. So instead just check
+		 * for UNIVERSAL class and ignore the tag.
+		 */
+		asn1_collect(&buf, &p, plen, inf, -1, V_ASN1_UNIVERSAL);
 		cont = (unsigned char *)buf.data;
 		len = buf.length;
 	} else {
@@ -678,16 +688,23 @@ static int asn1_d2i_ex_primitive(ASN1_VALUE **pval, unsigned char **in, long inl
 /* This function collects the asn1 data from a constructred string
  * type into a buffer. The values of 'in' and 'len' should refer
  * to the contents of the constructed type and 'inf' should be set
- * if it is indefinite length
+ * if it is indefinite length. If 'buf' is NULL then we just want
+ * to find the end of the current structure: useful for indefinite
+ * length constructed stuff.
  */
 
-static int asn1_collect(BUF_MEM *buf, unsigned char **in, long len, char inf, int tag)
+static int asn1_collect(BUF_MEM *buf, unsigned char **in, long len, char inf, int tag, int aclass)
 {
 	unsigned char *p, *q;
 	long plen;
 	char cst;
 	p = *in;
 	inf &= 1;
+	/* If no buffer and not indefinite length constructured just pass over the encoded data */
+	if(!buf && !inf) {
+		*in += len;
+		return 1;
+	}
 	while(len > 0) {
 		q = p;
 		/* Check for EOC */
@@ -700,13 +717,13 @@ static int asn1_collect(BUF_MEM *buf, unsigned char **in, long len, char inf, in
 			inf = 0;
 			goto err;
 		}
-		if(!asn1_check_tlen(&plen, NULL, NULL, &inf, &cst, &p, len, tag, V_ASN1_UNIVERSAL, 0, NULL)) {
+		if(!asn1_check_tlen(&plen, NULL, NULL, &inf, &cst, &p, len, tag, aclass, 0, NULL)) {
 			ASN1err(ASN1_F_ASN1_COLLECT, ERR_R_NESTED_ASN1_ERROR);
 			return 0;
 		}
 		/* If indefinite length constructed update max length */
 		if(cst) {
-			if(!asn1_collect(buf, &p, plen, inf, tag)) return 0;
+			if(!asn1_collect(buf, &p, plen, inf, tag, aclass)) return 0;
 		} else {
 			if(!collect_data(buf, &p, plen)) return 0;
 		}
@@ -725,12 +742,14 @@ static int asn1_collect(BUF_MEM *buf, unsigned char **in, long len, char inf, in
 static int collect_data(BUF_MEM *buf, unsigned char **p, long plen)
 {
 		int len;
-		len = buf->length;
-		if(!BUF_MEM_grow(buf, len + plen)) {
-			ASN1err(ASN1_F_COLLECT_DATA, ERR_R_MALLOC_FAILURE);
-			return 0;
+		if(buf) {
+			len = buf->length;
+			if(!BUF_MEM_grow(buf, len + plen)) {
+				ASN1err(ASN1_F_COLLECT_DATA, ERR_R_MALLOC_FAILURE);
+				return 0;
+			}
+			memcpy(buf->data + len, *p, plen);
 		}
-		memcpy(buf->data + len, *p, plen);
 		*p += plen;
 		return 1;
 }

@@ -127,26 +127,30 @@ void ASN1_template_free(ASN1_VALUE *val, const ASN1_TEMPLATE *tt)
 	} else ASN1_item_free(val, tt->item);
 }
 
-void ASN1_primitive_free(ASN1_VALUE *type, long utype)
+void ASN1_primitive_free(ASN1_VALUE *val, long utype)
 {
+	ASN1_TYPE *typ;
+	if(!val) return;
 	switch(utype) {
 		case V_ASN1_OBJECT:
-		ASN1_OBJECT_free((ASN1_OBJECT *)type);
+		ASN1_OBJECT_free((ASN1_OBJECT *)val);
 		break;
 
 		case V_ASN1_NULL:
-		ASN1_NULL_free((ASN1_NULL *)type);
+		ASN1_NULL_free((ASN1_NULL *)val);
 		break;
 
 		case V_ASN1_ANY:
-		ASN1_TYPE_free((ASN1_TYPE *)type);
+		typ = (ASN1_TYPE *)val;
+		ASN1_primitive_free((ASN1_VALUE *)typ->value.ptr, typ->type);
+		OPENSSL_free(typ);
 		break;
 
 		case V_ASN1_BOOLEAN:
 		break;
 
 		default:
-		ASN1_STRING_free((ASN1_STRING*)type);
+		ASN1_STRING_free((ASN1_STRING*)val);
 		break;
 	}
 }

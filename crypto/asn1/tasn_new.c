@@ -166,6 +166,7 @@ int ASN1_template_new(ASN1_VALUE **pval, const ASN1_TEMPLATE *tt)
 
 int ASN1_primitive_new(ASN1_VALUE **pval, long utype)
 {
+	ASN1_TYPE *typ;
 	switch(utype) {
 		case V_ASN1_OBJECT:
 		*pval = (ASN1_VALUE *)OBJ_nid2obj(NID_undef);
@@ -180,7 +181,11 @@ int ASN1_primitive_new(ASN1_VALUE **pval, long utype)
 		return 1;
 
 		case V_ASN1_ANY:
-		*pval = (ASN1_VALUE *)ASN1_TYPE_new();
+		typ = OPENSSL_malloc(sizeof(ASN1_TYPE));
+		if(!typ) return 0;
+		typ->value.ptr = NULL;
+		typ->type = -1;
+		*pval = (ASN1_VALUE *)typ;
 		break;
 
 		default:

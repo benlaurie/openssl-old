@@ -19,7 +19,8 @@ $ show time
 $!
 $ arch_name = f$edit(f$getsyi("arch_name"),"UPCASE")
 $!
-$ texe_dir := ssl$root:[test]
+$ tcom_dir := ssl$root:[test]
+$ texe_dir := ssl$root:['arch_name'_test]
 $ exe_dir  := ssl$root:['arch_name'_EXE]
 $!
 $! set default '__here'

@@ -70,6 +70,7 @@
 	Shared library support for VMS.
 	Kerberos 5 authentication (Heimdal)
 	Constification
+	Compression
 	Attribute Certificate support
 	Certificate Pair support
 	Storage Engines (primarly an LDAP storage engine)

@@ -59,7 +59,8 @@ DEPFLAG=
 PEX_LIBS= 
 EX_LIBS= 
 EXE_EXT= 
-AR=ar r
+ARFLAGS=
+AR=ar $(ARFLAGS) r
 RANLIB= ranlib
 PERL= perl
 TAR= tar
@@ -166,7 +167,7 @@ SHLIBDIRS= crypto ssl
 SDIRS=  \
 	md2 md4 md5 sha mdc2 hmac ripemd \
 	des rc2 rc4 rc5 idea bf cast \
-	bn ec rsa dsa ecdsa dh dso engine aes \
+	bn ec rsa dsa ecdsa dh ecdh dso engine aes \
 	buffer bio stack lhash rand err objects \
 	evp asn1 pem x509 x509v3 conf txt_db pkcs7 pkcs12 comp ocsp ui krb5
 
@@ -251,7 +252,8 @@ link-shared:
 		for i in $(SHLIBDIRS); do \
 			prev=lib$$i$(SHLIB_EXT); \
 			for j in $${tmp:-x}; do \
-				( set -x; ln -f -s $$prev lib$$i$$j ); \
+				( set -x; \
+				rm -f lib$$i$$j; ln -s $$prev lib$$i$$j ); \
 				prev=lib$$i$$j; \
 			done; \
 		done; \
@@ -564,6 +566,10 @@ links:
 	fi; \
 	done;
 
+gentests:
+	@(cd test && echo "generating dummy tests (if needed)..." && \
+	$(MAKE) CC='${CC}' PLATFORM='${PLATFORM}' CFLAG='${CFLAG}' SDIRS='$(SDIRS)' INSTALLTOP='${INSTALLTOP}' PEX_LIBS='${PEX_LIBS}' EX_LIBS='${EX_LIBS}' BN_ASM='${BN_ASM}' DES_ENC='${DES_ENC}' BF_ENC='${BF_ENC}' CAST_ENC='${CAST_ENC}' RC4_ENC='${RC4_ENC}' RC5_ENC='${RC5_ENC}' SHA1_ASM_OBJ='${SHA1_ASM_OBJ}' MD5_ASM_OBJ='${MD5_ASM_OBJ}' RMD160_ASM_OBJ='${RMD160_ASM_OBJ}' AR='${AR}' PROCESSOR='${PROCESSOR}' PERL='${PERL}' RANLIB='${RANLIB}' TESTS='${TESTS}' KRB5_INCLUDES='${KRB5_INCLUDES}' LIBKRB5='${LIBKRB5}' EXE_EXT='${EXE_EXT}' SHARED_LIBS='${SHARED_LIBS}' SHLIB_EXT='${SHLIB_EXT}' SHLIB_TARGET='${SHLIB_TARGET}' TESTS='${TESTS}' OPENSSL_DEBUG_MEMORY=on generate );
+
 dclean:
 	rm -f *.bak
 	@for i in $(DIRS) ;\
@@ -578,8 +584,8 @@ rehash: rehash.time
 rehash.time: certs
 	@(OPENSSL="`pwd`/apps/openssl"; OPENSSL_DEBUG_MEMORY=on; \
 		export OPENSSL OPENSSL_DEBUG_MEMORY; \
-		LD_LIBRARY_PATH="`pwd`"; SHLIB_PATH="`pwd`"; LIBPATH="`pwd`"; \
-		export LD_LIBRARY_PATH SHLIB_PATH LIBPATH; \
+		LD_LIBRARY_PATH="`pwd`"; DYLD_LIBRARY_PATH="`pwd`"; SHLIB_PATH="`pwd`"; LIBPATH="`pwd`"; \
+		export LD_LIBRARY_PATH DYLD_LIBRARY_PATH SHLIB_PATH LIBPATH; \
 		$(PERL) tools/c_rehash certs)
 	touch rehash.time
 
@@ -588,8 +594,8 @@ test:   tests
 tests: rehash
 	@(cd test && echo "testing..." && \
 	$(MAKE) CC='${CC}' PLATFORM='${PLATFORM}' CFLAG='${CFLAG}' SDIRS='$(SDIRS)' INSTALLTOP='${INSTALLTOP}' PEX_LIBS='${PEX_LIBS}' EX_LIBS='${EX_LIBS}' BN_ASM='${BN_ASM}' DES_ENC='${DES_ENC}' BF_ENC='${BF_ENC}' CAST_ENC='${CAST_ENC}' RC4_ENC='${RC4_ENC}' RC5_ENC='${RC5_ENC}' SHA1_ASM_OBJ='${SHA1_ASM_OBJ}' MD5_ASM_OBJ='${MD5_ASM_OBJ}' RMD160_ASM_OBJ='${RMD160_ASM_OBJ}' AR='${AR}' PROCESSOR='${PROCESSOR}' PERL='${PERL}' RANLIB='${RANLIB}' TESTS='${TESTS}' KRB5_INCLUDES='${KRB5_INCLUDES}' LIBKRB5='${LIBKRB5}' EXE_EXT='${EXE_EXT}' SHARED_LIBS='${SHARED_LIBS}' SHLIB_EXT='${SHLIB_EXT}' SHLIB_TARGET='${SHLIB_TARGET}' TESTS='${TESTS}' OPENSSL_DEBUG_MEMORY=on tests );
-	@LD_LIBRARY_PATH="`pwd`"; SHLIB_PATH="`pwd`"; LIBPATH="`pwd`"; \
-		export LD_LIBRARY_PATH SHLIB_PATH LIBPATH; \
+	@LD_LIBRARY_PATH="`pwd`"; DYLD_LIBRARY_PATH="`pwd`"; SHLIB_PATH="`pwd`"; LIBPATH="`pwd`"; \
+		export LD_LIBRARY_PATH DYLD_LIBRARY_PATH SHLIB_PATH LIBPATH; \
 		apps/openssl version -a
 
 report:
@@ -715,7 +721,7 @@ install: all install_docs
 			(       echo installing $$i; \
 				if [ "$(PLATFORM)" != "Cygwin" ]; then \
 					cp $$i $(INSTALL_PREFIX)$(INSTALLTOP)/lib; \
-					chmod 644 $(INSTALL_PREFIX)$(INSTALLTOP)/lib/$$i; \
+					chmod 555 $(INSTALL_PREFIX)$(INSTALLTOP)/lib/$$i; \
 				else \
 					c=`echo $$i | sed 's/^lib/cyg/'`; \
 					cp $$c $(INSTALL_PREFIX)$(INSTALLTOP)/bin/$$c; \
@@ -727,7 +733,8 @@ install: all install_docs
 		done; \
 		(	here="`pwd`"; \
 			cd $(INSTALL_PREFIX)$(INSTALLTOP)/lib; \
-			make -f $$here/Makefile link-shared ); \
+			set $(MAKE); \
+			$$1 -f $$here/Makefile link-shared ); \
 	fi
 
 install_docs:
@@ -736,22 +743,23 @@ install_docs:
 		$(INSTALL_PREFIX)$(MANDIR)/man3 \
 		$(INSTALL_PREFIX)$(MANDIR)/man5 \
 		$(INSTALL_PREFIX)$(MANDIR)/man7
-	@for i in doc/apps/*.pod; do \
+	@pod2man=`cd util; ./pod2mantest ignore`; \
+	for i in doc/apps/*.pod; do \
 		fn=`basename $$i .pod`; \
 		if [ "$$fn" = "config" ]; then sec=5; else sec=1; fi; \
 		echo "installing man$$sec/`basename $$i .pod`.$$sec"; \
 		(cd `$(PERL) util/dirname.pl $$i`; \
-		sh -c "$(PERL) `cd ../../util; ./pod2mantest ignore` \
+		sh -c "$(PERL) $$pod2man \
 			--section=$$sec --center=OpenSSL \
 			--release=$(VERSION) `basename $$i`") \
 			>  $(INSTALL_PREFIX)$(MANDIR)/man$$sec/`basename $$i .pod`.$$sec; \
-	done
-	@for i in doc/crypto/*.pod doc/ssl/*.pod; do \
+	done; \
+	for i in doc/crypto/*.pod doc/ssl/*.pod; do \
 		fn=`basename $$i .pod`; \
 		if [ "$$fn" = "des_modes" ]; then sec=7; else sec=3; fi; \
 		echo "installing man$$sec/`basename $$i .pod`.$$sec"; \
 		(cd `$(PERL) util/dirname.pl $$i`; \
-		sh -c "$(PERL) `cd ../../util; ./pod2mantest ignore` \
+		sh -c "$(PERL) $$pod2man \
 			--section=$$sec --center=OpenSSL \
 			--release=$(VERSION) `basename $$i`") \
 			>  $(INSTALL_PREFIX)$(MANDIR)/man$$sec/`basename $$i .pod`.$$sec; \

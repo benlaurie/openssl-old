@@ -108,16 +108,21 @@
  * Hudson (tjh@cryptsoft.com).
  *
  */
+/* ====================================================================
+ * Copyright 2002 Sun Microsystems, Inc. ALL RIGHTS RESERVED.
+ * ECC cipher suite support in OpenSSL originally developed by 
+ * SUN MICROSYSTEMS, INC., and contributed to the OpenSSL project.
+ */
 
 #include <limits.h>
 #include <string.h>
 #include <stdio.h>
+#include "ssl_locl.h"
 #include <openssl/buffer.h>
 #include <openssl/rand.h>
 #include <openssl/objects.h>
 #include <openssl/evp.h>
 #include <openssl/x509.h>
-#include "ssl_locl.h"
 
 /* send s->init_buf in records of type 'type' (SSL3_RT_HANDSHAKE or SSL3_RT_CHANGE_CIPHER_SPEC) */
 int ssl3_do_write(SSL *s, int type)
@@ -520,6 +525,12 @@ int ssl_cert_type(X509 *x, EVP_PKEY *pkey)
 			else ret= -1;
 			}
 		}
+#ifndef OPENSSL_NO_EC
+	else if (i == EVP_PKEY_EC)
+		{
+		ret = SSL_PKEY_ECC;
+		}
+#endif
 	else
 		ret= -1;
 

@@ -58,11 +58,11 @@
 
 #include <stdio.h>
 #include <string.h>
+#include "apps.h"
 #include <openssl/pem.h>
 #include <openssl/ocsp.h>
 #include <openssl/err.h>
 #include <openssl/ssl.h>
-#include "apps.h"
 
 /* Maximum leeway in validity period: default 5 minutes */
 #define MAX_VALIDITY_PERIOD	(5 * 60)
@@ -613,11 +613,11 @@ int MAIN(int argc, char **argv)
 			NULL, e, "CA certificate");
 		if (rcertfile)
 			{
-			rother = load_certs(bio_err, sign_certfile, FORMAT_PEM,
+			rother = load_certs(bio_err, rcertfile, FORMAT_PEM,
 				NULL, e, "responder other certificates");
-			if (!sign_other) goto end;
+			if (!rother) goto end;
 			}
-		rkey = load_key(bio_err, rkeyfile, FORMAT_PEM, NULL, NULL,
+		rkey = load_key(bio_err, rkeyfile, FORMAT_PEM, 0, NULL, NULL,
 			"responder private key");
 		if (!rkey)
 			goto end;
@@ -663,7 +663,7 @@ int MAIN(int argc, char **argv)
 				NULL, e, "signer certificates");
 			if (!sign_other) goto end;
 			}
-		key = load_key(bio_err, keyfile, FORMAT_PEM, NULL, NULL,
+		key = load_key(bio_err, keyfile, FORMAT_PEM, 0, NULL, NULL,
 			"signer private key");
 		if (!key)
 			goto end;

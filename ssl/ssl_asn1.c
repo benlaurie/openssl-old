@@ -58,10 +58,11 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include "ssl_locl.h"
 #include <openssl/asn1_mac.h>
 #include <openssl/objects.h>
 #include <openssl/x509.h>
-#include "ssl_locl.h"
+#include "cryptlib.h"
 
 typedef struct ssl_session_asn1_st
 	{
@@ -293,7 +294,9 @@ SSL_SESSION *d2i_SSL_SESSION(SSL_SESSION **a, unsigned char **pp,
 		i=SSL2_MAX_SSL_SESSION_ID_LENGTH;
 
 	if (os.length > i)
-		os.length=i;
+		os.length = i;
+	if (os.length > sizeof ret->session_id) /* can't happen */
+		os.length = sizeof ret->session_id;
 
 	ret->session_id_length=os.length;
 	memcpy(ret->session_id,os.data,os.length);

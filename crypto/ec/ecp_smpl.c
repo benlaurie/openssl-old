@@ -1,6 +1,8 @@
 /* crypto/ec/ecp_smpl.c */
 /* Includes code written by Lenka Fibikova <fibikova@exp-math.uni-essen.de>
- * for the OpenSSL project. */
+ * for the OpenSSL project. 
+ * Includes code written by Bodo Moeller for the OpenSSL project.
+*/
 /* ====================================================================
  * Copyright (c) 1998-2002 The OpenSSL Project.  All rights reserved.
  *
@@ -54,6 +56,11 @@
  * Hudson (tjh@cryptsoft.com).
  *
  */
+/* ====================================================================
+ * Copyright 2002 Sun Microsystems, Inc. ALL RIGHTS RESERVED.
+ * Portions of this software developed by SUN MICROSYSTEMS, INC.,
+ * and contributed to the OpenSSL project.
+ */
 
 #include <openssl/err.h>
 #include <openssl/symhacks.h>
@@ -68,8 +75,9 @@ const EC_METHOD *EC_GFp_simple_method(void)
 		ec_GFp_simple_group_finish,
 		ec_GFp_simple_group_clear_finish,
 		ec_GFp_simple_group_copy,
-		ec_GFp_simple_group_set_curve_GFp,
-		ec_GFp_simple_group_get_curve_GFp,
+		ec_GFp_simple_group_set_curve,
+		ec_GFp_simple_group_get_curve,
+		ec_GFp_simple_group_get_degree,
 		ec_GFp_simple_group_check_discriminant,
 		ec_GFp_simple_point_init,
 		ec_GFp_simple_point_finish,
@@ -78,14 +86,16 @@ const EC_METHOD *EC_GFp_simple_method(void)
 		ec_GFp_simple_point_set_to_infinity,
 		ec_GFp_simple_set_Jprojective_coordinates_GFp,
 		ec_GFp_simple_get_Jprojective_coordinates_GFp,
-		ec_GFp_simple_point_set_affine_coordinates_GFp,
-		ec_GFp_simple_point_get_affine_coordinates_GFp,
-		ec_GFp_simple_set_compressed_coordinates_GFp,
+		ec_GFp_simple_point_set_affine_coordinates,
+		ec_GFp_simple_point_get_affine_coordinates,
+		ec_GFp_simple_set_compressed_coordinates,
 		ec_GFp_simple_point2oct,
 		ec_GFp_simple_oct2point,
 		ec_GFp_simple_add,
 		ec_GFp_simple_dbl,
 		ec_GFp_simple_invert,
+		0 /* mul */,
+		0 /* precompute_mult */,
 		ec_GFp_simple_is_at_infinity,
 		ec_GFp_simple_is_on_curve,
 		ec_GFp_simple_cmp,
@@ -93,6 +103,7 @@ const EC_METHOD *EC_GFp_simple_method(void)
 		ec_GFp_simple_points_make_affine,
 		ec_GFp_simple_field_mul,
 		ec_GFp_simple_field_sqr,
+		0 /* field_div */,
 		0 /* field_encode */,
 		0 /* field_decode */,
 		0 /* field_set_to_one */ };
@@ -139,7 +150,7 @@ int ec_GFp_simple_group_copy(EC_GROUP *dest, const EC_GROUP *src)
 	}
 
 
-int ec_GFp_simple_group_set_curve_GFp(EC_GROUP *group,
+int ec_GFp_simple_group_set_curve(EC_GROUP *group,
 	const BIGNUM *p, const BIGNUM *a, const BIGNUM *b, BN_CTX *ctx)
 	{
 	int ret = 0;
@@ -149,7 +160,7 @@ int ec_GFp_simple_group_set_curve_GFp(EC_GROUP *group,
 	/* p must be a prime > 3 */
 	if (BN_num_bits(p) <= 2 || !BN_is_odd(p))
 		{
-		ECerr(EC_F_EC_GFP_SIMPLE_GROUP_SET_CURVE_GFP, EC_R_INVALID_FIELD);
+		ECerr(EC_F_EC_GFP_SIMPLE_GROUP_SET_CURVE, EC_R_INVALID_FIELD);
 		return 0;
 		}
 
@@ -194,7 +205,7 @@ int ec_GFp_simple_group_set_curve_GFp(EC_GROUP *group,
 	}
 
 
-int ec_GFp_simple_group_get_curve_GFp(const EC_GROUP *group, BIGNUM *p, BIGNUM *a, BIGNUM *b, BN_CTX *ctx)
+int ec_GFp_simple_group_get_curve(const EC_GROUP *group, BIGNUM *p, BIGNUM *a, BIGNUM *b, BN_CTX *ctx)
 	{
 	int ret = 0;
 	BN_CTX *new_ctx = NULL;
@@ -242,6 +253,12 @@ int ec_GFp_simple_group_get_curve_GFp(const EC_GROUP *group, BIGNUM *p, BIGNUM *
 	if (new_ctx)
 		BN_CTX_free(new_ctx);
 	return ret;
+	}
+
+
+int ec_GFp_simple_group_get_degree(const EC_GROUP *group)
+	{
+	return BN_num_bits(&group->field);
 	}
 
 
@@ -470,13 +487,13 @@ int ec_GFp_simple_get_Jprojective_coordinates_GFp(const EC_GROUP *group, const E
 	}
 
 
-int ec_GFp_simple_point_set_affine_coordinates_GFp(const EC_GROUP *group, EC_POINT *point,
+int ec_GFp_simple_point_set_affine_coordinates(const EC_GROUP *group, EC_POINT *point,
 	const BIGNUM *x, const BIGNUM *y, BN_CTX *ctx)
 	{
 	if (x == NULL || y == NULL)
 		{
 		/* unlike for projective coordinates, we do not tolerate this */
-		ECerr(EC_F_EC_GFP_SIMPLE_POINT_SET_AFFINE_COORDINATES_GFP, ERR_R_PASSED_NULL_PARAMETER);
+		ECerr(EC_F_EC_GFP_SIMPLE_POINT_SET_AFFINE_COORDINATES, ERR_R_PASSED_NULL_PARAMETER);
 		return 0;
 		}
 
@@ -484,7 +501,7 @@ int ec_GFp_simple_point_set_affine_coordinates_GFp(const EC_GROUP *group, EC_POI
 	}
 
 
-int ec_GFp_simple_point_get_affine_coordinates_GFp(const EC_GROUP *group, const EC_POINT *point,
+int ec_GFp_simple_point_get_affine_coordinates(const EC_GROUP *group, const EC_POINT *point,
 	BIGNUM *x, BIGNUM *y, BN_CTX *ctx)
 	{
 	BN_CTX *new_ctx = NULL;
@@ -494,7 +511,7 @@ int ec_GFp_simple_point_get_affine_coordinates_GFp(const EC_GROUP *group, const 
 
 	if (EC_POINT_is_at_infinity(group, point))
 		{
-		ECerr(EC_F_EC_GFP_SIMPLE_POINT_GET_AFFINE_COORDINATES_GFP, EC_R_POINT_AT_INFINITY);
+		ECerr(EC_F_EC_GFP_SIMPLE_POINT_GET_AFFINE_COORDINATES, EC_R_POINT_AT_INFINITY);
 		return 0;
 		}
 
@@ -545,7 +562,7 @@ int ec_GFp_simple_point_get_affine_coordinates_GFp(const EC_GROUP *group, const 
 		{
 		if (!BN_mod_inverse(Z_1, Z_, &group->field, ctx))
 			{
-			ECerr(EC_F_EC_GFP_SIMPLE_POINT_GET_AFFINE_COORDINATES_GFP, ERR_R_BN_LIB);
+			ECerr(EC_F_EC_GFP_SIMPLE_POINT_GET_AFFINE_COORDINATES, ERR_R_BN_LIB);
 			goto err;
 			}
 		
@@ -599,7 +616,7 @@ int ec_GFp_simple_point_get_affine_coordinates_GFp(const EC_GROUP *group, const 
 	}
 
 
-int ec_GFp_simple_set_compressed_coordinates_GFp(const EC_GROUP *group, EC_POINT *point,
+int ec_GFp_simple_set_compressed_coordinates(const EC_GROUP *group, EC_POINT *point,
 	const BIGNUM *x_, int y_bit, BN_CTX *ctx)
 	{
 	BN_CTX *new_ctx = NULL;
@@ -682,14 +699,12 @@ int ec_GFp_simple_set_compressed_coordinates_GFp(const EC_GROUP *group, EC_POINT
 		if (ERR_GET_LIB(err) == ERR_LIB_BN && ERR_GET_REASON(err) == BN_R_NOT_A_SQUARE)
 			{
 			(void)ERR_get_error();
-			ECerr(EC_F_EC_GFP_SIMPLE_SET_COMPRESSED_COORDINATES_GFP, EC_R_INVALID_COMPRESSED_POINT);
+			ECerr(EC_F_EC_GFP_SIMPLE_SET_COMPRESSED_COORDINATES, EC_R_INVALID_COMPRESSED_POINT);
 			}
 		else
-			ECerr(EC_F_EC_GFP_SIMPLE_SET_COMPRESSED_COORDINATES_GFP, ERR_R_BN_LIB);
+			ECerr(EC_F_EC_GFP_SIMPLE_SET_COMPRESSED_COORDINATES, ERR_R_BN_LIB);
 		goto err;
 		}
-	/* If tmp1 is not a square (i.e. there is no point on the curve with
-	 * our x), then y now is a nonsense value too */
 
 	if (y_bit != BN_is_odd(y))
 		{
@@ -701,16 +716,17 @@ int ec_GFp_simple_set_compressed_coordinates_GFp(const EC_GROUP *group, EC_POINT
 			if (kron == -2) goto err;
 
 			if (kron == 1)
-				ECerr(EC_F_EC_GFP_SIMPLE_SET_COMPRESSED_COORDINATES_GFP, EC_R_INVALID_COMPRESSION_BIT);
+				ECerr(EC_F_EC_GFP_SIMPLE_SET_COMPRESSED_COORDINATES, EC_R_INVALID_COMPRESSION_BIT);
 			else
-				ECerr(EC_F_EC_GFP_SIMPLE_SET_COMPRESSED_COORDINATES_GFP, EC_R_INVALID_COMPRESSED_POINT);
+				/* BN_mod_sqrt() should have cought this error (not a square) */
+				ECerr(EC_F_EC_GFP_SIMPLE_SET_COMPRESSED_COORDINATES, EC_R_INVALID_COMPRESSED_POINT);
 			goto err;
 			}
 		if (!BN_usub(y, &group->field, y)) goto err;
 		}
 	if (y_bit != BN_is_odd(y))
 		{
-		ECerr(EC_F_EC_GFP_SIMPLE_SET_COMPRESSED_COORDINATES_GFP, ERR_R_INTERNAL_ERROR);
+		ECerr(EC_F_EC_GFP_SIMPLE_SET_COMPRESSED_COORDINATES, ERR_R_INTERNAL_ERROR);
 		goto err;
 		}
 

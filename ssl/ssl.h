@@ -161,6 +161,11 @@
  * Hudson (tjh@cryptsoft.com).
  *
  */
+/* ====================================================================
+ * Copyright 2002 Sun Microsystems, Inc. ALL RIGHTS RESERVED.
+ * ECC cipher suite support in OpenSSL originally developed by 
+ * SUN MICROSYSTEMS, INC., and contributed to the OpenSSL project.
+ */
 
 #ifndef HEADER_SSL_H 
 #define HEADER_SSL_H 
@@ -253,7 +258,7 @@ extern "C" {
 #define SSL_TXT_RC4		"RC4"
 #define SSL_TXT_RC2		"RC2"
 #define SSL_TXT_IDEA		"IDEA"
-#define SSL_TXT_AES		"AESdraft" /* AES ciphersuites are not yet official (thus excluded from 'ALL') */
+#define SSL_TXT_AES		"AES"
 #define SSL_TXT_MD5		"MD5"
 #define SSL_TXT_SHA1		"SHA1"
 #define SSL_TXT_SHA		"SHA"
@@ -265,6 +270,24 @@ extern "C" {
 #define SSL_TXT_SSLV3		"SSLv3"
 #define SSL_TXT_TLSV1		"TLSv1"
 #define SSL_TXT_ALL		"ALL"
+#define SSL_TXT_ECC		"ECCdraft" /* ECC ciphersuites are not yet official */
+
+/*
+ * COMPLEMENTOF* definitions. These identifiers are used to (de-select)
+ * ciphers normally not being used.
+ * Example: "RC4" will activate all ciphers using RC4 including ciphers
+ * without authentication, which would normally disabled by DEFAULT (due
+ * the "!ADH" being part of default). Therefore "RC4:!COMPLEMENTOFDEFAULT"
+ * will make sure that it is also disabled in the specific selection.
+ * COMPLEMENTOF* identifiers are portable between version, as adjustments
+ * to the default cipher setup will also be included here.
+ *
+ * COMPLEMENTOFDEFAULT does not experience the same special treatment that
+ * DEFAULT gets, as only selection is being done and no sorting as needed
+ * for DEFAULT.
+ */
+#define SSL_TXT_CMPALL		"COMPLEMENTOFALL"
+#define SSL_TXT_CMPDEF		"COMPLEMENTOFDEFAULT"
 
 /* The following cipher list is used by default.
  * It also is substituted when an application-defined cipher list string
@@ -453,6 +476,8 @@ typedef struct ssl_session_st
 
 /* As server, disallow session resumption on renegotiation */
 #define SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION	0x00010000L
+/* If set, always create a new key when using tmp_ecdh parameters */
+#define SSL_OP_SINGLE_ECDH_USE				0x00080000L
 /* If set, always create a new key when using tmp_dh parameters */
 #define SSL_OP_SINGLE_DH_USE				0x00100000L
 /* Set to always use the tmp_rsa key when doing RSA operations,
@@ -1057,19 +1082,21 @@ size_t SSL_get_peer_finished(SSL *s, void *buf, size_t count);
 #define SSL_CTRL_NEED_TMP_RSA			1
 #define SSL_CTRL_SET_TMP_RSA			2
 #define SSL_CTRL_SET_TMP_DH			3
-#define SSL_CTRL_SET_TMP_RSA_CB			4
-#define SSL_CTRL_SET_TMP_DH_CB			5
+#define SSL_CTRL_SET_TMP_ECDH			4
+#define SSL_CTRL_SET_TMP_RSA_CB			5
+#define SSL_CTRL_SET_TMP_DH_CB			6
+#define SSL_CTRL_SET_TMP_ECDH_CB		7
 
-#define SSL_CTRL_GET_SESSION_REUSED		6
-#define SSL_CTRL_GET_CLIENT_CERT_REQUEST	7
-#define SSL_CTRL_GET_NUM_RENEGOTIATIONS		8
-#define SSL_CTRL_CLEAR_NUM_RENEGOTIATIONS	9
-#define SSL_CTRL_GET_TOTAL_RENEGOTIATIONS	10
-#define SSL_CTRL_GET_FLAGS			11
-#define SSL_CTRL_EXTRA_CHAIN_CERT		12
+#define SSL_CTRL_GET_SESSION_REUSED		8
+#define SSL_CTRL_GET_CLIENT_CERT_REQUEST	9
+#define SSL_CTRL_GET_NUM_RENEGOTIATIONS		10
+#define SSL_CTRL_CLEAR_NUM_RENEGOTIATIONS	11
+#define SSL_CTRL_GET_TOTAL_RENEGOTIATIONS	12
+#define SSL_CTRL_GET_FLAGS			13
+#define SSL_CTRL_EXTRA_CHAIN_CERT		14
 
-#define SSL_CTRL_SET_MSG_CALLBACK               13
-#define SSL_CTRL_SET_MSG_CALLBACK_ARG           14
+#define SSL_CTRL_SET_MSG_CALLBACK               15
+#define SSL_CTRL_SET_MSG_CALLBACK_ARG           16
 
 /* Stats */
 #define SSL_CTRL_SESS_NUMBER			20
@@ -1112,6 +1139,8 @@ size_t SSL_get_peer_finished(SSL *s, void *buf, size_t count);
 	SSL_CTX_ctrl(ctx,SSL_CTRL_SET_TMP_RSA,0,(char *)rsa)
 #define SSL_CTX_set_tmp_dh(ctx,dh) \
 	SSL_CTX_ctrl(ctx,SSL_CTRL_SET_TMP_DH,0,(char *)dh)
+#define SSL_CTX_set_tmp_ecdh(ctx,ecdh) \
+	SSL_CTX_ctrl(ctx,SSL_CTRL_SET_TMP_ECDH,0,(char *)ecdh)
 
 #define SSL_need_tmp_RSA(ssl) \
 	SSL_ctrl(ssl,SSL_CTRL_NEED_TMP_RSA,0,NULL)
@@ -1119,6 +1148,8 @@ size_t SSL_get_peer_finished(SSL *s, void *buf, size_t count);
 	SSL_ctrl(ssl,SSL_CTRL_SET_TMP_RSA,0,(char *)rsa)
 #define SSL_set_tmp_dh(ssl,dh) \
 	SSL_ctrl(ssl,SSL_CTRL_SET_TMP_DH,0,(char *)dh)
+#define SSL_set_tmp_ecdh(ssl,ecdh) \
+	SSL_ctrl(ssl,SSL_CTRL_SET_TMP_ECDH,0,(char *)ecdh)
 
 #define SSL_CTX_add_extra_chain_cert(ctx,x509) \
 	SSL_CTX_ctrl(ctx,SSL_CTRL_EXTRA_CHAIN_CERT,0,(char *)x509)
@@ -1428,6 +1459,14 @@ void SSL_set_tmp_dh_callback(SSL *ssl,
 				 DH *(*dh)(SSL *ssl,int is_export,
 					   int keylength));
 #endif
+#ifndef OPENSSL_NO_ECDH
+void SSL_CTX_set_tmp_ecdh_callback(SSL_CTX *ctx,
+				 EC_KEY *(*ecdh)(SSL *ssl,int is_export,
+					   int keylength));
+void SSL_set_tmp_ecdh_callback(SSL *ssl,
+				 EC_KEY *(*ecdh)(SSL *ssl,int is_export,
+					   int keylength));
+#endif
 
 #ifndef OPENSSL_NO_COMP
 int SSL_COMP_add_compression_method(int id,COMP_METHOD *cm);
@@ -1445,6 +1484,7 @@ void ERR_load_SSL_strings(void);
 
 /* Function codes. */
 #define SSL_F_CLIENT_CERTIFICATE			 100
+#define SSL_F_CLIENT_FINISHED				 238
 #define SSL_F_CLIENT_HELLO				 101
 #define SSL_F_CLIENT_MASTER_KEY				 102
 #define SSL_F_D2I_SSL_SESSION				 103
@@ -1458,7 +1498,9 @@ void ERR_load_SSL_strings(void);
 #define SSL_F_I2D_SSL_SESSION				 111
 #define SSL_F_READ_N					 112
 #define SSL_F_REQUEST_CERTIFICATE			 113
+#define SSL_F_SERVER_FINISH				 239
 #define SSL_F_SERVER_HELLO				 114
+#define SSL_F_SERVER_VERIFY				 240
 #define SSL_F_SSL23_ACCEPT				 115
 #define SSL_F_SSL23_CLIENT_HELLO			 116
 #define SSL_F_SSL23_CONNECT				 117
@@ -1470,6 +1512,7 @@ void ERR_load_SSL_strings(void);
 #define SSL_F_SSL2_ACCEPT				 122
 #define SSL_F_SSL2_CONNECT				 123
 #define SSL_F_SSL2_ENC_INIT				 124
+#define SSL_F_SSL2_GENERATE_KEY_MATERIAL		 241
 #define SSL_F_SSL2_PEEK					 234
 #define SSL_F_SSL2_READ					 125
 #define SSL_F_SSL2_READ_INTERNAL			 236
@@ -1506,6 +1549,7 @@ void ERR_load_SSL_strings(void);
 #define SSL_F_SSL3_SEND_CLIENT_KEY_EXCHANGE		 152
 #define SSL_F_SSL3_SEND_CLIENT_VERIFY			 153
 #define SSL_F_SSL3_SEND_SERVER_CERTIFICATE		 154
+#define SSL_F_SSL3_SEND_SERVER_HELLO			 242
 #define SSL_F_SSL3_SEND_SERVER_KEY_EXCHANGE		 155
 #define SSL_F_SSL3_SETUP_BUFFERS			 156
 #define SSL_F_SSL3_SETUP_KEY_BLOCK			 157
@@ -1597,6 +1641,9 @@ void ERR_load_SSL_strings(void);
 #define SSL_R_BAD_DH_P_LENGTH				 110
 #define SSL_R_BAD_DIGEST_LENGTH				 111
 #define SSL_R_BAD_DSA_SIGNATURE				 112
+#define SSL_R_BAD_ECC_CERT				 1117
+#define SSL_R_BAD_ECDSA_SIGNATURE			 1112
+#define SSL_R_BAD_ECPOINT				 1113
 #define SSL_R_BAD_HELLO_REQUEST				 105
 #define SSL_R_BAD_LENGTH				 271
 #define SSL_R_BAD_MAC_DECODE				 113
@@ -1637,6 +1684,7 @@ void ERR_load_SSL_strings(void);
 #define SSL_R_DECRYPTION_FAILED_OR_BAD_RECORD_MAC	 1109
 #define SSL_R_DH_PUBLIC_VALUE_LENGTH_IS_WRONG		 148
 #define SSL_R_DIGEST_CHECK_FAILED			 149
+#define SSL_R_ECGROUP_TOO_LARGE_FOR_CIPHER		 1119
 #define SSL_R_ENCRYPTED_LENGTH_TOO_LONG			 150
 #define SSL_R_ERROR_GENERATING_TMP_RSA_KEY		 1092
 #define SSL_R_ERROR_IN_RECEIVED_CIPHER_LIST		 151
@@ -1650,6 +1698,7 @@ void ERR_load_SSL_strings(void);
 #define SSL_R_INVALID_COMMAND				 280
 #define SSL_R_INVALID_PURPOSE				 278
 #define SSL_R_INVALID_TRUST				 279
+#define SSL_R_KEY_ARG_TOO_LONG				 1112
 #define SSL_R_KRB5					 1104
 #define SSL_R_KRB5_C_CC_PRINC				 1094
 #define SSL_R_KRB5_C_GET_CRED				 1095
@@ -1676,6 +1725,7 @@ void ERR_load_SSL_strings(void);
 #define SSL_R_MISSING_RSA_ENCRYPTING_CERT		 169
 #define SSL_R_MISSING_RSA_SIGNING_CERT			 170
 #define SSL_R_MISSING_TMP_DH_KEY			 171
+#define SSL_R_MISSING_TMP_ECDH_KEY			 1114
 #define SSL_R_MISSING_TMP_RSA_KEY			 172
 #define SSL_R_MISSING_TMP_RSA_PKEY			 173
 #define SSL_R_MISSING_VERIFY_MESSAGE			 174
@@ -1729,6 +1779,8 @@ void ERR_load_SSL_strings(void);
 #define SSL_R_SHORT_READ				 219
 #define SSL_R_SIGNATURE_FOR_NON_SIGNING_CERTIFICATE	 220
 #define SSL_R_SSL23_DOING_SESSION_ID_REUSE		 221
+#define SSL_R_SSL2_CONNECTION_ID_TOO_LONG		 1114
+#define SSL_R_SSL3_SESSION_ID_TOO_LONG			 1113
 #define SSL_R_SSL3_SESSION_ID_TOO_SHORT			 222
 #define SSL_R_SSLV3_ALERT_BAD_CERTIFICATE		 1042
 #define SSL_R_SSLV3_ALERT_BAD_RECORD_MAC		 1020
@@ -1771,8 +1823,10 @@ void ERR_load_SSL_strings(void);
 #define SSL_R_TLS_RSA_ENCRYPTED_VALUE_LENGTH_IS_WRONG	 234
 #define SSL_R_TRIED_TO_USE_UNSUPPORTED_CIPHER		 235
 #define SSL_R_UNABLE_TO_DECODE_DH_CERTS			 236
+#define SSL_R_UNABLE_TO_DECODE_ECDH_CERTS		 1115
 #define SSL_R_UNABLE_TO_EXTRACT_PUBLIC_KEY		 237
 #define SSL_R_UNABLE_TO_FIND_DH_PARAMETERS		 238
+#define SSL_R_UNABLE_TO_FIND_ECDH_PARAMETERS		 1116
 #define SSL_R_UNABLE_TO_FIND_PUBLIC_KEY_PARAMETERS	 239
 #define SSL_R_UNABLE_TO_FIND_SSL_METHOD			 240
 #define SSL_R_UNABLE_TO_LOAD_SSL2_MD5_ROUTINES		 241
@@ -1793,6 +1847,7 @@ void ERR_load_SSL_strings(void);
 #define SSL_R_UNKNOWN_STATE				 255
 #define SSL_R_UNSUPPORTED_CIPHER			 256
 #define SSL_R_UNSUPPORTED_COMPRESSION_ALGORITHM		 257
+#define SSL_R_UNSUPPORTED_ELLIPTIC_CURVE		 1118
 #define SSL_R_UNSUPPORTED_OPTION			 1091
 #define SSL_R_UNSUPPORTED_PROTOCOL			 258
 #define SSL_R_UNSUPPORTED_SSL_VERSION			 259

@@ -55,6 +55,11 @@
  * copied and put under another distribution licence
  * [including the GNU Public Licence.]
  */
+/* ====================================================================
+ * Copyright 2002 Sun Microsystems, Inc. ALL RIGHTS RESERVED.
+ * Binary polynomial ECC support in OpenSSL originally developed by 
+ * SUN MICROSYSTEMS, INC., and contributed to the OpenSSL project.
+ */
 
 #include <stdio.h>
 #include "cryptlib.h"
@@ -70,12 +75,14 @@
 #ifndef OPENSSL_NO_DSA
 #include <openssl/dsa.h>
 #endif
-#ifndef OPENSSL_NO_ECDSA
-#include <openssl/ecdsa.h>
+#ifndef OPENSSL_NO_EC
+#include <openssl/ec.h>
 #endif
 
 static int print(BIO *fp,const char *str,BIGNUM *num,
 		unsigned char *buf,int off);
+static int print_bin(BIO *fp, const char *str, const unsigned char *num,
+		size_t len, int off);
 #ifndef OPENSSL_NO_RSA
 #ifndef OPENSSL_NO_FP_API
 int RSA_print_fp(FILE *fp, const RSA *x, int off)
@@ -257,6 +264,22 @@ int ECPKParameters_print_fp(FILE *fp, const EC_GROUP *x, int off)
 	BIO_free(b);
 	return(ret);
 	}
+
+int EC_KEY_print_fp(FILE *fp, const EC_KEY *x, int off)
+	{
+	BIO *b;
+	int ret;
+ 
+	if ((b=BIO_new(BIO_s_file())) == NULL)
+		{
+		ECerr(EC_F_EC_KEY_PRINT_FP, ERR_R_BIO_LIB);
+		return(0);
+		}
+	BIO_set_fp(b, fp, BIO_NOCLOSE);
+	ret = EC_KEY_print(b, x, off);
+	BIO_free(b);
+	return(ret);
+	}
 #endif
 
 int ECPKParameters_print(BIO *bp, const EC_GROUP *x, int off)
@@ -268,7 +291,9 @@ int ECPKParameters_print(BIO *bp, const EC_GROUP *x, int off)
 	BN_CTX  *ctx=NULL;
 	EC_POINT *point=NULL;
 	BIGNUM	*p=NULL, *a=NULL, *b=NULL, *gen=NULL,
-		*order=NULL, *cofactor=NULL, *seed=NULL;
+		*order=NULL, *cofactor=NULL;
+	const unsigned char *seed;
+	size_t	seed_len=0;
 	
 	static const char *gen_compressed = "Generator (compressed):";
 	static const char *gen_uncompressed = "Generator (uncompressed):";
@@ -306,8 +331,12 @@ int ECPKParameters_print(BIO *bp, const EC_GROUP *x, int off)
 	else
 		{
 		/* explicit parameters */
-		/* TODO */
+		int is_char_two = 0;
 		point_conversion_form_t form;
+		int tmp_nid = EC_METHOD_get_field_type(EC_GROUP_method_of(x));
+
+		if (tmp_nid == NID_X9_62_characteristic_two_field)
+			is_char_two = 1;
 
 		if ((p = BN_new()) == NULL || (a = BN_new()) == NULL ||
 			(b = BN_new()) == NULL || (order = BN_new()) == NULL ||
@@ -317,10 +346,21 @@ int ECPKParameters_print(BIO *bp, const EC_GROUP *x, int off)
 			goto err;
 			}
 
-		if (!EC_GROUP_get_curve_GFp(x, p, a, b, ctx))
+		if (is_char_two)
 			{
-			reason = ERR_R_EC_LIB;
-			goto err;
+			if (!EC_GROUP_get_curve_GF2m(x, p, a, b, ctx))
+				{
+				reason = ERR_R_EC_LIB;
+				goto err;
+				}
+			}
+		else /* prime field */
+			{
+			if (!EC_GROUP_get_curve_GFp(x, p, a, b, ctx))
+				{
+				reason = ERR_R_EC_LIB;
+				goto err;
+				}
 			}
 
 		if ((point = EC_GROUP_get0_generator(x)) == NULL)
@@ -356,18 +396,8 @@ int ECPKParameters_print(BIO *bp, const EC_GROUP *x, int off)
 		if (buf_len < (i = (size_t)BN_num_bytes(cofactor))) 
 			buf_len = i;
 
-		if (EC_GROUP_get0_seed(x))
-			{
-			seed = BN_bin2bn(EC_GROUP_get0_seed(x),
-				EC_GROUP_get_seed_len(x), NULL);
-			if (seed == NULL)
-				{
-				reason = ERR_R_BN_LIB;
-				goto err;
-				}
-			if (buf_len < (i = (size_t)BN_num_bytes(seed))) 
-				buf_len = i;
-			}
+		if ((seed = EC_GROUP_get0_seed(x)) != NULL)
+			seed_len = EC_GROUP_get_seed_len(x);
 
 		buf_len += 10;
 		if ((buffer = OPENSSL_malloc(buf_len)) == NULL)
@@ -379,10 +409,25 @@ int ECPKParameters_print(BIO *bp, const EC_GROUP *x, int off)
 			{
 			if (off > 128) off=128;
 			memset(str,' ',off);
+			if (BIO_write(bp, str, off) <= 0)
+				goto err;
 			}
-  
-		if ((p != NULL) && !print(bp, "P:   ", p, buffer, off)) 
-			goto err;
+
+		if (BIO_printf(bp, "Field Type: %s\n", OBJ_nid2sn(tmp_nid))
+			<= 0)
+			goto err;  
+
+		if (is_char_two)
+			{
+			if ((p != NULL) && !print(bp, "Polynomial:", p, buffer,
+				off))
+				goto err;
+			}
+		else
+			{
+			if ((p != NULL) && !print(bp, "Prime:", p, buffer,off))
+				goto err;
+			}
 		if ((a != NULL) && !print(bp, "A:   ", a, buffer, off)) 
 			goto err;
 		if ((b != NULL) && !print(bp, "B:   ", b, buffer, off))
@@ -409,8 +454,8 @@ int ECPKParameters_print(BIO *bp, const EC_GROUP *x, int off)
 			buffer, off)) goto err;
 		if ((cofactor != NULL) && !print(bp, "Cofactor: ", cofactor, 
 			buffer, off)) goto err;
-		if ((seed != NULL) && !print(bp, "Seed:", seed, 
-			buffer, off)) goto err;
+		if (seed && !print_bin(bp, "Seed:", seed, seed_len, off))
+			goto err;
 		}
 	ret=1;
 err:
@@ -428,37 +473,14 @@ err:
 		BN_free(order);
 	if (cofactor)
 		BN_free(cofactor);
-	if (seed) 
-		BN_free(seed);
 	if (ctx)
 		BN_CTX_free(ctx);
 	if (buffer != NULL) 
 		OPENSSL_free(buffer);
 	return(ret);	
 	}
-#endif /* OPENSSL_NO_EC */
 
-
-#ifndef OPENSSL_NO_ECDSA
-#ifndef OPENSSL_NO_FP_API
-int ECDSA_print_fp(FILE *fp, const ECDSA *x, int off)
-{
-	BIO *b;
-	int ret;
- 
-	if ((b=BIO_new(BIO_s_file())) == NULL)
-	{
-		ECDSAerr(ECDSA_F_ECDSA_PRINT_FP, ERR_R_BIO_LIB);
-		return(0);
-	}
-	BIO_set_fp(b, fp, BIO_NOCLOSE);
-	ret = ECDSA_print(b, x, off);
-	BIO_free(b);
-	return(ret);
-}
-#endif
-
-int ECDSA_print(BIO *bp, const ECDSA *x, int off)
+int EC_KEY_print(BIO *bp, const EC_KEY *x, int off)
 	{
 	char str[128];
 	unsigned char *buffer=NULL;
@@ -474,7 +496,7 @@ int ECDSA_print(BIO *bp, const ECDSA *x, int off)
 		}
 
 	if ((pub_key = EC_POINT_point2bn(x->group, x->pub_key,
-		ECDSA_get_conversion_form(x), NULL, ctx)) == NULL)
+		x->conv_form, NULL, ctx)) == NULL)
 		{
 		reason = ERR_R_EC_LIB;
 		goto err;
@@ -516,7 +538,7 @@ int ECDSA_print(BIO *bp, const ECDSA *x, int off)
 	ret=1;
 err:
 	if (!ret)
- 		ECDSAerr(ECDSA_F_ECDSA_PRINT, reason);
+ 		ECerr(EC_F_EC_KEY_PRINT, reason);
 	if (pub_key) 
 		BN_free(pub_key);
 	if (ctx)
@@ -525,7 +547,7 @@ err:
 		OPENSSL_free(buffer);
 	return(ret);
 	}
-#endif
+#endif /* OPENSSL_NO_EC */
 
 static int print(BIO *bp, const char *number, BIGNUM *num, unsigned char *buf,
 	     int off)
@@ -575,6 +597,44 @@ static int print(BIO *bp, const char *number, BIGNUM *num, unsigned char *buf,
 		if (BIO_write(bp,"\n",1) <= 0) return(0);
 		}
 	return(1);
+	}
+
+static int print_bin(BIO *fp, const char *name, const unsigned char *buf,
+		size_t len, int off)
+	{
+	int i;
+	char str[128];
+
+	if (buf == NULL)
+		return 1;
+	if (off)
+		{
+		if (off > 128)
+			off=128;
+		memset(str,' ',off);
+		if (BIO_write(fp, str, off) <= 0)
+			return 0;
+		}
+
+	if (BIO_printf(fp,"%s", name) <= 0)
+		return 0;
+
+	for (i=0; i<len; i++)
+		{
+		if ((i%15) == 0)
+			{
+			str[0]='\n';
+			memset(&(str[1]),' ',off+4);
+			if (BIO_write(fp, str, off+1+4) <= 0)
+				return 0;
+			}
+		if (BIO_printf(fp,"%02x%s",buf[i],((i+1) == len)?"":":") <= 0)
+			return 0;
+		}
+	if (BIO_write(fp,"\n",1) <= 0)
+		return 0;
+
+	return 1;
 	}
 
 #ifndef OPENSSL_NO_DH
@@ -690,26 +750,26 @@ err:
 
 #endif /* !OPENSSL_NO_DSA */
 
-#ifndef OPENSSL_NO_ECDSA
+#ifndef OPENSSL_NO_EC
 #ifndef OPENSSL_NO_FP_API
-int ECDSAParameters_print_fp(FILE *fp, const ECDSA *x)
+int ECParameters_print_fp(FILE *fp, const EC_KEY *x)
 	{
 	BIO *b;
 	int ret;
  
 	if ((b=BIO_new(BIO_s_file())) == NULL)
-	{
-		ECDSAerr(ECDSA_F_ECDSAPARAMETERS_PRINT_FP, ERR_R_BIO_LIB);
+		{
+		ECerr(EC_F_ECPARAMETERS_PRINT_FP, ERR_R_BIO_LIB);
 		return(0);
-	}
+		}
 	BIO_set_fp(b, fp, BIO_NOCLOSE);
-	ret = ECDSAParameters_print(b, x);
+	ret = ECParameters_print(b, x);
 	BIO_free(b);
 	return(ret);
 	}
 #endif
 
-int ECDSAParameters_print(BIO *bp, const ECDSA *x)
+int ECParameters_print(BIO *bp, const EC_KEY *x)
 	{
 	int     reason=ERR_R_EC_LIB, ret=0;
 	BIGNUM	*order=NULL;
@@ -741,7 +801,7 @@ int ECDSAParameters_print(BIO *bp, const ECDSA *x)
 err:
 	if (order)
 		BN_free(order);
-	ECDSAerr(ECDSA_F_ECDSAPARAMETERS_PRINT, reason);
+	ECerr(EC_F_ECPARAMETERS_PRINT, reason);
 	return(ret);
 	}
   

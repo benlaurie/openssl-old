@@ -129,7 +129,11 @@
 #ifdef OPENSSL_SYS_WINDOWS
 #define strcasecmp _stricmp
 #else
-#include <strings.h>
+#  ifdef NO_STRINGS_H
+    int	strcasecmp();
+#  else
+#    include <strings.h>
+#  endif /* NO_STRINGS_H */
 #endif
 
 #ifdef OPENSSL_SYS_WINDOWS
@@ -794,7 +798,7 @@ end:
 	return(x);
 	}
 
-EVP_PKEY *load_key(BIO *err, const char *file, int format,
+EVP_PKEY *load_key(BIO *err, const char *file, int format, int maybe_stdin,
 	const char *pass, ENGINE *e, const char *key_descrip)
 	{
 	BIO *key=NULL;
@@ -804,7 +808,7 @@ EVP_PKEY *load_key(BIO *err, const char *file, int format,
 	cb_data.password = pass;
 	cb_data.prompt_info = file;
 
-	if (file == NULL)
+	if (file == NULL && (!maybe_stdin || format == FORMAT_ENGINE))
 		{
 		BIO_printf(err,"no keyfile specified\n");
 		goto end;
@@ -824,12 +828,19 @@ EVP_PKEY *load_key(BIO *err, const char *file, int format,
 		ERR_print_errors(err);
 		goto end;
 		}
-	if (BIO_read_filename(key,file) <= 0)
+	if (file == NULL && maybe_stdin)
 		{
-		BIO_printf(err, "Error opening %s %s\n", key_descrip, file);
-		ERR_print_errors(err);
-		goto end;
+		setvbuf(stdin, NULL, _IONBF, 0);
+		BIO_set_fp(key,stdin,BIO_NOCLOSE);
 		}
+	else
+		if (BIO_read_filename(key,file) <= 0)
+			{
+			BIO_printf(err, "Error opening %s %s\n",
+				key_descrip, file);
+			ERR_print_errors(err);
+			goto end;
+			}
 	if (format == FORMAT_ASN1)
 		{
 		pkey=d2i_PrivateKey_bio(key, NULL);
@@ -863,7 +874,7 @@ EVP_PKEY *load_key(BIO *err, const char *file, int format,
 	return(pkey);
 	}
 
-EVP_PKEY *load_pubkey(BIO *err, const char *file, int format,
+EVP_PKEY *load_pubkey(BIO *err, const char *file, int format, int maybe_stdin,
 	const char *pass, ENGINE *e, const char *key_descrip)
 	{
 	BIO *key=NULL;
@@ -873,7 +884,7 @@ EVP_PKEY *load_pubkey(BIO *err, const char *file, int format,
 	cb_data.password = pass;
 	cb_data.prompt_info = file;
 
-	if (file == NULL)
+	if (file == NULL && (!maybe_stdin || format == FORMAT_ENGINE))
 		{
 		BIO_printf(err,"no keyfile specified\n");
 		goto end;
@@ -893,11 +904,18 @@ EVP_PKEY *load_pubkey(BIO *err, const char *file, int format,
 		ERR_print_errors(err);
 		goto end;
 		}
-	if (BIO_read_filename(key,file) <= 0)
+	if (file == NULL && maybe_stdin)
 		{
-		BIO_printf(err, "Error opening %s %s\n", key_descrip, file);
-		ERR_print_errors(err);
-		goto end;
+		setvbuf(stdin, NULL, _IONBF, 0);
+		BIO_set_fp(key,stdin,BIO_NOCLOSE);
+		}
+	else
+		if (BIO_read_filename(key,file) <= 0)
+			{
+			BIO_printf(err, "Error opening %s %s\n",
+				key_descrip, file);
+			ERR_print_errors(err);
+			goto end;
 		}
 	if (format == FORMAT_ASN1)
 		{
@@ -1213,7 +1231,7 @@ static int set_table_opts(unsigned long *flags, const char *arg, const NAME_EX_T
 
 void print_name(BIO *out, char *title, X509_NAME *nm, unsigned long lflags)
 {
-	char buf[256];
+	char *buf;
 	char mline = 0;
 	int indent = 0;
 	if(title) BIO_puts(out, title);
@@ -1222,9 +1240,10 @@ void print_name(BIO *out, char *title, X509_NAME *nm, unsigned long lflags)
 		indent = 4;
 	}
 	if(lflags == XN_FLAG_COMPAT) {
-		X509_NAME_oneline(nm,buf,256);
-		BIO_puts(out,buf);
+		buf = X509_NAME_oneline(nm, 0, 0);
+		BIO_puts(out, buf);
 		BIO_puts(out, "\n");
+		OPENSSL_free(buf);
 	} else {
 		if(mline) BIO_puts(out, "\n");
 		X509_NAME_print_ex(out, nm, indent, lflags);

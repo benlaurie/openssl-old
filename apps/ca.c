@@ -80,7 +80,11 @@
 #ifdef OPENSSL_SYS_WINDOWS
 #define strcasecmp _stricmp
 #else
-#include <strings.h>
+#  ifdef NO_STRINGS_H
+    int	strcasecmp();
+#  else
+#    include <strings.h>
+#  endif /* NO_STRINGS_H */
 #endif
 
 #ifndef W_OK
@@ -695,7 +699,7 @@ bad:
 			goto err;
 			}
 		}
-	pkey = load_key(bio_err, keyfile, keyform, key, e, 
+	pkey = load_key(bio_err, keyfile, keyform, 0, key, e, 
 		"CA private key");
 	if (key) memset(key,0,strlen(key));
 	if (pkey == NULL)
@@ -1450,13 +1454,13 @@ bad:
 			}
 		if ((crldays == 0) && (crlhours == 0))
 			{
-			BIO_printf(bio_err,"cannot lookup how long until the next CRL is issuer\n");
+			BIO_printf(bio_err,"cannot lookup how long until the next CRL is issued\n");
 			goto err;
 			}
 
 		if (verbose) BIO_printf(bio_err,"making CRL\n");
 		if ((crl=X509_CRL_new()) == NULL) goto err;
-		if (!X509_CRL_set_issuer_name(crl, X509_get_issuer_name(x509))) goto err;
+		if (!X509_CRL_set_issuer_name(crl, X509_get_subject_name(x509))) goto err;
 
 		tmptm = ASN1_TIME_new();
 		if (!tmptm) goto err;
@@ -1511,7 +1515,7 @@ bad:
 			else
 #endif
 #ifndef OPENSSL_NO_ECDSA
-			if (pkey->type == EVP_PKEY_ECDSA)
+			if (pkey->type == EVP_PKEY_EC)
 				dgst=EVP_ecdsa();
 			else
 #endif
@@ -2090,9 +2094,8 @@ again2:
 			}
 		}
 
-	row[DB_name]=X509_NAME_oneline(dn_subject,NULL,0);
 	row[DB_serial]=BN_bn2hex(serial);
-	if ((row[DB_name] == NULL) || (row[DB_serial] == NULL))
+	if (row[DB_serial] == NULL)
 		{
 		BIO_printf(bio_err,"Memory allocation failure\n");
 		goto err;
@@ -2290,7 +2293,7 @@ again2:
 	EVP_PKEY_free(pktmp);
 #endif
 #ifndef OPENSSL_NO_ECDSA
-	if (pkey->type == EVP_PKEY_ECDSA)
+	if (pkey->type == EVP_PKEY_EC)
 		dgst = EVP_ecdsa();
 	pktmp = X509_get_pubkey(ret);
 	if (EVP_PKEY_missing_parameters(pktmp) &&
@@ -2315,10 +2318,10 @@ again2:
 
 	/* row[DB_serial] done already */
 	row[DB_file]=(char *)OPENSSL_malloc(8);
-	/* row[DB_name] done already */
+	row[DB_name]=X509_NAME_oneline(X509_get_subject_name(ret),NULL,0);
 
 	if ((row[DB_type] == NULL) || (row[DB_exp_date] == NULL) ||
-		(row[DB_file] == NULL))
+		(row[DB_file] == NULL) || (row[DB_name] == NULL))
 		{
 		BIO_printf(bio_err,"Memory allocation failure\n");
 		goto err;

@@ -756,10 +756,10 @@ static int asn1_collect(BUF_MEM *buf, unsigned char **in, long len, char inf, in
 {
 	unsigned char *p, *q;
 	long plen;
-	char cst;
+	char cst, ininf;
 	p = *in;
 	inf &= 1;
-	/* If no buffer and not indefinite length constructured just pass over the encoded data */
+	/* If no buffer and not indefinite length constructed just pass over the encoded data */
 	if(!buf && !inf) {
 		*in += len;
 		return 1;
@@ -774,15 +774,15 @@ static int asn1_collect(BUF_MEM *buf, unsigned char **in, long len, char inf, in
 				return 0;
 			}
 			inf = 0;
-			goto err;
+			break;
 		}
-		if(!asn1_check_tlen(&plen, NULL, NULL, &inf, &cst, &p, len, tag, aclass, 0, NULL)) {
+		if(!asn1_check_tlen(&plen, NULL, NULL, &ininf, &cst, &p, len, tag, aclass, 0, NULL)) {
 			ASN1err(ASN1_F_ASN1_COLLECT, ERR_R_NESTED_ASN1_ERROR);
 			return 0;
 		}
 		/* If indefinite length constructed update max length */
 		if(cst) {
-			if(!asn1_collect(buf, &p, plen, inf, tag, aclass)) return 0;
+			if(!asn1_collect(buf, &p, plen, ininf, tag, aclass)) return 0;
 		} else {
 			if(!collect_data(buf, &p, plen)) return 0;
 		}
@@ -794,8 +794,6 @@ static int asn1_collect(BUF_MEM *buf, unsigned char **in, long len, char inf, in
 	}
 	*in = p;
 	return 1;
-	err:
-	return 0;
 }
 
 static int collect_data(BUF_MEM *buf, unsigned char **p, long plen)

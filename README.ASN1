@@ -141,4 +141,3 @@ The values of 'type' in the GENERAL_NAME structure have changed. This is
 because the old code use the ASN1 initial octet as the selector. The new
 code uses the index in the ASN1_CHOICE template.
 
-

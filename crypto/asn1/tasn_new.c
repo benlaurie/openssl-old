@@ -112,9 +112,13 @@ static int asn1_item_ex_combine_new(ASN1_VALUE **pval, const ASN1_ITEM *it, int 
 		break;
 
 		case ASN1_ITYPE_PRIMITIVE:
-
-		if(!ASN1_primitive_new(pval, it->utype))
+		if(it->templates) {
+			if(!ASN1_template_new(pval, it->templates))
 				goto memerr;
+		} else {
+			if(!ASN1_primitive_new(pval, it->utype))
+				goto memerr;
+		}
 		break;
 
 		case ASN1_ITYPE_MSTRING:

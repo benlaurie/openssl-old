@@ -86,7 +86,8 @@ static void asn1_item_combine_free(ASN1_VALUE *val, const ASN1_ITEM *it, int com
 	switch(it->itype) {
 
 		case ASN1_ITYPE_PRIMITIVE:
-		ASN1_primitive_free(val, it->utype);
+		if(it->templates) ASN1_template_free(val, it->templates);
+		else ASN1_primitive_free(val, it->utype);
 		break;
 
 		case ASN1_ITYPE_MSTRING:

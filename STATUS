@@ -79,7 +79,6 @@
     o  Jean-Hugues ROYER <jhroyer@joher.com>: rsa_oaep.c with Watcom C
     o  $(PERL) in */Makefile.ssl
     o  "Sign the certificate?" - "n" creates empty certificate file
-    o  add Configure option "rsaref"
     o  dubious declaration of crypt() in des.h
 
   OPEN ISSUES

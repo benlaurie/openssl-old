@@ -159,7 +159,6 @@ RMD160_ASM_OBJ= asm/rm86-out.o
 
 # KRB5 stuff
 KRB5_INCLUDES=
-LIBKRB5=
 
 DIRS=   crypto ssl engines apps test tools
 SHLIBDIRS= crypto ssl
@@ -283,7 +282,7 @@ do_$(SHLIB_TARGET):
 		libs="$$libs -l$$i"; \
 	done
 
-openssl.pc:
+openssl.pc: Makefile.ssl
 	@ ( echo 'prefix=$(INSTALLTOP)'; \
 	    echo 'exec_prefix=$${prefix}'; \
 	    echo 'libdir=$${exec_prefix}/lib'; \

@@ -116,13 +116,13 @@ static int asn1_item_ex_combine_new(ASN1_VALUE **pval, const ASN1_ITEM *it, int 
 			if(!ASN1_template_new(pval, it->templates))
 				goto memerr;
 		} else {
-			if(!ASN1_primitive_new(pval, it->utype))
+			if(!ASN1_primitive_new(pval, it))
 				goto memerr;
 		}
 		break;
 
 		case ASN1_ITYPE_MSTRING:
-		if(!ASN1_primitive_new(pval, -1))
+		if(!ASN1_primitive_new(pval, it))
 				goto memerr;
 		break;
 
@@ -198,9 +198,15 @@ int ASN1_template_new(ASN1_VALUE **pval, const ASN1_TEMPLATE *tt)
  * functions.
  */
 
-int ASN1_primitive_new(ASN1_VALUE **pval, long utype)
+int ASN1_primitive_new(ASN1_VALUE **pval, const ASN1_ITEM *it)
 {
 	ASN1_TYPE *typ;
+	int utype;
+	const ASN1_PRIMITIVE_FUNCS *pf;
+	pf = it->funcs;
+	if(pf && pf->prim_new) return pf->prim_new(pval, it);
+	if(!it || (it->itype == ASN1_ITYPE_MSTRING)) utype = -1;
+	else utype = it->utype;
 	switch(utype) {
 		case V_ASN1_OBJECT:
 		*pval = (ASN1_VALUE *)OBJ_nid2obj(NID_undef);

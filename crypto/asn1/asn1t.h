@@ -494,7 +494,7 @@ struct ASN1_TLC_st{
 	int hdrlen;	/* header length */
 };
 
-/* Typedefs for ASN1 functions */
+/* Typedefs for ASN1 function pointers */
 
 typedef ASN1_VALUE * ASN1_new_func(void);
 typedef void ASN1_free_func(ASN1_VALUE *a);
@@ -507,6 +507,9 @@ typedef int ASN1_ex_d2i(ASN1_VALUE **pval, unsigned char **in, long len, const A
 typedef int ASN1_ex_i2d(ASN1_VALUE **pval, unsigned char **out, const ASN1_ITEM *it, int tag, int aclass);
 typedef int ASN1_ex_new_func(ASN1_VALUE **pval, const ASN1_ITEM *it);
 typedef void ASN1_ex_free_func(ASN1_VALUE **pval, const ASN1_ITEM *it);
+
+typedef int ASN1_primitive_i2c(ASN1_VALUE **pval, unsigned char *cont, int *putype, const ASN1_ITEM *it);
+typedef int ASN1_primitive_c2i(ASN1_VALUE **pval, unsigned char *cont, int len, int utype, char *free_cont, const ASN1_ITEM *it);
 
 typedef struct ASN1_COMPAT_FUNCS_st {
 	ASN1_new_func *asn1_new;
@@ -522,6 +525,15 @@ typedef struct ASN1_EXTERN_FUNCS_st {
 	ASN1_ex_d2i *asn1_ex_d2i;
 	ASN1_ex_i2d *asn1_ex_i2d;
 } ASN1_EXTERN_FUNCS;
+
+typedef struct ASN1_PRIMITIVE_FUNCS_st {
+	void *app_data;
+	unsigned long flags;
+	ASN1_ex_new_func *prim_new;
+	ASN1_ex_free_func *prim_free;
+	ASN1_primitive_c2i *prim_c2i;
+	ASN1_primitive_i2c *prim_i2c;
+} ASN1_PRIMITIVE_FUNCS;
 
 /* This is the ASN1_AUX structure: it handles various
  * miscellaneous requirements. For example the use of
@@ -645,7 +657,7 @@ extern const ASN1_ITEM ASN1_SEQUENCE_it;
 int ASN1_item_ex_new(ASN1_VALUE **pval, const ASN1_ITEM *it);
 void ASN1_item_ex_free(ASN1_VALUE **pval, const ASN1_ITEM *it);
 int ASN1_template_new(ASN1_VALUE **pval, const ASN1_TEMPLATE *tt);
-int ASN1_primitive_new(ASN1_VALUE **pval, long utype);
+int ASN1_primitive_new(ASN1_VALUE **pval, const ASN1_ITEM *it);
 
 void ASN1_template_free(ASN1_VALUE **pval, const ASN1_TEMPLATE *tt);
 int ASN1_template_d2i(ASN1_VALUE **pval, unsigned char **in, long len, const ASN1_TEMPLATE *tt);
@@ -654,7 +666,10 @@ int ASN1_item_ex_d2i(ASN1_VALUE **pval, unsigned char **in, long len, const ASN1
 
 int ASN1_item_ex_i2d(ASN1_VALUE **pval, unsigned char **out, const ASN1_ITEM *it, int tag, int aclass);
 int ASN1_template_i2d(ASN1_VALUE **pval, unsigned char **out, const ASN1_TEMPLATE *tt);
-void ASN1_primitive_free(ASN1_VALUE **pval, long utype);
+void ASN1_primitive_free(ASN1_VALUE **pval, const ASN1_ITEM *it);
+
+int asn1_ex_i2c(ASN1_VALUE **pval, unsigned char *cont, int *putype, const ASN1_ITEM *it);
+int asn1_ex_c2i(ASN1_VALUE **pval, unsigned char *cont, int len, int utype, char *free_cont, const ASN1_ITEM *it);
 
 int asn1_get_choice_selector(ASN1_VALUE **pval, const ASN1_ITEM *it);
 int asn1_set_choice_selector(ASN1_VALUE **pval, int value, const ASN1_ITEM *it);

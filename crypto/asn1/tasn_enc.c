@@ -62,7 +62,7 @@
 #include <openssl/asn1t.h>
 #include <openssl/objects.h>
 
-static int asn1_i2d_ex_primitive(ASN1_VALUE **pval, unsigned char **out, int utype, int tag, int aclass);
+static int asn1_i2d_ex_primitive(ASN1_VALUE **pval, unsigned char **out, const ASN1_ITEM *it, int tag, int aclass);
 static int asn1_set_seq_out(STACK *seq, unsigned char **out, int skcontlen, const ASN1_ITEM *item, int isset);
 
 /* Encode an ASN1 item, this is compatible with the
@@ -120,12 +120,12 @@ int ASN1_item_ex_i2d(ASN1_VALUE **pval, unsigned char **out, const ASN1_ITEM *it
 		case ASN1_ITYPE_PRIMITIVE:
 		if(it->templates)
 			return ASN1_template_i2d(pval, out, it->templates);
-		return asn1_i2d_ex_primitive(pval, out, it->utype, tag, aclass);
+		return asn1_i2d_ex_primitive(pval, out, it, tag, aclass);
 		break;
 
 		case ASN1_ITYPE_MSTRING:
 		strtmp = (ASN1_STRING *)*pval;
-		return asn1_i2d_ex_primitive(pval, out, strtmp->type, tag, aclass);
+		return asn1_i2d_ex_primitive(pval, out, it, -1, 0);
 
 		case ASN1_ITYPE_CHOICE:
 		if(asn1_cb && !asn1_cb(ASN1_OP_I2D_PRE, pval, it))
@@ -342,31 +342,76 @@ static int asn1_set_seq_out(STACK *sk, unsigned char **out, int skcontlen, const
 	return 1;
 }
 
-static int asn1_i2d_ex_primitive(ASN1_VALUE **pval, unsigned char **out, int utype, int tag, int aclass)
+static int asn1_i2d_ex_primitive(ASN1_VALUE **pval, unsigned char **out, const ASN1_ITEM *it, int tag, int aclass)
 {
 	int len;
-	unsigned char *cont = NULL, c;
-	ASN1_OBJECT *otmp;
-	ASN1_STRING *stmp;
-	ASN1_VALUE *vtmp;
-	int btmp;
-	if((utype != V_ASN1_BOOLEAN) && !*pval) return 0;
-	if(utype == V_ASN1_ANY) {
-		ASN1_TYPE *atype;
-		atype = (ASN1_TYPE *)*pval;
-		utype = atype->type;
-		if(utype == V_ASN1_NULL) {
-			vtmp = (ASN1_VALUE *)1;
-			pval = &vtmp;
-		} else pval = (ASN1_VALUE **)&atype->value.ptr;
-	} else vtmp = *pval;
-	if(tag == -1) {
-		tag = utype;
-		aclass = V_ASN1_UNIVERSAL;
-	}
-	/* Setup cont and len to point to content octets and
-	 * their length.
+	int utype;
+
+	utype = it->utype;
+
+	/* Get length of content octets and maybe find
+	 * out the underlying type.
 	 */
+
+	len = asn1_ex_i2c(pval, NULL, &utype, it);
+
+	/* -1 means omit type */
+
+	if(len == -1) return 0;
+
+	/* If not implicitly tagged get tag from underlying type */
+	if(tag == -1) tag = utype;
+
+	/* Output tag+length followed by content octets */
+	if(out) {
+		/* If SEQUENCE, SET or OTHER then header is
+		 * included in pseudo content octets
+		 */
+		if((utype != V_ASN1_SEQUENCE) &&
+		   (utype != V_ASN1_SET) &&
+		   (utype != V_ASN1_OTHER))
+			ASN1_put_object(out, 0, len, tag, aclass);
+		asn1_ex_i2c(pval, *out, &utype, it);
+		*out += len;
+	}
+
+	return ASN1_object_size(0, len, tag);
+}
+
+/* Produce content octets from a structure */
+
+int asn1_ex_i2c(ASN1_VALUE **pval, unsigned char *cout, int *putype, const ASN1_ITEM *it)
+{
+	ASN1_BOOLEAN *tbool = NULL;
+	ASN1_STRING *strtmp;
+	ASN1_OBJECT *otmp;
+	int utype;
+	unsigned char *cont, c;
+	int len;
+	const ASN1_PRIMITIVE_FUNCS *pf;
+	pf = it->funcs;
+	if(pf && pf->prim_i2c) return pf->prim_i2c(pval, cout, putype, it);
+
+	/* Should type be omitted? */
+	if((it->itype == ASN1_ITYPE_PRIMITIVE) && (it->utype == V_ASN1_BOOLEAN)) {
+		tbool = (ASN1_BOOLEAN *)pval;
+		if(*tbool == -1) return -1;
+	} else if(!*pval) return -1;
+
+	if(it->itype == ASN1_ITYPE_MSTRING) {
+		/* If MSTRING type set the underlying type */
+		strtmp = (ASN1_STRING *)*pval;
+		utype = strtmp->type;
+		*putype = utype;
+	} else if(it->utype == V_ASN1_ANY) {
+		/* If ANY set type and pointer to value */
+		ASN1_TYPE *typ;
+		typ = (ASN1_TYPE *)*pval;
+		utype = typ->type;
+		*putype = utype;
+		pval = (ASN1_VALUE **)&typ->value.ptr;
+	} else utype = *putype;
+
 	switch(utype) {
 		case V_ASN1_OBJECT:
 		otmp = (ASN1_OBJECT *)*pval;
@@ -380,21 +425,20 @@ static int asn1_i2d_ex_primitive(ASN1_VALUE **pval, unsigned char **out, int uty
 		break;
 
 		case V_ASN1_BOOLEAN:
-		btmp = *(ASN1_BOOLEAN *)pval;
-		/* -1 means undefined and thus omitted */
-		if(btmp < 0 ) return 0;
-		c = (unsigned char)btmp;
+		tbool = (ASN1_BOOLEAN *)pval;
+		/* Strictly speaking this is invalid: an normal BOOLEAN
+		 * type will be caught earlier so we are left with a
+		 * BOOLEAN in an ASN1_TYPE structure. ASN1_TYPE shouldn't
+		 * set BOOLEAN to -1, the whole structure should be NULL
+		 */
+		if(*tbool == -1) return -1;
+		c = (unsigned char)*tbool;
 		cont = &c;
 		len = 1;
 		break;
 
 		case V_ASN1_BIT_STRING:
-		len = i2c_ASN1_BIT_STRING((ASN1_BIT_STRING *)*pval, NULL);
-		if(out) {
-			ASN1_put_object(out, 0, len, tag, aclass);
-			i2c_ASN1_BIT_STRING((ASN1_BIT_STRING *)*pval, out);
-		}
-		return ASN1_object_size(0, len, tag);
+		return i2c_ASN1_BIT_STRING((ASN1_BIT_STRING *)*pval, cout ? &cout : NULL);
 		break;
 
 		case V_ASN1_INTEGER:
@@ -404,12 +448,8 @@ static int asn1_i2d_ex_primitive(ASN1_VALUE **pval, unsigned char **out, int uty
 		/* These are all have the same content format
 		 * as ASN1_INTEGER
 		 */
-		len = i2c_ASN1_INTEGER((ASN1_INTEGER *)*pval, NULL);
-		if(out) {
-			ASN1_put_object(out, 0, len, tag, aclass);
-			i2c_ASN1_INTEGER((ASN1_INTEGER *)*pval, out);
-		}
-		return ASN1_object_size(0, len, tag);
+		return i2c_ASN1_INTEGER((ASN1_INTEGER *)*pval, cout ? &cout : NULL);
+		break;
 
 		case V_ASN1_OCTET_STRING:
 		case V_ASN1_NUMERICSTRING:
@@ -425,29 +465,17 @@ static int asn1_i2d_ex_primitive(ASN1_VALUE **pval, unsigned char **out, int uty
 		case V_ASN1_UNIVERSALSTRING:
 		case V_ASN1_BMPSTRING:
 		case V_ASN1_UTF8STRING:
-		/* All based on ASN1_STRING and handled the same */
-		stmp = (ASN1_STRING *)*pval;
-		cont = stmp->data;
-		len = stmp->length;
-
-		break;
-
-
 		case V_ASN1_SEQUENCE:
 		case V_ASN1_SET:
 		default:
-		stmp = (ASN1_STRING *)*pval;
-		if(stmp->data && out) {
-			memcpy(*out, stmp->data, stmp->length);
-			*out += stmp->length;
-		}
-		return stmp->length;
+		/* All based on ASN1_STRING and handled the same */
+		strtmp = (ASN1_STRING *)*pval;
+		cont = strtmp->data;
+		len = strtmp->length;
+
+		break;
 
 	}
-	if(out) {
-		ASN1_put_object(out, 0, len, tag, aclass);
-		if(cont) memcpy(*out, cont, len);
-		*out += len;
-	}
-	return ASN1_object_size(0, len, tag);
+	if(cout && len) memcpy(cout, cont, len);
+	return len;
 }

@@ -93,11 +93,11 @@ static void asn1_item_combine_free(ASN1_VALUE **pval, const ASN1_ITEM *it, int c
 
 		case ASN1_ITYPE_PRIMITIVE:
 		if(it->templates) ASN1_template_free(pval, it->templates);
-		else ASN1_primitive_free(pval, it->utype);
+		else ASN1_primitive_free(pval, it);
 		break;
 
 		case ASN1_ITYPE_MSTRING:
-		ASN1_primitive_free(pval, -1);
+		ASN1_primitive_free(pval, it);
 		break;
 
 		case ASN1_ITYPE_CHOICE:
@@ -168,30 +168,52 @@ void ASN1_template_free(ASN1_VALUE **pval, const ASN1_TEMPLATE *tt)
 	} else asn1_item_combine_free(pval, tt->item, tt->flags & ASN1_TFLG_COMBINE);
 }
 
-void ASN1_primitive_free(ASN1_VALUE **pval, long utype)
+void ASN1_primitive_free(ASN1_VALUE **pval, const ASN1_ITEM *it)
 {
-	ASN1_TYPE *typ;
-	if((utype != V_ASN1_BOOLEAN) && !*pval) return;
+	int utype;
+	if(it) {
+		const ASN1_PRIMITIVE_FUNCS *pf;
+		pf = it->funcs;
+		if(pf && pf->prim_free) {
+			pf->prim_free(pval, it);
+			return;
+		}
+	}
+	/* Special case: if 'it' is NULL free contents of ASN1_TYPE */
+	if(!it) {
+		ASN1_TYPE *typ = (ASN1_TYPE *)*pval;
+		utype = typ->type;
+		pval = (ASN1_VALUE **)&typ->value.ptr;
+		if(!*pval) return;
+	} else if(it->itype == ASN1_ITYPE_MSTRING) {
+		utype = -1;
+		if(!*pval) return;
+	} else {
+		utype = it->utype;
+		if((utype != V_ASN1_BOOLEAN) && !*pval) return;
+	}
+
 	switch(utype) {
 		case V_ASN1_OBJECT:
 		ASN1_OBJECT_free((ASN1_OBJECT *)*pval);
 		break;
 
-		case V_ASN1_NULL:
 		case V_ASN1_BOOLEAN:
+		*(ASN1_BOOLEAN *)pval = -1;
+		return;
+
+		case V_ASN1_NULL:
 		break;
 
 		case V_ASN1_ANY:
-		typ = (ASN1_TYPE *)*pval;
-		ASN1_primitive_free((ASN1_VALUE **)&typ->value.ptr, typ->type);
-		OPENSSL_free(typ);
+		ASN1_primitive_free(pval, NULL);
+		OPENSSL_free(*pval);
 		break;
 
 		default:
-		ASN1_STRING_free((ASN1_STRING*)*pval);
+		ASN1_STRING_free((ASN1_STRING *)*pval);
 		*pval = NULL;
 		break;
 	}
-	if(utype == V_ASN1_BOOLEAN) *(int *)pval = -1;
-	else *pval = NULL;
+	*pval = NULL;
 }

@@ -134,6 +134,7 @@ static void x509_name_ex_free(ASN1_VALUE **pval, const ASN1_ITEM *it)
 	BUF_MEM_free(a->bytes);
 	sk_X509_NAME_ENTRY_pop_free(a->entries,X509_NAME_ENTRY_free);
 	OPENSSL_free(a);
+	*pval = NULL;
 }
 
 /* Used with sk_pop_free() to free up the internal representation.

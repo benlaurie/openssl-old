@@ -72,7 +72,7 @@ static int asn1_check_tlen(long *olen, int *otag, unsigned char *oclass, char *i
 static int asn1_template_ex_d2i(ASN1_VALUE **pval, unsigned char **in, long len, const ASN1_TEMPLATE *tt, char opt, ASN1_TLC *ctx);
 static int asn1_template_noexp_d2i(ASN1_VALUE **val, unsigned char **in, long len, const ASN1_TEMPLATE *tt, char opt, ASN1_TLC *ctx);
 static int asn1_d2i_ex_primitive(ASN1_VALUE **pval, unsigned char **in, long len,
-					int utype, int tag, int aclass, char opt, ASN1_TLC *ctx);
+					const ASN1_ITEM *it, int tag, int aclass, char opt, ASN1_TLC *ctx);
 
 /* Macro to initialize and invalidate the cache */
 
@@ -132,7 +132,7 @@ int ASN1_item_ex_d2i(ASN1_VALUE **pval, unsigned char **in, long len, const ASN1
 		case ASN1_ITYPE_PRIMITIVE:
 		if(it->templates)
 			return asn1_template_ex_d2i(pval, in, len, it->templates, opt, ctx);
-		return asn1_d2i_ex_primitive(pval, in, len, it->utype, tag, aclass, opt, ctx);
+		return asn1_d2i_ex_primitive(pval, in, len, it, tag, aclass, opt, ctx);
 		break;
 
 		case ASN1_ITYPE_MSTRING:
@@ -157,7 +157,7 @@ int ASN1_item_ex_d2i(ASN1_VALUE **pval, unsigned char **in, long len, const ASN1
 			ASN1err(ASN1_F_ASN1_ITEM_EX_D2I, ASN1_R_MSTRING_WRONG_TAG);
 			goto err;
 		} 
-		return asn1_d2i_ex_primitive(pval, in, len, otag, -1, 0, 1, ctx);
+		return asn1_d2i_ex_primitive(pval, in, len, it, otag, 0, 0, ctx);
 
 		case ASN1_ITYPE_EXTERN:
 		/* Use new style d2i */
@@ -539,27 +539,30 @@ static int asn1_template_noexp_d2i(ASN1_VALUE **val, unsigned char **in, long le
 	return 0;
 }
 
-static int asn1_d2i_ex_primitive(ASN1_VALUE **pval, unsigned char **in, long inlen, int utype,
+static int asn1_d2i_ex_primitive(ASN1_VALUE **pval, unsigned char **in, long inlen, 
+						const ASN1_ITEM *it,
 						int tag, int aclass, char opt, ASN1_TLC *ctx)
 {
-	int ret = 0;
+	int ret = 0, utype;
 	long plen;
 	char cst, inf, free_cont = 0;
 	unsigned char *p;
 	BUF_MEM buf;
 	unsigned char *cont = NULL;
-	ASN1_STRING *stmp;
-	ASN1_BOOLEAN *tbool;
 	long len; 
 	if(!pval) {
 		ASN1err(ASN1_F_ASN1_D2I_EX_PRIMITIVE, ASN1_R_ILLEGAL_NULL);
 		return 0; /* Should never happen */
 	}
+
+	if(it->itype == ASN1_ITYPE_MSTRING) {
+		utype = tag;
+		tag = -1;
+	} else utype = it->utype;
+
 	if(utype == V_ASN1_ANY) {
-		int otag;
+		/* If type is ANY need to figure out type from tag */
 		unsigned char oclass;
-		ASN1_TYPE *ttmp;
-		ASN1_VALUE *anytype;
 		if(tag >= 0) {
 			ASN1err(ASN1_F_ASN1_D2I_EX_PRIMITIVE, ASN1_R_ILLEGAL_TAGGED_ANY);
 			return 0;
@@ -569,29 +572,12 @@ static int asn1_d2i_ex_primitive(ASN1_VALUE **pval, unsigned char **in, long inl
 			return 0;
 		}
 		p = *in;
-		ret = asn1_check_tlen(NULL, &otag, &oclass, NULL, NULL, &p, inlen, -1, 0, 0, ctx);
+		ret = asn1_check_tlen(NULL, &utype, &oclass, NULL, NULL, &p, inlen, -1, 0, 0, ctx);
 		if(!ret) {
 			ASN1err(ASN1_F_ASN1_D2I_EX_PRIMITIVE, ERR_R_NESTED_ASN1_ERROR);
 			return 0;
 		}
-		if(oclass != V_ASN1_UNIVERSAL) otag = V_ASN1_OTHER;
-		anytype = NULL;
-		ret = asn1_d2i_ex_primitive(&anytype, in, inlen, otag, -1, 0, 0, ctx);
-		if(!ret) {
-			ASN1err(ASN1_F_ASN1_D2I_EX_PRIMITIVE, ERR_R_NESTED_ASN1_ERROR);
-			return 0;
-		}
-		if(*pval) ASN1_TYPE_free((ASN1_TYPE *)*pval);
-		ttmp = ASN1_TYPE_new();
-		*pval = (ASN1_VALUE *)ttmp;
-		if(!ttmp) {
-			ASN1err(ASN1_F_ASN1_D2I_EX_PRIMITIVE, ERR_R_MALLOC_FAILURE);
-			return 0;
-		}
-		if(otag != V_ASN1_NULL) ttmp->value.ptr = (char *)anytype;
-		ttmp->type = otag;
-		return 1;
-
+		if(oclass != V_ASN1_UNIVERSAL) utype = V_ASN1_OTHER;
 	}
 	if(tag == -1) {
 		tag = utype;
@@ -642,13 +628,42 @@ static int asn1_d2i_ex_primitive(ASN1_VALUE **pval, unsigned char **in, long inl
 		p += plen;
 	}
 
+	/* We now have content length and type: translate into a structure */
+	if(!asn1_ex_c2i(pval, cont, len, utype, &free_cont, it)) goto err;
+
+	*in = p;
+	ret = 1;
+	err:
+	if(free_cont && buf.data) OPENSSL_free(buf.data);
+	return ret;
+}
+
+/* Translate ASN1 content octets into a structure */
+
+int asn1_ex_c2i(ASN1_VALUE **pval, unsigned char *cont, int len, int utype, char *free_cont, const ASN1_ITEM *it)
+{
+	ASN1_STRING *stmp;
+	ASN1_TYPE *typ = NULL;
+	int ret = 0;
+	const ASN1_PRIMITIVE_FUNCS *pf;
+	pf = it->funcs;
+	if(pf && pf->prim_c2i) return pf->prim_c2i(pval, cont, len, utype, free_cont, it);
+	/* If ANY type clear type and set pointer to internal value */
+	if(it->utype == V_ASN1_ANY) {
+		if(!*pval) {
+			typ = ASN1_TYPE_new();
+			*pval = (ASN1_VALUE *)typ;
+		} else typ = (ASN1_TYPE *)pval;
+		if(utype != typ->type) ASN1_TYPE_set(typ, utype, NULL);
+		pval = (ASN1_VALUE **)&typ->value.ptr;
+	}
 	switch(utype) {
 		case V_ASN1_OBJECT:
 		if(!c2i_ASN1_OBJECT((ASN1_OBJECT **)pval, &cont, len)) goto err;
 		break;
 
 		case V_ASN1_NULL:
-		if(plen) {
+		if(len) {
 			ASN1err(ASN1_F_ASN1_D2I_EX_PRIMITIVE, ASN1_R_NULL_IS_WRONG_LENGTH);
 			goto err;
 		}
@@ -656,12 +671,14 @@ static int asn1_d2i_ex_primitive(ASN1_VALUE **pval, unsigned char **in, long inl
 		break;
 
 		case V_ASN1_BOOLEAN:
-		if(plen != 1) {
+		if(len != 1) {
 			ASN1err(ASN1_F_ASN1_D2I_EX_PRIMITIVE, ASN1_R_BOOLEAN_IS_WRONG_LENGTH);
 			goto err;
+		} else {
+			ASN1_BOOLEAN *tbool;
+			tbool = (ASN1_BOOLEAN *)pval;
+			*tbool = *cont;
 		}
-		tbool = (ASN1_BOOLEAN *)pval;
-		*tbool = *cont;
 		break;
 
 		case V_ASN1_BIT_STRING:
@@ -706,11 +723,11 @@ static int asn1_d2i_ex_primitive(ASN1_VALUE **pval, unsigned char **in, long inl
 			stmp->type = utype;
 		}
 		/* If we've already allocated a buffer use it */
-		if(free_cont) {
+		if(*free_cont) {
 			if(stmp->data) OPENSSL_free(stmp->data);
 			stmp->data = cont;
 			stmp->length = len;
-			free_cont = 0;
+			*free_cont = 0;
 		} else {
 			if(!ASN1_STRING_set(stmp, cont, len)) {
 				ASN1err(ASN1_F_ASN1_D2I_EX_PRIMITIVE, ERR_R_MALLOC_FAILURE);
@@ -721,11 +738,12 @@ static int asn1_d2i_ex_primitive(ASN1_VALUE **pval, unsigned char **in, long inl
 		}
 		break;
 	}
+	/* If ASN1_ANY and NULL type fix up value */
+	if(typ && utype==V_ASN1_NULL) typ->value.ptr = NULL;
 
-	*in = p;
 	ret = 1;
 	err:
-	if(free_cont && buf.data) OPENSSL_free(buf.data);
+	if(!ret) ASN1_TYPE_free(typ);
 	return ret;
 }
 

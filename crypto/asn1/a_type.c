@@ -71,7 +71,7 @@ int ASN1_TYPE_get(ASN1_TYPE *a)
 void ASN1_TYPE_set(ASN1_TYPE *a, int type, void *value)
 	{
 	if (a->value.ptr != NULL)
-		ASN1_primitive_free((ASN1_VALUE **)&a->value.ptr, a->type);
+		ASN1_primitive_free((ASN1_VALUE **)&a, NULL);
 	a->type=type;
 	a->value.ptr=value;
 	}

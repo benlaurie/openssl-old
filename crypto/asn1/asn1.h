@@ -137,6 +137,8 @@ extern "C" {
 #define B_ASN1_BMPSTRING	0x0800
 #define B_ASN1_UNKNOWN		0x1000
 #define B_ASN1_UTF8STRING	0x2000
+#define B_ASN1_UTCTIME		0x4000
+#define B_ASN1_GENERALIZEDTIME	0x8000
 
 /* For use with ASN1_mbstring_copy() */
 #define MBSTRING_FLAG		0x1000
@@ -457,6 +459,10 @@ typedef struct BIT_STRING_BITNAME_st {
 		i2d_ASN1_bytes((ASN1_STRING *)a,pp,V_ASN1_OCTET_STRING,\
 		V_ASN1_UNIVERSAL)
 
+#define B_ASN1_TIME \
+			B_ASN1_UTCTIME | \
+			B_ASN1_GENERALIZEDTIME
+
 #define B_ASN1_PRINTABLE \
 			B_ASN1_PRINTABLESTRING| \
 			B_ASN1_T61STRING| \
@@ -766,10 +772,8 @@ int		i2d_ASN1_GENERALIZEDTIME(ASN1_GENERALIZEDTIME *a,unsigned char **pp);
 ASN1_GENERALIZEDTIME *	d2i_ASN1_GENERALIZEDTIME(ASN1_GENERALIZEDTIME **a,unsigned char **pp,
 			long length);
 
-ASN1_TIME *	ASN1_TIME_new(void);
-void		ASN1_TIME_free(ASN1_TIME *a);
-int		i2d_ASN1_TIME(ASN1_TIME *a,unsigned char **pp);
-ASN1_TIME *	d2i_ASN1_TIME(ASN1_TIME **a,unsigned char **pp, long length);
+DECLARE_ASN1_FUNCTIONS(ASN1_TIME)
+
 ASN1_TIME *ASN1_TIME_set(ASN1_TIME *s,time_t t);
 
 int		i2d_ASN1_SET(STACK *a, unsigned char **pp,
@@ -1140,6 +1144,7 @@ int asn1_item_is_bool(const ASN1_ITEM *it);
 #define ASN1_F_X509_VAL_NEW				 221
 
 /* Reason codes. */
+#define ASN1_R_AUX_ERROR				 181
 #define ASN1_R_BAD_CLASS				 100
 #define ASN1_R_BAD_OBJECT_HEADER			 101
 #define ASN1_R_BAD_PASSWORD_READ			 102

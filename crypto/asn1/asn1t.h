@@ -124,6 +124,28 @@ extern "C" {
 		#stname \
 	}
 
+#define ASN1_SEQUENCE_aux(tname, cb) \
+	const static ASN1_AUX tname##_aux = {NULL, 0, 0, 0, cb}; \
+	ASN1_SEQUENCE(tname)
+
+#define ASN1_SEQUENCE_ref(tname, cb, lck) \
+	const static ASN1_AUX tname##_aux = {NULL, ASN1_AFLG_REFCOUNT, offsetof(tname, references), lck, cb}; \
+	ASN1_SEQUENCE(tname)
+
+#define ASN1_SEQUENCE_END_aux(stname, tname) ASN1_SEQUENCE_END_ref(stname, tname)
+
+#define ASN1_SEQUENCE_END_ref(stname, tname) \
+	;\
+	const ASN1_ITEM tname##_it = { \
+		ASN1_ITYPE_SEQUENCE,\
+		V_ASN1_SEQUENCE,\
+		tname##_seq_tt,\
+		sizeof(tname##_seq_tt) / sizeof(ASN1_TEMPLATE),\
+		&tname##_aux,\
+		sizeof(stname),\
+		#stname \
+	}
+
 
 /* This pair helps declare a CHOICE type. We can do:
  *
@@ -466,6 +488,49 @@ typedef struct ASN1_EXTERN_FUNCS_st {
 	ASN1_ex_i2d *asn1_ex_i2d;
 } ASN1_EXTERN_FUNCS;
 
+/* This is the ASN1_AUX structure: it handles various
+ * miscellaneous requirements. For example the use of
+ * reference counts and an informational callback.
+ *
+ * The "informational callback" is called at various
+ * points during the ASN1 encoding and decoding. It can
+ * be used to provide minor customisation of the structures
+ * used. This is most useful where the supplied routines
+ * *almost* do the right thing but need some extra help
+ * at a few points. If the callback returns zero then
+ * it is assumed a fatal error has occurred and the 
+ * main operation should be abandoned.
+ *
+ * If major changes in the default behaviour are required
+ * then an external type is more appropriate.
+ */
+
+typedef int ASN1_aux_cb(int operation, ASN1_VALUE **in, const ASN1_ITEM *it);
+
+typedef struct ASN1_AUX_st {
+	void *app_data;
+	int flags;
+	int ref_offset;		/* Offset of reference value */
+	int ref_lock;		/* Lock type to use */
+	ASN1_aux_cb *asn1_cb;
+} ASN1_AUX;
+
+/* Flags in ASN1_AUX */
+
+/* Use a reference count */
+#define ASN1_AFLG_REFCOUNT	1
+
+/* operation values for asn1_cb */
+
+#define ASN1_OP_NEW_PRE		0
+#define ASN1_OP_NEW_POST	1
+#define ASN1_OP_FREE_PRE	2
+#define ASN1_OP_FREE_POST	3
+#define ASN1_OP_D2I_PRE		4
+#define ASN1_OP_D2I_POST	5
+#define ASN1_OP_I2D_PRE		6
+#define ASN1_OP_I2D_POST	7
+
 /* Macro to implement a primitive type */
 #define IMPLEMENT_ASN1_TYPE(stname) IMPLEMENT_ASN1_TYPE_name(stname, stname)
 #define IMPLEMENT_ASN1_TYPE_name(stname, itname) const ASN1_ITEM itname##_it = \
@@ -549,6 +614,8 @@ extern const ASN1_ITEM ASN1_VISIBLESTRING_it;
 extern const ASN1_ITEM ASN1_UNIVERSALSTRING_it;
 extern const ASN1_ITEM ASN1_BMPSTRING_it;
 extern const ASN1_ITEM ASN1_ANY_it;
+
+int asn1_do_lock(ASN1_VALUE *pval, int op, const ASN1_ITEM *it);
 
 #ifdef  __cplusplus
 }

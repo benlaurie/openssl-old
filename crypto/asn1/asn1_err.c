@@ -273,6 +273,7 @@ static ERR_STRING_DATA ASN1_str_functs[]=
 
 static ERR_STRING_DATA ASN1_str_reasons[]=
 	{
+{ASN1_R_AUX_ERROR                        ,"aux error"},
 {ASN1_R_BAD_CLASS                        ,"bad class"},
 {ASN1_R_BAD_OBJECT_HEADER                ,"bad object header"},
 {ASN1_R_BAD_PASSWORD_READ                ,"bad password read"},

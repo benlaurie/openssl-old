@@ -76,8 +76,12 @@ static void asn1_item_combine_free(ASN1_VALUE *val, const ASN1_ITEM *it, int com
 	const ASN1_TEMPLATE *tt = NULL, *seqtt;
 	const ASN1_EXTERN_FUNCS *ef;
 	const ASN1_COMPAT_FUNCS *cf;
+	const ASN1_AUX *aux = it->funcs;
+	ASN1_aux_cb *asn1_cb;
 	int i;
 	if(!val) return;
+	if(aux && aux->asn1_cb) asn1_cb = aux->asn1_cb;
+	else asn1_cb = 0;
 
 	switch(it->itype) {
 
@@ -91,12 +95,14 @@ static void asn1_item_combine_free(ASN1_VALUE *val, const ASN1_ITEM *it, int com
 
 		case ASN1_ITYPE_CHOICE:
 		i = asn1_get_choice_selector(val, it);
+		if(asn1_cb) asn1_cb(ASN1_OP_FREE_PRE, &val, it);
 		if((i >= 0) && (i < it->tcount)) {
 			ASN1_VALUE *chval;
 			tt = it->templates + i;
 			chval = asn1_get_field(val, tt);
 			ASN1_template_free(chval, tt);
-		} 
+		}
+		if(asn1_cb) asn1_cb(ASN1_OP_FREE_POST, &val, it);
 		if(!combine) OPENSSL_free(val);
 		break;
 
@@ -111,12 +117,15 @@ static void asn1_item_combine_free(ASN1_VALUE *val, const ASN1_ITEM *it, int com
 		break;
 
 		case ASN1_ITYPE_SEQUENCE:
+		if(asn1_do_lock(val, -1, it) > 0) return;
+		if(asn1_cb) asn1_cb(ASN1_OP_FREE_PRE, &val, it);
 		for(i = 0, tt = it->templates; i < it->tcount; tt++, i++) {
 			ASN1_VALUE *seqval;
 			seqtt = asn1_do_adb(val, tt);
 			seqval = asn1_get_field(val, seqtt);
 			ASN1_template_free(seqval, seqtt);
 		}
+		if(asn1_cb) asn1_cb(ASN1_OP_FREE_POST, &val, it);
 		if(!combine) OPENSSL_free(val);
 		break;
 	}

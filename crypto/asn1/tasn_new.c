@@ -84,8 +84,14 @@ static int asn1_item_ex_combine_new(ASN1_VALUE **pval, const ASN1_ITEM *it, int 
 	const ASN1_TEMPLATE *tt = NULL;
 	const ASN1_COMPAT_FUNCS *cf;
 	const ASN1_EXTERN_FUNCS *ef;
+	const ASN1_AUX *aux = it->funcs;
+	ASN1_aux_cb *asn1_cb;
 	ASN1_VALUE **pseqval;
 	int i;
+	if(aux && aux->asn1_cb) asn1_cb = aux->asn1_cb;
+	else asn1_cb = 0;
+
+	*pval = NULL;
 
 	switch(it->itype) {
 
@@ -123,6 +129,8 @@ static int asn1_item_ex_combine_new(ASN1_VALUE **pval, const ASN1_ITEM *it, int 
 			memset(*pval, 0, it->size);
 		}
 		asn1_set_choice_selector(pval, -1, it);
+		if(asn1_cb && !asn1_cb(ASN1_OP_NEW_POST, pval, it))
+				goto auxerr;
 		break;
 
 		case ASN1_ITYPE_SEQUENCE:
@@ -130,11 +138,16 @@ static int asn1_item_ex_combine_new(ASN1_VALUE **pval, const ASN1_ITEM *it, int 
 			*pval = OPENSSL_malloc(it->size);
 			if(!*pval) goto memerr;
 			memset(*pval, 0, it->size);
+			asn1_do_lock(*pval, 0, it);
 		}
+		if(asn1_cb && !asn1_cb(ASN1_OP_NEW_PRE, pval, it))
+				goto auxerr;
 		for(i = 0, tt = it->templates; i < it->tcount; tt++, i++) {
 			pseqval = asn1_get_field_ptr(pval, tt);
 			if(!ASN1_template_new(pseqval, tt)) goto memerr;
 		}
+		if(asn1_cb && !asn1_cb(ASN1_OP_NEW_POST, pval, it))
+				goto auxerr;
 		break;
 	}
 	return 1;
@@ -142,6 +155,12 @@ static int asn1_item_ex_combine_new(ASN1_VALUE **pval, const ASN1_ITEM *it, int 
 	memerr:
 	ASN1err(ASN1_F_ASN1_ITEM_NEW, ERR_R_MALLOC_FAILURE);
 	return 0;
+
+	auxerr:
+	ASN1err(ASN1_F_ASN1_ITEM_NEW, ASN1_R_AUX_ERROR);
+	ASN1_item_free(*pval, it);
+	return 0;
+	
 }
 
 int ASN1_template_new(ASN1_VALUE **pval, const ASN1_TEMPLATE *tt)

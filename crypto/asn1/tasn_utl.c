@@ -90,6 +90,37 @@ int asn1_set_choice_selector(ASN1_VALUE **pval, int value, const ASN1_ITEM *it)
 	return ret;
 }
 
+/* Do reference counting. The value 'op' decides what to do. 
+ * if it is +1 then the count is incremented. If op is 0 count is
+ * set to 1. If op is -1 count is decremented and the return value
+ * is the current refrence count or 0 if no reference count exists.
+ */
+
+int asn1_do_lock(ASN1_VALUE *pval, int op, const ASN1_ITEM *it)
+{
+	const ASN1_AUX *aux;
+	int *lck, ret;
+	if(it->itype != ASN1_ITYPE_SEQUENCE) return 0;
+	aux = it->funcs;
+	if(!aux || !(aux->flags & ASN1_AFLG_REFCOUNT)) return 0;
+	lck = offset2ptr(pval, aux->ref_offset);
+	if(op == 0) {
+		*lck = 1;
+		return 1;
+	}
+	ret = CRYPTO_add(lck, op, aux->ref_lock);
+#ifdef REF_PRINT
+	fprintf(stderr, "%s: Reference Count: %d\n", it->sname, *lck);
+#endif
+#ifdef REF_CHECK
+	if(ret < 0) 
+		fprintf(stderr, "%s, bad reference count\n", it->sname);
+#endif
+	return ret;
+}
+	
+	
+
 /* Given an ASN1_TEMPLATE get a field */
 
 ASN1_VALUE *asn1_get_field(ASN1_VALUE *val, const ASN1_TEMPLATE *tt)

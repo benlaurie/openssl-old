@@ -115,6 +115,8 @@ int ASN1_item_ex_d2i(ASN1_VALUE **pval, unsigned char **in, long len, const ASN1
 	const ASN1_TEMPLATE *tt, *errtt = NULL;
 	const ASN1_COMPAT_FUNCS *cf;
 	const ASN1_EXTERN_FUNCS *ef;
+	const ASN1_AUX *aux = it->funcs;
+	ASN1_aux_cb *asn1_cb;
 	unsigned char *p, *q, imphack = 0, oclass;
 	char seq_eoc, cst, isopt;
 	int i;
@@ -122,6 +124,8 @@ int ASN1_item_ex_d2i(ASN1_VALUE **pval, unsigned char **in, long len, const ASN1
 	int ret = 0;
 	ASN1_VALUE *pchval, **pchptr, *ptmpval;
 	if(!pval) return 0;
+	if(aux && aux->asn1_cb) asn1_cb = aux->asn1_cb;
+	else asn1_cb = 0;
 
 	switch(it->itype) {
 
@@ -209,6 +213,8 @@ int ASN1_item_ex_d2i(ASN1_VALUE **pval, unsigned char **in, long len, const ASN1
 
 
 		case ASN1_ITYPE_CHOICE:
+		if(asn1_cb && !asn1_cb(ASN1_OP_D2I_PRE, pval, it))
+				goto auxerr;
 		/* CHOICE type, try each possibility in turn */
 		pchval = NULL;
 		p = *in;
@@ -246,6 +252,8 @@ int ASN1_item_ex_d2i(ASN1_VALUE **pval, unsigned char **in, long len, const ASN1
 		*pchptr = pchval;
 		asn1_set_choice_selector(pval, i, it);
 		*in = p;
+		if(asn1_cb && !asn1_cb(ASN1_OP_D2I_POST, pval, it))
+				goto auxerr;
 		return 1;
 
 		case ASN1_ITYPE_SEQUENCE:
@@ -272,6 +280,8 @@ int ASN1_item_ex_d2i(ASN1_VALUE **pval, unsigned char **in, long len, const ASN1
 				goto err;
 			}
 		}
+		if(asn1_cb && !asn1_cb(ASN1_OP_D2I_PRE, pval, it))
+				goto auxerr;
 
 		/* Get each field entry */
 		for(i = 0, tt = it->templates; i < it->tcount; i++, tt++) {
@@ -347,11 +357,15 @@ int ASN1_item_ex_d2i(ASN1_VALUE **pval, unsigned char **in, long len, const ASN1
 		}
 
 		*in = p;
+		if(asn1_cb && !asn1_cb(ASN1_OP_D2I_POST, pval, it))
+				goto auxerr;
 		return 1;
 
 		default:
 		return 0;
 	}
+	auxerr:
+	ASN1err(ASN1_F_ASN1_ITEM_EX_D2I, ASN1_R_AUX_ERROR);
 	err:
 	ASN1_item_free(*pval, it);
 	*pval = NULL;

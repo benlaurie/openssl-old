@@ -824,23 +824,11 @@ X509_REQ *	X509_to_X509_REQ(X509 *x, EVP_PKEY *pkey, const EVP_MD *md);
 X509 *		X509_REQ_to_X509(X509_REQ *r, int days,EVP_PKEY *pkey);
 void ERR_load_X509_strings(void );
 
-X509_ALGOR *	X509_ALGOR_new(void );
-void		X509_ALGOR_free(X509_ALGOR *a);
-int		i2d_X509_ALGOR(X509_ALGOR *a,unsigned char **pp);
-X509_ALGOR *	d2i_X509_ALGOR(X509_ALGOR **a,unsigned char **pp,
-			long length);
+DECLARE_ASN1_FUNCTIONS(X509_ALGOR)
+DECLARE_ASN1_FUNCTIONS(X509_VAL)
 
-X509_VAL *	X509_VAL_new(void );
-void		X509_VAL_free(X509_VAL *a);
-int		i2d_X509_VAL(X509_VAL *a,unsigned char **pp);
-X509_VAL *	d2i_X509_VAL(X509_VAL **a,unsigned char **pp,
-			long length);
+DECLARE_ASN1_FUNCTIONS(X509_PUBKEY)
 
-X509_PUBKEY *	X509_PUBKEY_new(void );
-void		X509_PUBKEY_free(X509_PUBKEY *a);
-int		i2d_X509_PUBKEY(X509_PUBKEY *a,unsigned char **pp);
-X509_PUBKEY *	d2i_X509_PUBKEY(X509_PUBKEY **a,unsigned char **pp,
-			long length);
 int		X509_PUBKEY_set(X509_PUBKEY **x, EVP_PKEY *pkey);
 EVP_PKEY *	X509_PUBKEY_get(X509_PUBKEY *key);
 int		X509_get_pubkey_parameters(EVP_PKEY *pkey,
@@ -882,30 +870,15 @@ X509_ATTRIBUTE *d2i_X509_ATTRIBUTE(X509_ATTRIBUTE **a,unsigned char **pp,
 			long length);
 X509_ATTRIBUTE *X509_ATTRIBUTE_create(int nid, int atrtype, void *value);
 
+DECLARE_ASN1_FUNCTIONS(X509_EXTENSION)
 
-X509_EXTENSION *X509_EXTENSION_new(void );
-void		X509_EXTENSION_free(X509_EXTENSION *a);
-int		i2d_X509_EXTENSION(X509_EXTENSION *a,unsigned char **pp);
-X509_EXTENSION *d2i_X509_EXTENSION(X509_EXTENSION **a,unsigned char **pp,
-			long length);
+DECLARE_ASN1_FUNCTIONS(X509_NAME_ENTRY)
 
-X509_NAME_ENTRY *X509_NAME_ENTRY_new(void);
-void		X509_NAME_ENTRY_free(X509_NAME_ENTRY *a);
-int		i2d_X509_NAME_ENTRY(X509_NAME_ENTRY *a,unsigned char **pp);
-X509_NAME_ENTRY *d2i_X509_NAME_ENTRY(X509_NAME_ENTRY **a,unsigned char **pp,
-			long length);
+DECLARE_ASN1_FUNCTIONS(X509_NAME)
 
-X509_NAME *	X509_NAME_new(void);
-void		X509_NAME_free(X509_NAME *a);
-int		i2d_X509_NAME(X509_NAME *a,unsigned char **pp);
-X509_NAME *	d2i_X509_NAME(X509_NAME **a,unsigned char **pp,long length);
 int		X509_NAME_set(X509_NAME **xn, X509_NAME *name);
 
-
-X509_CINF *	X509_CINF_new(void);
-void		X509_CINF_free(X509_CINF *a);
-int		i2d_X509_CINF(X509_CINF *a,unsigned char **pp);
-X509_CINF *	d2i_X509_CINF(X509_CINF **a,unsigned char **pp,long length);
+DECLARE_ASN1_FUNCTIONS(X509_CINF)
 
 X509 *		X509_new(void);
 void		X509_free(X509 *a);

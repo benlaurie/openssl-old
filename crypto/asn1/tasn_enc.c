@@ -92,7 +92,11 @@ int ASN1_item_ex_i2d(ASN1_VALUE *val, unsigned char **out, const ASN1_ITEM *it, 
 	ASN1_STRING *strtmp;
 	const ASN1_COMPAT_FUNCS *cf;
 	const ASN1_EXTERN_FUNCS *ef;
+	const ASN1_AUX *aux = it->funcs;
+	ASN1_aux_cb *asn1_cb;
 	if(!val) return 0;
+	if(aux && aux->asn1_cb) asn1_cb = aux->asn1_cb;
+	else asn1_cb = 0;
 
 	switch(it->itype) {
 
@@ -107,6 +111,8 @@ int ASN1_item_ex_i2d(ASN1_VALUE *val, unsigned char **out, const ASN1_ITEM *it, 
 		return asn1_i2d_ex_primitive(val, out, strtmp->type, tag, aclass);
 
 		case ASN1_ITYPE_CHOICE:
+		if(asn1_cb && !asn1_cb(ASN1_OP_I2D_PRE, &val, it))
+				return 0;
 		i = asn1_get_choice_selector(val, it);
 		if((i >= 0) && (i < it->tcount)) {
 			ASN1_VALUE *chval;
@@ -116,6 +122,8 @@ int ASN1_item_ex_i2d(ASN1_VALUE *val, unsigned char **out, const ASN1_ITEM *it, 
 			return ASN1_template_i2d(chval, out, chtt);
 		} 
 		/* Fixme: error condition if selector out of range */
+		if(asn1_cb && !asn1_cb(ASN1_OP_I2D_POST, &val, it))
+				return 0;
 		break;
 
 		case ASN1_ITYPE_EXTERN:
@@ -142,6 +150,8 @@ int ASN1_item_ex_i2d(ASN1_VALUE *val, unsigned char **out, const ASN1_ITEM *it, 
 			tag = V_ASN1_SEQUENCE;
 			aclass = V_ASN1_UNIVERSAL;
 		}
+		if(asn1_cb && !asn1_cb(ASN1_OP_I2D_PRE, &val, it))
+				return 0;
 		/* First work out sequence content length */
 		for(i = 0, tt = it->templates; i < it->tcount; tt++, i++) {
 			const ASN1_TEMPLATE *seqtt;
@@ -166,6 +176,8 @@ int ASN1_item_ex_i2d(ASN1_VALUE *val, unsigned char **out, const ASN1_ITEM *it, 
 			/* FIXME: check for errors in enhanced version */
 			ASN1_template_i2d(seqval, out, seqtt);
 		}
+		if(asn1_cb  && !asn1_cb(ASN1_OP_I2D_POST, &val, it))
+				return 0;
 		return seqlen;
 
 		default:

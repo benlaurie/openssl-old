@@ -93,7 +93,7 @@
 #include <stdio.h>
 #include "des_locl.h"
 
-void des_cblock_print_file(const des_cblock cb, FILE *fp)
+void des_cblock_print_file(const_des_cblock *cb, FILE *fp)
 {
 	int i;
 	const unsigned int *p = (const unsigned int *)cb;

@@ -29,6 +29,7 @@
 			Win32 VC++			- failed
 				PCURSORINFO not defined unless Win2000 [FIXED]
 				RAND_poll() problem on Win2000 [FIXED]
+				DSO method always DSO_METHOD_null [FIXED]
 			CygWin32			- test failed
 			MingW32				- failed
 				thelp32.h

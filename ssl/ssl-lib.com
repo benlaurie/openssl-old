@@ -1188,7 +1188,8 @@ $ ENDIF
 $!
 $! Time to check the contents, and to make sure we get the correct library.
 $!
-$ IF P5.EQS."SOCKETSHR" .OR. P5.EQS."MULTINET" .OR. P5.EQS."UCX" .OR. P5.EQS."TCPIP" .OR. P5.EQS."NONE"
+$ IF P5.EQS."SOCKETSHR" .OR. P5.EQS."MULTINET" .OR. P5.EQS."UCX" -
+     .OR. P5.EQS."TCPIP" .OR. P5.EQS."NONE"
 $ THEN
 $!
 $!  Check to see if SOCKETSHR was chosen

@@ -577,13 +577,8 @@ my %table=(
 
 );
 
-<<<<<<< Configure
-my @WinTargets=qw(VC-NT VC-CE VC-WIN64 VC-WIN32 VC-WIN16 VC-W31-16 VC-W31-32
-	VC-MSDOS BC-32 BC-16 Mingw32 OS2-EMX);
-=======
-my @MK1MF_Builds=qw(VC-NT VC-CE VC-WIN32 VC-WIN16 VC-W31-16 VC-W31-32 VC-MSDOS
-	BC-32 BC-16 Mingw32 OS2-EMX netware-clib netware-libc);
->>>>>>> 1.419
+my @MK1MF_Builds=qw(VC-NT VC-CE VC-WIN64 VC-WIN32 VC-WIN16 VC-W31-16 VC-W31-32
+	VC-MSDOS BC-32 BC-16 Mingw32 OS2-EMX netware-clib netware-libc);
 
 my $idx = 0;
 my $idx_cc = $idx++;

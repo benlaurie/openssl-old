@@ -184,8 +184,12 @@ int ASN1_template_new(ASN1_VALUE **pval, const ASN1_TEMPLATE *tt)
 		return ASN1_item_ex_new(pval, it);
 		
 	/* If OPTIONAL or ANY DEFINED BY nothing to do */
+
+	/* FIXME: OPTIONAL shouldn't really do this in general
+	 * because it needs to set the type to its "undefined"
+	 * state which may not be NULL.
+	 */
 	if(tt->flags & (ASN1_TFLG_OPTIONAL|ASN1_TFLG_ADB_MASK)) {
-		/* Maybe free it first? */
 		*pval = NULL;
 		return 1;
 	}
@@ -193,7 +197,6 @@ int ASN1_template_new(ASN1_VALUE **pval, const ASN1_TEMPLATE *tt)
 	if(tt->flags & ASN1_TFLG_SK_MASK) {
 		STACK_OF(ASN1_VALUE) *skval;
 		skval = sk_ASN1_VALUE_new_null();
-		*pval = (ASN1_VALUE *)sk_new_null();
 		if(!skval) {
 			ASN1err(ASN1_F_ASN1_TEMPLATE_NEW, ERR_R_MALLOC_FAILURE);
 			return 0;

@@ -521,7 +521,7 @@ void BIO_sock_cleanup(void)
 #if !defined(OPENSSL_SYS_VMS) || __VMS_VER >= 70000000
 
 #ifdef OPENSSL_SYS_VMS
-int BIO_socket_ioctl(int fd, long type, UINT_L32p arg)  /* changed for 64-bit API */
+int BIO_socket_ioctl(int fd, long type, VOID_L32p arg)  /* changed for 64-bit API */
 #else
 int BIO_socket_ioctl(int fd, long type, void *arg)
 #endif

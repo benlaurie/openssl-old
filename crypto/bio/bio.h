@@ -584,7 +584,7 @@ struct hostent *BIO_gethostbyname(const char *name);
 #pragma __required_pointer_size __save
 #pragma __required_pointer_size 32
 #endif
-typedef unsigned long * UINT_L32p;
+typedef void * VOID_L32p;
 #if __INITIAL_POINTER_SIZE == 64
 #pragma __required_pointer_size __restore
 #endif

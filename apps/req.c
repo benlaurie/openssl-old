@@ -133,7 +133,7 @@ static int add_attribute_object(X509_REQ *req, char *text,
 				char *def, char *value, int nid, int n_min,
 				int n_max, unsigned long chtype);
 static int add_DN_object(X509_NAME *n, char *text, char *def, char *value,
-	int nid,int n_min,int n_max, unsigned long chtype);
+	int nid,int n_min,int n_max, unsigned long chtype, int mval);
 #ifndef OPENSSL_NO_RSA
 static void MS_CALLBACK req_cb(int p,int n,void *arg);
 #endif
@@ -172,7 +172,9 @@ int MAIN(int argc, char **argv)
 	int informat,outformat,verify=0,noout=0,text=0,keyform=FORMAT_PEM;
 	int nodes=0,kludge=0,newhdr=0,subject=0,pubkey=0;
 	char *infile,*outfile,*prog,*keyfile=NULL,*template=NULL,*keyout=NULL;
+#ifndef OPENSSL_NO_ENGINE
 	char *engine=NULL;
+#endif
 	char *extensions = NULL;
 	char *req_exts = NULL;
 	const EVP_CIPHER *cipher=NULL;
@@ -220,11 +222,13 @@ int MAIN(int argc, char **argv)
 			if (--argc < 1) goto bad;
 			outformat=str2fmt(*(++argv));
 			}
+#ifndef OPENSSL_NO_ENGINE
 		else if (strcmp(*argv,"-engine") == 0)
 			{
 			if (--argc < 1) goto bad;
 			engine= *(++argv);
 			}
+#endif
 		else if (strcmp(*argv,"-key") == 0)
 			{
 			if (--argc < 1) goto bad;
@@ -488,7 +492,9 @@ bad:
 		BIO_printf(bio_err," -verify        verify signature on REQ\n");
 		BIO_printf(bio_err," -modulus       RSA modulus\n");
 		BIO_printf(bio_err," -nodes         don't encrypt the output key\n");
+#ifndef OPENSSL_NO_ENGINE
 		BIO_printf(bio_err," -engine e      use engine e, possibly a hardware device\n");
+#endif
 		BIO_printf(bio_err," -subject       output the request's subject\n");
 		BIO_printf(bio_err," -passin        private key password source\n");
 		BIO_printf(bio_err," -key file      use the private key contained in file\n");
@@ -516,7 +522,7 @@ bad:
 		BIO_printf(bio_err," -extensions .. specify certificate extension section (override value in config file)\n");
 		BIO_printf(bio_err," -reqexts ..    specify request extension section (override value in config file)\n");
 		BIO_printf(bio_err," -utf8          input characters are UTF8 (default ASCII)\n");
-		BIO_printf(bio_err," -nameopt arg   - various certificate name options\n");
+		BIO_printf(bio_err," -nameopt arg    - various certificate name options\n");
 		BIO_printf(bio_err," -reqopt arg    - various request text options\n\n");
 		goto end;
 		}
@@ -680,7 +686,9 @@ bad:
 	if ((in == NULL) || (out == NULL))
 		goto end;
 
+#ifndef OPENSSL_NO_ENGINE
         e = setup_engine(bio_err, engine, 0);
+#endif
 
 	if (keyfile != NULL)
 		{
@@ -720,10 +728,10 @@ bad:
 		if (newkey < MIN_KEY_LENGTH && (pkey_type == TYPE_RSA || pkey_type == TYPE_DSA))
 			{
 			BIO_printf(bio_err,"private key length is too short,\n");
-			BIO_printf(bio_err,"it needs to be at least %d bits, not %d\n",MIN_KEY_LENGTH,newkey);
+			BIO_printf(bio_err,"it needs to be at least %d bits, not %ld\n",MIN_KEY_LENGTH,newkey);
 			goto end;
 			}
-		BIO_printf(bio_err,"Generating a %d bit %s private key\n",
+		BIO_printf(bio_err,"Generating a %ld bit %s private key\n",
 			newkey,(pkey_type == TYPE_RSA)?"RSA":
 			(pkey_type == TYPE_DSA)?"DSA":"EC");
 
@@ -1251,7 +1259,7 @@ static int prompt_info(X509_REQ *req,
 	int i;
 	char *p,*q;
 	char buf[100];
-	int nid;
+	int nid, mval;
 	long n_min,n_max;
 	char *type,*def,*value;
 	CONF_VALUE *v;
@@ -1294,6 +1302,13 @@ start:		for (;;)
 					if(*p) type = p;
 					break;
 				}
+			if (*type == '+')
+				{
+				mval = -1;
+				type++;
+				}
+			else
+				mval = 0;
 			/* If OBJ not recognised ignore it */
 			if ((nid=OBJ_txt2nid(type)) == NID_undef) goto start;
 
@@ -1318,14 +1333,20 @@ start:		for (;;)
 
 			sprintf(buf,"%s_min",v->name);
 			if (!NCONF_get_number(req_conf,dn_sect,buf, &n_min))
+				{
+				ERR_clear_error();
 				n_min = -1;
+				}
 
 			sprintf(buf,"%s_max",v->name);
 			if (!NCONF_get_number(req_conf,dn_sect,buf, &n_max))
+				{
+				ERR_clear_error();
 				n_max = -1;
+				}
 
 			if (!add_DN_object(subj,v->value,def,value,nid,
-				n_min,n_max, chtype))
+				n_min,n_max, chtype, mval))
 				return 0;
 			}
 		if (X509_NAME_entry_count(subj) == 0)
@@ -1415,6 +1436,7 @@ static int auto_info(X509_REQ *req, STACK_OF(CONF_VALUE) *dn_sk,
 
 	for (i = 0; i < sk_CONF_VALUE_num(dn_sk); i++)
 		{
+		int mval;
 		v=sk_CONF_VALUE_value(dn_sk,i);
 		p=q=NULL;
 		type=v->name;
@@ -1431,8 +1453,19 @@ static int auto_info(X509_REQ *req, STACK_OF(CONF_VALUE) *dn_sk,
 				if(*p) type = p;
 				break;
 			}
+#ifndef CHARSET_EBCDIC
+		if (*p == '+')
+#else
+		if (*p == os_toascii['+'])
+#endif
+			{
+			p++;
+			mval = -1;
+			}
+		else
+			mval = 0;
 		if (!X509_NAME_add_entry_by_txt(subj,type, chtype,
-				(unsigned char *) v->value,-1,-1,0)) return 0;
+				(unsigned char *) v->value,-1,-1,mval)) return 0;
 
 		}
 
@@ -1455,7 +1488,7 @@ static int auto_info(X509_REQ *req, STACK_OF(CONF_VALUE) *dn_sk,
 
 
 static int add_DN_object(X509_NAME *n, char *text, char *def, char *value,
-	     int nid, int n_min, int n_max, unsigned long chtype)
+	     int nid, int n_min, int n_max, unsigned long chtype, int mval)
 	{
 	int i,ret=0;
 	MS_STATIC char buf[1024];
@@ -1505,7 +1538,7 @@ start:
 #endif
 	if(!req_check_len(i, n_min, n_max)) goto start;
 	if (!X509_NAME_add_entry_by_NID(n,nid, chtype,
-				(unsigned char *) buf, -1,-1,0)) goto err;
+				(unsigned char *) buf, -1,-1,mval)) goto err;
 	ret=1;
 err:
 	return(ret);

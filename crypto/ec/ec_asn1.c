@@ -3,7 +3,7 @@
  * Written by Nils Larsch for the OpenSSL project.
  */
 /* ====================================================================
- * Copyright (c) 2000-2002 The OpenSSL Project.  All rights reserved.
+ * Copyright (c) 2000-2003 The OpenSSL Project.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -224,7 +224,7 @@ ASN1_SEQUENCE(ECPARAMETERS) = {
 	ASN1_SIMPLE(ECPARAMETERS, curve, X9_62_CURVE),
 	ASN1_SIMPLE(ECPARAMETERS, base, ASN1_OCTET_STRING),
 	ASN1_SIMPLE(ECPARAMETERS, order, ASN1_INTEGER),
-	ASN1_SIMPLE(ECPARAMETERS, cofactor, ASN1_INTEGER)
+	ASN1_OPT(ECPARAMETERS, cofactor, ASN1_INTEGER)
 } ASN1_SEQUENCE_END(ECPARAMETERS)
 
 DECLARE_ASN1_FUNCTIONS_const(ECPARAMETERS)
@@ -715,17 +715,15 @@ static ECPARAMETERS *ec_asn1_group2parameters(const EC_GROUP *group,
 		goto err;
 		}
 
-	/* set the cofactor */
-	if (!EC_GROUP_get_cofactor(group, tmp, NULL))
+	/* set the cofactor (optional) */
+	if (EC_GROUP_get_cofactor(group, tmp, NULL))
 		{
-		ECerr(EC_F_EC_ASN1_GROUP2PARAMETERS, ERR_R_EC_LIB);
-		goto err;
-		}
-	ret->cofactor = BN_to_ASN1_INTEGER(tmp, ret->cofactor);
-	if (ret->cofactor == NULL)
-		{
-		ECerr(EC_F_EC_ASN1_GROUP2PARAMETERS, ERR_R_ASN1_LIB);
-		goto err;
+		ret->cofactor = BN_to_ASN1_INTEGER(tmp, ret->cofactor);
+		if (ret->cofactor == NULL)
+			{
+			ECerr(EC_F_EC_ASN1_GROUP2PARAMETERS, ERR_R_ASN1_LIB);
+			goto err;
+			}
 		}
 
 	ok = 1;
@@ -978,9 +976,7 @@ static EC_GROUP *ec_asn1_parameters2group(const ECPARAMETERS *params)
 		ret->seed_len = params->curve->seed->length;
 		}
 
-	/* extract the order, cofactor and generator */
-	if (!params->order || !params->cofactor || !params->base ||
-	    !params->base->data)
+	if (!params->order || !params->base || !params->base->data)
 		{
 		ECerr(EC_F_EC_ASN1_PARAMETERS2GROUP, EC_R_ASN1_ERROR);
 		goto err;
@@ -988,14 +984,11 @@ static EC_GROUP *ec_asn1_parameters2group(const ECPARAMETERS *params)
 
 	if ((point = EC_POINT_new(ret)) == NULL) goto err;
 
-	a = ASN1_INTEGER_to_BN(params->order, a);
-	b = ASN1_INTEGER_to_BN(params->cofactor, b);
-	if (!a || !b)
-		{
-		ECerr(EC_F_EC_ASN1_PARAMETERS2GROUP, ERR_R_ASN1_LIB);
-		goto err;
-		}
+	/* set the point conversion form */
+	EC_GROUP_set_point_conversion_form(ret, (point_conversion_form_t)
+				(params->base->data[0] & ~0x01));
 
+	/* extract the ec point */
 	if (!EC_POINT_oct2point(ret, point, params->base->data, 
 		                params->base->length, NULL))
 		{
@@ -1003,10 +996,29 @@ static EC_GROUP *ec_asn1_parameters2group(const ECPARAMETERS *params)
 		goto err;
 		}
 
-	/* set the point conversion form */
-	EC_GROUP_set_point_conversion_form(ret, (point_conversion_form_t)
-				(params->base->data[0] & ~0x01));
-
+	/* extract the order */
+	if ((a = ASN1_INTEGER_to_BN(params->order, a)) == NULL)
+		{
+		ECerr(EC_F_EC_ASN1_PARAMETERS2GROUP, ERR_R_ASN1_LIB);
+		goto err;
+		}
+	
+	/* extract the cofactor (optional) */
+	if (params->cofactor == NULL)
+		{
+		if (b)
+			{
+			BN_free(b);
+			b = NULL;
+			}
+		}
+	else
+		if ((b = ASN1_INTEGER_to_BN(params->cofactor, b)) == NULL)
+			{
+			ECerr(EC_F_EC_ASN1_PARAMETERS2GROUP, ERR_R_ASN1_LIB);
+			goto err;
+			}
+	/* set the generator, order and cofactor (if present) */
 	if (!EC_GROUP_set_generator(ret, point, a, b))
 		{
 		ECerr(EC_F_EC_ASN1_PARAMETERS2GROUP, ERR_R_EC_LIB);
@@ -1394,8 +1406,7 @@ EC_KEY *d2i_ECParameters(EC_KEY **a, const unsigned char **in, long len)
 	return ret;
 	}
 
-EC_KEY *ECPublicKey_set_octet_string(EC_KEY **a, const unsigned char **in, 
-					long len)
+EC_KEY *o2i_ECPublicKey(EC_KEY **a, const unsigned char **in, long len)
 	{
 	EC_KEY *ret=NULL;
 
@@ -1403,33 +1414,35 @@ EC_KEY *ECPublicKey_set_octet_string(EC_KEY **a, const unsigned char **in,
 		{
 		/* sorry, but a EC_GROUP-structur is necessary
                  * to set the public key */
-		ECerr(EC_F_ECPUBLICKEY_SET_OCTET, ERR_R_PASSED_NULL_PARAMETER);
+		ECerr(EC_F_O2I_ECPUBLICKEY, ERR_R_PASSED_NULL_PARAMETER);
 		return 0;
 		}
 	ret = *a;
 	if (ret->pub_key == NULL && 
 		(ret->pub_key = EC_POINT_new(ret->group)) == NULL)
 		{
-		ECerr(EC_F_ECPUBLICKEY_SET_OCTET, ERR_R_MALLOC_FAILURE);
+		ECerr(EC_F_O2I_ECPUBLICKEY, ERR_R_MALLOC_FAILURE);
 		return 0;
 		}
 	if (!EC_POINT_oct2point(ret->group, ret->pub_key, *in, len, NULL))
 		{
-		ECerr(EC_F_ECPUBLICKEY_SET_OCTET, ERR_R_EC_LIB);
+		ECerr(EC_F_O2I_ECPUBLICKEY, ERR_R_EC_LIB);
 		return 0;
 		}
 	/* save the point conversion form */
 	ret->conv_form = (point_conversion_form_t)(*in[0] & ~0x01);
+	*in += len;
 	return ret;
 	}
 
-int ECPublicKey_get_octet_string(EC_KEY *a, unsigned char **out)
+int i2o_ECPublicKey(EC_KEY *a, unsigned char **out)
 	{
-        size_t  buf_len=0;
+        size_t buf_len=0;
+	int new_buffer = 0;
 
         if (a == NULL) 
 		{
-		ECerr(EC_F_ECPUBLICKEY_GET_OCTET, ERR_R_PASSED_NULL_PARAMETER);
+		ECerr(EC_F_I2O_ECPUBLICKEY, ERR_R_PASSED_NULL_PARAMETER);
 		return 0;
 		}
 
@@ -1441,19 +1454,23 @@ int ECPublicKey_get_octet_string(EC_KEY *a, unsigned char **out)
 		return buf_len;
 
 	if (*out == NULL)
+		{
 		if ((*out = OPENSSL_malloc(buf_len)) == NULL)
 			{
-			ECerr(EC_F_ECPUBLICKEY_GET_OCTET, 
-				ERR_R_MALLOC_FAILURE);
+			ECerr(EC_F_I2O_ECPUBLICKEY, ERR_R_MALLOC_FAILURE);
 			return 0;
 			}
+		new_buffer = 1;
+		}
         if (!EC_POINT_point2oct(a->group, a->pub_key, a->conv_form,
 				*out, buf_len, NULL))
 		{
-		ECerr(EC_F_ECPUBLICKEY_GET_OCTET, ERR_R_EC_LIB);
+		ECerr(EC_F_I2O_ECPUBLICKEY, ERR_R_EC_LIB);
 		OPENSSL_free(*out);
 		*out = NULL;
 		return 0;
 		}
+	if (!new_buffer)
+		*out += buf_len;
 	return buf_len;
 	}

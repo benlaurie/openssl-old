@@ -56,8 +56,6 @@
  * [including the GNU Public Licence.]
  */
 
-#ifndef OPENSSL_NO_SOCK
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
@@ -354,7 +352,7 @@ int BIO_sock_non_fatal_error(int err)
 #endif
 
 #ifdef EAGAIN
-#if EWOULDBLOCK != EAGAIN
+# if EWOULDBLOCK != EAGAIN
 	case EAGAIN:
 # endif
 #endif
@@ -377,4 +375,3 @@ int BIO_sock_non_fatal_error(int err)
 		}
 	return(0);
 	}
-#endif

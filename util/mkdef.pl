@@ -93,7 +93,7 @@ my @known_algorithms = ( "RC2", "RC4", "RC5", "IDEA", "DES", "BF",
 			 # External "algorithms"
 			 "FP_API", "STDIO", "SOCK", "KRB5",
 			 # Engines
-			 "STATIC_ENGINE",
+			 "STATIC_ENGINE", "ENGINE", "HW",
 			 # Deprecated functions
 			 "DEPRECATED" );
 
@@ -111,7 +111,7 @@ my $no_rc2; my $no_rc4; my $no_rc5; my $no_idea; my $no_des; my $no_bf;
 my $no_cast;
 my $no_md2; my $no_md4; my $no_md5; my $no_sha; my $no_ripemd; my $no_mdc2;
 my $no_rsa; my $no_dsa; my $no_dh; my $no_hmac=0; my $no_aes; my $no_krb5;
-my $no_ec; my $no_ecdsa; my $no_ecdh;
+my $no_ec; my $no_ecdsa; my $no_ecdh; my $no_engine; my $no_hw;
 my $no_fp_api; my $no_static_engine; my $no_deprecated;
 
 foreach (@ARGV, split(/ /, $options))
@@ -182,6 +182,8 @@ foreach (@ARGV, split(/ /, $options))
 	elsif (/^no-comp$/)	{ $no_comp=1; }
 	elsif (/^no-dso$/)	{ $no_dso=1; }
 	elsif (/^no-krb5$/)	{ $no_krb5=1; }
+	elsif (/^no-engine$/)	{ $no_engine=1; }
+	elsif (/^no-hw$/)	{ $no_hw=1; }
 	}
 
 
@@ -243,7 +245,7 @@ $crypto.=" crypto/ecdsa/ecdsa.h" ; # unless $no_ecdsa;
 $crypto.=" crypto/ecdh/ecdh.h" ; # unless $no_ecdh;
 $crypto.=" crypto/hmac/hmac.h" ; # unless $no_hmac;
 
-$crypto.=" crypto/engine/engine.h";
+$crypto.=" crypto/engine/engine.h"; # unless $no_engine;
 $crypto.=" crypto/stack/stack.h" ; # unless $no_stack;
 $crypto.=" crypto/buffer/buffer.h" ; # unless $no_buffer;
 $crypto.=" crypto/bio/bio.h" ; # unless $no_bio;
@@ -446,6 +448,10 @@ sub do_defs
 	    		}
 
 			s/\/\*.*?\*\///gs;                   # ignore comments
+			if (/\/\*/) {			     # if we have part
+				$line = $_;		     # of a comment,
+				next;			     # continue reading
+			}
 			s/{[^{}]*}//gs;                      # ignore {} blocks
 			print STDERR "DEBUG: \$def=\"$def\"\n" if $debug && $def ne "";
 			print STDERR "DEBUG: \$_=\"$_\"\n" if $debug;
@@ -671,6 +677,10 @@ sub do_defs
 						      "EXPORT_VAR_AS_FUNCTION",
 						      "FUNCTION");
 					next;
+				} elsif (/^\s*DECLARE_ASN1_ALLOC_FUNCTIONS\s*\(\s*(\w*)\s*\)/) {
+					$def .= "int $1_free(void);";
+					$def .= "int $1_new(void);";
+					next;
 				} elsif (/^\s*DECLARE_ASN1_FUNCTIONS_name\s*\(\s*(\w*)\s*,\s*(\w*)\s*\)/) {
 					$def .= "int d2i_$2(void);";
 					$def .= "int i2d_$2(void);";
@@ -823,14 +833,14 @@ sub do_defs
 			} elsif (/\(\*(\w*(\{[0-9]+\})?)\([^\)]+/) {
 				$s = $1;
 				print STDERR "DEBUG: found ANSI C function $s\n" if $debug;
-			} elsif (/\w+\W+(\w+)\W*\(\s*\)$/s) {
+			} elsif (/\w+\W+(\w+)\W*\(\s*\)(\s*__attribute__\(.*\)\s*)?$/s) {
 				# K&R C
 				print STDERR "DEBUG: found K&R C function $s\n" if $debug;
 				next;
-			} elsif (/\w+\W+\w+(\{[0-9]+\})?\W*\(.*\)$/s) {
-				while (not /\(\)$/s) {
-					s/[^\(\)]*\)$/\)/s;
-					s/\([^\(\)]*\)\)$/\)/s;
+			} elsif (/\w+\W+\w+(\{[0-9]+\})?\W*\(.*\)(\s*__attribute__\(.*\)\s*)?$/s) {
+				while (not /\(\)(\s*__attribute__\(.*\)\s*)?$/s) {
+					s/[^\(\)]*\)(\s*__attribute__\(.*\)\s*)?$/\)/s;
+					s/\([^\(\)]*\)\)(\s*__attribute__\(.*\)\s*)?$/\)/s;
 				}
 				s/\(void\)//;
 				/(\w+(\{[0-9]+\})?)\W*\(\)/s;
@@ -1065,6 +1075,8 @@ sub is_valid
 			if ($keyword eq "COMP" && $no_comp) { return 0; }
 			if ($keyword eq "DSO" && $no_dso) { return 0; }
 			if ($keyword eq "KRB5" && $no_krb5) { return 0; }
+			if ($keyword eq "ENGINE" && $no_engine) { return 0; }
+			if ($keyword eq "HW" && $no_hw) { return 0; }
 			if ($keyword eq "FP_API" && $no_fp_api) { return 0; }
 			if ($keyword eq "STATIC_ENGINE" && $no_static_engine) { return 0; }
 			if ($keyword eq "DEPRECATED" && $no_deprecated) { return 0; }

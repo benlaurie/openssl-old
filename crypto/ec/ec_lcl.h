@@ -3,7 +3,7 @@
  * Originally written by Bodo Moeller for the OpenSSL project.
  */
 /* ====================================================================
- * Copyright (c) 1998-2001 The OpenSSL Project.  All rights reserved.
+ * Copyright (c) 1998-2003 The OpenSSL Project.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -136,11 +136,6 @@ struct ec_method_st {
 	int (*dbl)(const EC_GROUP *, EC_POINT *r, const EC_POINT *a, BN_CTX *);
 	int (*invert)(const EC_GROUP *, EC_POINT *, BN_CTX *);
 
-	/* used by EC_POINTs_mul, EC_POINT_mul, EC_POINT_precompute_mult: */
-	int (*mul)(const EC_GROUP *group, EC_POINT *r, const BIGNUM *scalar,
-		size_t num, const EC_POINT *points[], const BIGNUM *scalars[], BN_CTX *);
-	int (*precompute_mult)(EC_GROUP *group, BN_CTX *);
-
 	/* used by EC_POINT_is_at_infinity, EC_POINT_is_on_curve, EC_POINT_cmp: */
 	int (*is_at_infinity)(const EC_GROUP *, const EC_POINT *);
 	int (*is_on_curve)(const EC_GROUP *, const EC_POINT *, BN_CTX *);
@@ -149,6 +144,13 @@ struct ec_method_st {
 	/* used by EC_POINT_make_affine, EC_POINTs_make_affine: */
 	int (*make_affine)(const EC_GROUP *, EC_POINT *, BN_CTX *);
 	int (*points_make_affine)(const EC_GROUP *, size_t num, EC_POINT *[], BN_CTX *);
+
+	/* used by EC_POINTs_mul, EC_POINT_mul, EC_POINT_precompute_mult, EC_POINT_have_precompute_mult
+	 * (default implementations are used if the 'mul' pointer is 0): */
+	int (*mul)(const EC_GROUP *group, EC_POINT *r, const BIGNUM *scalar,
+		size_t num, const EC_POINT *points[], const BIGNUM *scalars[], BN_CTX *);
+	int (*precompute_mult)(EC_GROUP *group, BN_CTX *);
+	int (*have_precompute_mult)(const EC_GROUP *group);
 
 
 	/* internal functions */
@@ -165,6 +167,13 @@ struct ec_method_st {
 	int (*field_set_to_one)(const EC_GROUP *, BIGNUM *r, BN_CTX *);
 } /* EC_METHOD */;
 
+typedef struct ec_extra_data_st {
+	struct ec_extra_data_st *next;
+	void *data;
+	void *(*dup_func)(void *);
+	void (*free_func)(void *);
+	void (*clear_free_func)(void *);
+} EC_EXTRA_DATA; /* used in EC_GROUP */
 
 struct ec_group_st {
 	const EC_METHOD *meth;
@@ -179,10 +188,7 @@ struct ec_group_st {
 	unsigned char *seed; /* optional seed for parameters (appears in ASN1) */
 	size_t seed_len;
 
-	void *extra_data;
-	void *(*extra_data_dup_func)(void *);
-	void (*extra_data_free_func)(void *);
-	void (*extra_data_clear_free_func)(void *);
+	EC_EXTRA_DATA *extra_data; /* linked list */
 
 	/* The following members are handled by the method functions,
 	 * even if they appear generic */
@@ -222,14 +228,17 @@ struct ec_group_st {
  * (with visibility limited to 'package' level for now).
  * We use the function pointers as index for retrieval; this obviates
  * global ex_data-style index tables.
- * (Currently, we have one slot only, but is is possible to extend this
- * if necessary.) */
-int EC_GROUP_set_extra_data(EC_GROUP *, void *extra_data, void *(*extra_data_dup_func)(void *),
-	void (*extra_data_free_func)(void *), void (*extra_data_clear_free_func)(void *));
-void *EC_GROUP_get_extra_data(const EC_GROUP *, void *(*extra_data_dup_func)(void *),
-	void (*extra_data_free_func)(void *), void (*extra_data_clear_free_func)(void *));
-void EC_GROUP_free_extra_data(EC_GROUP *);
-void EC_GROUP_clear_free_extra_data(EC_GROUP *);
+ */
+int EC_GROUP_set_extra_data(EC_GROUP *, void *data,
+	void *(*dup_func)(void *), void (*free_func)(void *), void (*clear_free_func)(void *));
+void *EC_GROUP_get_extra_data(const EC_GROUP *,
+	void *(*dup_func)(void *), void (*free_func)(void *), void (*clear_free_func)(void *));
+void EC_GROUP_free_extra_data(EC_GROUP*,
+	void *(*dup_func)(void *), void (*free_func)(void *), void (*clear_free_func)(void *));
+void EC_GROUP_clear_free_extra_data(EC_GROUP*,
+	void *(*dup_func)(void *), void (*free_func)(void *), void (*clear_free_func)(void *));
+void EC_GROUP_free_all_extra_data(EC_GROUP *);
+void EC_GROUP_clear_free_all_extra_data(EC_GROUP *);
 
 
 
@@ -248,10 +257,13 @@ struct ec_point_st {
 
 
 
-/* method functions in ec_mult.c */
+/* method functions in ec_mult.c
+ * (ec_lib.c uses these as defaults if group->method->mul is 0) */
 int ec_wNAF_mul(const EC_GROUP *group, EC_POINT *r, const BIGNUM *scalar,
 	size_t num, const EC_POINT *points[], const BIGNUM *scalars[], BN_CTX *);
 int ec_wNAF_precompute_mult(EC_GROUP *group, BN_CTX *);
+int ec_wNAF_have_precompute_mult(const EC_GROUP *group);
+
 
 /* method functions in ecp_smpl.c */
 int ec_GFp_simple_group_init(EC_GROUP *);
@@ -317,6 +329,7 @@ int ec_GFp_recp_field_sqr(const EC_GROUP *, BIGNUM *r, const BIGNUM *a, BN_CTX *
 
 
 /* method functions in ecp_nist.c */
+int ec_GFp_nist_group_copy(EC_GROUP *dest, const EC_GROUP *src);
 int ec_GFp_nist_group_set_curve(EC_GROUP *, const BIGNUM *p, const BIGNUM *a, const BIGNUM *b, BN_CTX *);
 int ec_GFp_nist_field_mul(const EC_GROUP *, BIGNUM *r, const BIGNUM *a, const BIGNUM *b, BN_CTX *);
 int ec_GFp_nist_field_sqr(const EC_GROUP *, BIGNUM *r, const BIGNUM *a, BN_CTX *);
@@ -363,3 +376,4 @@ int ec_GF2m_simple_field_div(const EC_GROUP *, BIGNUM *r, const BIGNUM *a, const
 int ec_GF2m_simple_mul(const EC_GROUP *group, EC_POINT *r, const BIGNUM *scalar,
 	size_t num, const EC_POINT *points[], const BIGNUM *scalars[], BN_CTX *);
 int ec_GF2m_precompute_mult(EC_GROUP *group, BN_CTX *ctx);
+int ec_GF2m_have_precompute_mult(const EC_GROUP *group);

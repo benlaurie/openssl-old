@@ -2,7 +2,112 @@
  OpenSSL CHANGES
  _______________
 
- Changes between 0.9.7 and 0.9.8  [xx XXX xxxx]
+ Changes between 0.9.7a and 0.9.8  [xx XXX xxxx]
+
+  *) Make it possible to create self-signed certificates with 'openssl ca'
+     in such a way that the self-signed certificate becomes part of the
+     CA database and uses the same mechanisms for serial number generation
+     as all other certificate signing.  The new flag '-selfsign' enables
+     this functionality.  Adapt CA.sh and CA.pl.in.
+     [Richard Levitte]
+
+  *) Add functionality to check the public key of a certificate request
+     against a given private.  This is useful to check that a certificate
+     request can be signed by that key (self-signing).
+     [Richard Levitte]
+
+  *) Make it possible to have multiple active certificates with the same
+     subject in the CA index file.  This is done only if the keyword
+     'unique_subject' is set to 'no' in the main CA section (default
+     if 'CA_default') of the configuration file.  The value is saved
+     with the database itself in a separate index attribute file,
+     named like the index file with '.attr' appended to the name.
+     [Richard Levitte]
+
+  *) Generate muti valued AVAs using '+' notation in config files for
+     req and dirName.
+     [Steve Henson]
+
+  *) Support for nameConstraints certificate extension.
+     [Steve Henson]
+
+  *) Support for policyConstraints certificate extension.
+     [Steve Henson]
+
+  *) Support for policyMappings certificate extension.
+     [Steve Henson]
+
+  *) Fixed a typo bug that would cause ENGINE_set_default() to set an
+     ENGINE as defaults for all supported algorithms irrespective of
+     the 'flags' parameter. 'flags' is now honoured, so applications
+     should make sure they are passing it correctly.
+     [Geoff Thorpe]
+
+  *) Make sure the default DSA_METHOD implementation only uses its
+     dsa_mod_exp() and/or bn_mod_exp() handlers if they are non-NULL,
+     and change its own handlers to be NULL so as to remove unnecessary
+     indirection. This lets alternative implementations fallback to the
+     default implementation more easily.
+     [Geoff Thorpe]
+
+  *) Support for directoryName in GeneralName related extensions
+     in config files.
+     [Steve Henson]
+
+  *) Make it possible to link applications using Makefile.shared.
+     Make that possible even when linking against static libraries!
+     [Richard Levitte]
+
+  *) Various fixes to base64 BIO and non blocking I/O. On write 
+     flushes were not handled properly if the BIO retried. On read
+     data was not being buffered properly and had various logic bugs.
+     [Steve Henson]
+
+  *) Support for single pass processing for S/MIME signing. This now
+     means that S/MIME signing can be done from a pipe, in addition
+     cleartext signing (multipart/signed type) is effectively streaming
+     and the signed data does not need to be all held in memory.
+
+     This is done with a new flag PKCS7_STREAM. When this flag is set
+     PKCS7_sign() only initializes the PKCS7 structure and the actual signing
+     is done after the data is output (and digests calculated) in
+     SMIME_write_PKCS7().
+     [Steve Henson]
+
+  *) Add full support for -rpath/-R, both in shared libraries and
+     applications, at least on the platforms where it's known how
+     to do it.
+     [Richard Levitte]
+
+  *) In crypto/ec/ec_mult.c, implement fast point multiplication with
+     precomputation, based on wNAF splitting: EC_GROUP_precompute_mult()
+     will now compute a table of multiples of the generator that
+     makes subsequent invocations of EC_POINTs_mul() or EC_POINT_mul()
+     faster (notably in the case of a single point multiplication,
+     scalar * generator).
+     [Nils Larsch, Bodo Moeller]
+
+  *) IPv6 support for certificate extensions. The various extensions
+     which use the IP:a.b.c.d can now take IPv6 addresses using the
+     formats of RFC1884 2.2 . IPv6 addresses are now also displayed
+     correctly.
+     [Steve Henson]
+
+  *) Added an ENGINE that implements RSA by performing private key
+     exponentiations with the GMP library. The conversions to and from
+     GMP's mpz_t format aren't optimised nor are any montgomery forms
+     cached, and on x86 it appears OpenSSL's own performance has caught up.
+     However there are likely to be other architectures where GMP could
+     provide a boost. This ENGINE is not built in by default, but it can be
+     specified at Configure time and should be accompanied by the necessary
+     linker additions, eg;
+         ./config -DOPENSSL_USE_GMP -lgmp
+     [Geoff Thorpe]
+
+  *) "openssl engine" will not display ENGINE/DSO load failure errors when
+     testing availability of engines with "-t" - the old behaviour is
+     produced by increasing the feature's verbosity with "-tt".
+     [Geoff Thorpe]
 
   *) ECDSA routines: under certain error conditions uninitialized BN objects
      could be freed. Solution: make sure initialization is performed early
@@ -149,8 +254,6 @@
      [Nils Gura and Douglas Stebila (Sun Microsystems Laboratories)]
 
   *) Add ECDH in new directory crypto/ecdh/.
-TODO: more general interface (return  x  coordinate, not its hash)
-TODO: bug: pad  x  with leading zeros if necessary
      [Douglas Stebila (Sun Microsystems Laboratories)]
 
   *) Let BN_rand_range() abort with an error after 100 iterations
@@ -379,7 +482,103 @@ TODO: bug: pad  x  with leading zeros if necessary
          EC_GROUP_get_nid()
      [Nils Larsch <nla@trustcenter.de, Bodo Moeller]
  
- Changes between 0.9.7 and 0.9.7a  [XX xxx 2003]
+  *) Remove a few calls to bn_wexpand() in BN_sqr() (the one in there
+     was actually never needed) and in BN_mul().  The removal in BN_mul()
+     required a small change in bn_mul_part_recursive() and the addition
+     of the functions bn_cmp_part_words(), bn_sub_part_words() and
+     bn_add_part_words(), which do the same thing as bn_cmp_words(),
+     bn_sub_words() and bn_add_words() except they take arrays with
+     differing sizes.
+     [Richard Levitte]
+
+ Changes between 0.9.7a and 0.9.7b  [xx XXX 2003]
+
+  *) Countermeasure against the Klima-Pokorny-Rosa extension of
+     Bleichbacher's attack on PKCS #1 v1.5 padding: treat
+     a protocol version number mismatch like a decryption error
+     in ssl3_get_client_key_exchange (ssl/s3_srvr.c).
+     [Bodo Moeller]
+
+  *) Turn on RSA blinding by default in the default implementation
+     to avoid a timing attack. Applications that don't want it can call
+     RSA_blinding_off() or use the new flag RSA_FLAG_NO_BLINDING.
+     They would be ill-advised to do so in most cases.
+     [Ben Laurie, Steve Henson, Geoff Thorpe, Bodo Moeller]
+
+  *) Change RSA blinding code so that it works when the PRNG is not
+     seeded (in this case, the secret RSA exponent is abused as
+     an unpredictable seed -- if it is not unpredictable, there
+     is no point in blinding anyway).  Make RSA blinding thread-safe
+     by remembering the creator's thread ID in rsa->blinding and
+     having all other threads use local one-time blinding factors
+     (this requires more computation than sharing rsa->blinding, but
+     avoids excessive locking; and if an RSA object is not shared
+     between threads, blinding will still be very fast).
+     [Bodo Moeller]
+
+yet to be integrated into this CVS branch:
+- Geoff's ENGINE_set_default() fix
+
+  *) Target "mingw" now allows native Windows code to be generated in
+     the Cygwin environment as well as with the MinGW compiler.
+     [Ulf Moeller] 
+
+ Changes between 0.9.7 and 0.9.7a  [19 Feb 2003]
+
+  *) In ssl3_get_record (ssl/s3_pkt.c), minimize information leaked
+     via timing by performing a MAC computation even if incorrrect
+     block cipher padding has been found.  This is a countermeasure
+     against active attacks where the attacker has to distinguish
+     between bad padding and a MAC verification error. (CAN-2003-0078)
+
+     [Bodo Moeller; problem pointed out by Brice Canvel (EPFL),
+     Alain Hiltgen (UBS), Serge Vaudenay (EPFL), and
+     Martin Vuagnoux (EPFL, Ilion)]
+
+  *) Make the no-err option work as intended.  The intention with no-err
+     is not to have the whole error stack handling routines removed from
+     libcrypto, it's only intended to remove all the function name and
+     reason texts, thereby removing some of the footprint that may not
+     be interesting if those errors aren't displayed anyway.
+
+     NOTE: it's still possible for any application or module to have it's
+     own set of error texts inserted.  The routines are there, just not
+     used by default when no-err is given.
+     [Richard Levitte]
+
+  *) Add support for FreeBSD on IA64.
+     [dirk.meyer@dinoex.sub.org via Richard Levitte, resolves #454]
+
+  *) Adjust DES_cbc_cksum() so it returns the same value as the MIT
+     Kerberos function mit_des_cbc_cksum().  Before this change,
+     the value returned by DES_cbc_cksum() was like the one from
+     mit_des_cbc_cksum(), except the bytes were swapped.
+     [Kevin Greaney <Kevin.Greaney@hp.com> and Richard Levitte]
+
+  *) Allow an application to disable the automatic SSL chain building.
+     Before this a rather primitive chain build was always performed in
+     ssl3_output_cert_chain(): an application had no way to send the 
+     correct chain if the automatic operation produced an incorrect result.
+
+     Now the chain builder is disabled if either:
+
+     1. Extra certificates are added via SSL_CTX_add_extra_chain_cert().
+
+     2. The mode flag SSL_MODE_NO_AUTO_CHAIN is set.
+
+     The reasoning behind this is that an application would not want the
+     auto chain building to take place if extra chain certificates are
+     present and it might also want a means of sending no additional
+     certificates (for example the chain has two certificates and the
+     root is omitted).
+     [Steve Henson]
+
+  *) Add the possibility to build without the ENGINE framework.
+     [Steven Reddie <smr@essemer.com.au> via Richard Levitte]
+
+  *) Under Win32 gmtime() can return NULL: check return value in
+     OPENSSL_gmtime(). Add error code for case where gmtime() fails.
+     [Steve Henson]
 
   *) DSA routines: under certain error conditions uninitialized BN objects
      could be freed. Solution: make sure initialization is performed early
@@ -2080,6 +2279,11 @@ des-cbc           3624.96k     5258.21k     5530.91k     5624.30k     5628.26k
      be reduced modulo  m.
      [Lenka Fibikova <fibikova@exp-math.uni-essen.de>, Bodo Moeller]
 
+#if 0
+     The following entry accidentily appeared in the CHANGES file
+     distributed with OpenSSL 0.9.7.  The modifications described in
+     it do *not* apply to OpenSSL 0.9.7.
+
   *) Remove a few calls to bn_wexpand() in BN_sqr() (the one in there
      was actually never needed) and in BN_mul().  The removal in BN_mul()
      required a small change in bn_mul_part_recursive() and the addition
@@ -2088,6 +2292,7 @@ des-cbc           3624.96k     5258.21k     5530.91k     5624.30k     5628.26k
      bn_sub_words() and bn_add_words() except they take arrays with
      differing sizes.
      [Richard Levitte]
+#endif
 
   *) In 'openssl passwd', verify passwords read from the terminal
      unless the '-salt' option is used (which usually means that
@@ -2218,6 +2423,18 @@ des-cbc           3624.96k     5258.21k     5530.91k     5624.30k     5628.26k
 
   *) Clean old EAY MD5 hack from e_os.h.
      [Richard Levitte]
+
+ Changes between 0.9.6h and 0.9.6i  [19 Feb 2003]
+
+  *) In ssl3_get_record (ssl/s3_pkt.c), minimize information leaked
+     via timing by performing a MAC computation even if incorrrect
+     block cipher padding has been found.  This is a countermeasure
+     against active attacks where the attacker has to distinguish
+     between bad padding and a MAC verification error. (CAN-2003-0078)
+
+     [Bodo Moeller; problem pointed out by Brice Canvel (EPFL),
+     Alain Hiltgen (UBS), Serge Vaudenay (EPFL), and
+     Martin Vuagnoux (EPFL, Ilion)]
 
  Changes between 0.9.6g and 0.9.6h  [5 Dec 2002]
 

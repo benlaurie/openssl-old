@@ -3,7 +3,7 @@
  * Written by Nils Larsch for the OpenSSL project.
  */
 /* ====================================================================
- * Copyright (c) 1998-2002 The OpenSSL Project.  All rights reserved.
+ * Copyright (c) 1998-2003 The OpenSSL Project.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -72,7 +72,7 @@ const EC_METHOD *EC_GFp_nist_method(void)
 		ec_GFp_simple_group_init,
 		ec_GFp_simple_group_finish,
 		ec_GFp_simple_group_clear_finish,
-		ec_GFp_simple_group_copy,
+		ec_GFp_nist_group_copy,
 		ec_GFp_nist_group_set_curve,
 		ec_GFp_simple_group_get_curve,
 		ec_GFp_simple_group_get_degree,
@@ -92,13 +92,14 @@ const EC_METHOD *EC_GFp_nist_method(void)
 		ec_GFp_simple_add,
 		ec_GFp_simple_dbl,
 		ec_GFp_simple_invert,
-		0 /* mul */,
-		0 /* precompute_mult */,
 		ec_GFp_simple_is_at_infinity,
 		ec_GFp_simple_is_on_curve,
 		ec_GFp_simple_cmp,
 		ec_GFp_simple_make_affine,
 		ec_GFp_simple_points_make_affine,
+		0 /* mul */,
+		0 /* precompute_mult */,
+		0 /* have_precompute_mult */,	
 		ec_GFp_nist_field_mul,
 		ec_GFp_nist_field_sqr,
 		0 /* field_div */,
@@ -113,6 +114,12 @@ const EC_METHOD *EC_GFp_nist_method(void)
 #define	NO_32_BIT_TYPE
 #endif
 
+int ec_GFp_nist_group_copy(EC_GROUP *dest, const EC_GROUP *src)
+	{
+	dest->field_mod_func = src->field_mod_func;
+
+	return ec_GFp_simple_group_copy(dest, src);
+	}
 
 int ec_GFp_nist_group_set_curve(EC_GROUP *group, const BIGNUM *p,
 	const BIGNUM *a, const BIGNUM *b, BN_CTX *ctx)
@@ -165,21 +172,7 @@ int ec_GFp_nist_group_set_curve(EC_GROUP *group, const BIGNUM *p,
 		goto err;
 		}
 
-	/* group->field */
-	if (!BN_copy(&group->field, p)) goto err;
-	BN_set_sign(&group->field, 0);
-
-	/* group->a */
-	if (!group->field_mod_func(&group->a, a, p, ctx)) goto err;
-
-	/* group->b */
-	if (!group->field_mod_func(&group->b, b, p, ctx)) goto err;
-
-	/* group->a_is_minus3 */
-	if (!BN_add_word(tmp_bn, 3)) goto err;
-	group->a_is_minus3 = (0 == BN_cmp(tmp_bn, &group->field));
-
-	ret = 1;
+	ret = ec_GFp_simple_group_set_curve(group, p, a, b, ctx);
 
  err:
 	BN_CTX_end(ctx);

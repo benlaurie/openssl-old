@@ -259,7 +259,9 @@ static int s_msg=0;
 static int s_quiet=0;
 
 static int hack=0;
+#ifndef OPENSSL_NO_ENGINE
 static char *engine_id=NULL;
+#endif
 static const char *session_id_prefix=NULL;
 
 #ifdef MONOLITH
@@ -284,7 +286,9 @@ static void s_server_init(void)
 	s_msg=0;
 	s_quiet=0;
 	hack=0;
+#ifndef OPENSSL_NO_ENGINE
 	engine_id=NULL;
+#endif
 	}
 #endif
 
@@ -341,7 +345,9 @@ static void sv_usage(void)
 	BIO_printf(bio_err," -WWW          - Respond to a 'GET /<path> HTTP/1.0' with file ./<path>\n");
 	BIO_printf(bio_err," -HTTP         - Respond to a 'GET /<path> HTTP/1.0' with file ./<path>\n");
         BIO_printf(bio_err,"                 with the assumption it contains a complete HTTP response.\n");
+#ifndef OPENSSL_NO_ENGINE
 	BIO_printf(bio_err," -engine id    - Initialise and use the specified engine\n");
+#endif
 	BIO_printf(bio_err," -id_prefix arg - Generate SSL/TLS session IDs prefixed by 'arg'\n");
 	BIO_printf(bio_err," -rand file%cfile%c...\n", LIST_SEPARATOR_CHAR, LIST_SEPARATOR_CHAR);
 	}
@@ -516,7 +522,9 @@ int MAIN(int argc, char *argv[])
 	int no_tmp_rsa=0,no_dhe=0,no_ecdhe=0,nocert=0;
 	int state=0;
 	SSL_METHOD *meth=NULL;
+#ifndef OPENSSL_NO_ENGINE
 	ENGINE *e=NULL;
+#endif
 	char *inrand=NULL;
 
 #if !defined(OPENSSL_NO_SSL2) && !defined(OPENSSL_NO_SSL3)
@@ -700,11 +708,13 @@ int MAIN(int argc, char *argv[])
 			if (--argc < 1) goto bad;
 			session_id_prefix = *(++argv);
 			}
+#ifndef OPENSSL_NO_ENGINE
 		else if (strcmp(*argv,"-engine") == 0)
 			{
 			if (--argc < 1) goto bad;
 			engine_id= *(++argv);
 			}
+#endif
 		else if (strcmp(*argv,"-rand") == 0)
 			{
 			if (--argc < 1) goto bad;
@@ -729,7 +739,9 @@ bad:
 	SSL_load_error_strings();
 	OpenSSL_add_ssl_algorithms();
 
+#ifndef OPENSSL_NO_ENGINE
         e = setup_engine(bio_err, engine_id, 1);
+#endif
 
 	if (!app_RAND_load_file(NULL, bio_err, 1) && inrand == NULL
 		&& !RAND_status())
@@ -963,23 +975,23 @@ static void print_stats(BIO *bio, SSL_CTX *ssl_ctx)
 	{
 	BIO_printf(bio,"%4ld items in the session cache\n",
 		SSL_CTX_sess_number(ssl_ctx));
-	BIO_printf(bio,"%4d client connects (SSL_connect())\n",
+	BIO_printf(bio,"%4ld client connects (SSL_connect())\n",
 		SSL_CTX_sess_connect(ssl_ctx));
-	BIO_printf(bio,"%4d client renegotiates (SSL_connect())\n",
+	BIO_printf(bio,"%4ld client renegotiates (SSL_connect())\n",
 		SSL_CTX_sess_connect_renegotiate(ssl_ctx));
-	BIO_printf(bio,"%4d client connects that finished\n",
+	BIO_printf(bio,"%4ld client connects that finished\n",
 		SSL_CTX_sess_connect_good(ssl_ctx));
-	BIO_printf(bio,"%4d server accepts (SSL_accept())\n",
+	BIO_printf(bio,"%4ld server accepts (SSL_accept())\n",
 		SSL_CTX_sess_accept(ssl_ctx));
-	BIO_printf(bio,"%4d server renegotiates (SSL_accept())\n",
+	BIO_printf(bio,"%4ld server renegotiates (SSL_accept())\n",
 		SSL_CTX_sess_accept_renegotiate(ssl_ctx));
-	BIO_printf(bio,"%4d server accepts that finished\n",
+	BIO_printf(bio,"%4ld server accepts that finished\n",
 		SSL_CTX_sess_accept_good(ssl_ctx));
-	BIO_printf(bio,"%4d session cache hits\n",SSL_CTX_sess_hits(ssl_ctx));
-	BIO_printf(bio,"%4d session cache misses\n",SSL_CTX_sess_misses(ssl_ctx));
-	BIO_printf(bio,"%4d session cache timeouts\n",SSL_CTX_sess_timeouts(ssl_ctx));
-	BIO_printf(bio,"%4d callback cache hits\n",SSL_CTX_sess_cb_hits(ssl_ctx));
-	BIO_printf(bio,"%4d cache full overflows (%d allowed)\n",
+	BIO_printf(bio,"%4ld session cache hits\n",SSL_CTX_sess_hits(ssl_ctx));
+	BIO_printf(bio,"%4ld session cache misses\n",SSL_CTX_sess_misses(ssl_ctx));
+	BIO_printf(bio,"%4ld session cache timeouts\n",SSL_CTX_sess_timeouts(ssl_ctx));
+	BIO_printf(bio,"%4ld callback cache hits\n",SSL_CTX_sess_cb_hits(ssl_ctx));
+	BIO_printf(bio,"%4ld cache full overflows (%ld allowed)\n",
 		SSL_CTX_sess_cache_full(ssl_ctx),
 		SSL_CTX_sess_get_cache_size(ssl_ctx));
 	}

@@ -74,34 +74,27 @@ if [ "x$XREL" != "x" ]; then
 		echo "whatever-whatever-sco5"; exit 0
 		;;
 	    4.2MP)
-		if [ "x$VERSION" = "x2.01" ]; then
-		    echo "${MACHINE}-whatever-unixware201"; exit 0
-		elif [ "x$VERSION" = "x2.02" ]; then
-		    echo "${MACHINE}-whatever-unixware202"; exit 0
-		elif [ "x$VERSION" = "x2.03" ]; then
-		    echo "${MACHINE}-whatever-unixware203"; exit 0
-		elif [ "x$VERSION" = "x2.1.1" ]; then
-		    echo "${MACHINE}-whatever-unixware211"; exit 0
-		elif [ "x$VERSION" = "x2.1.2" ]; then
-		    echo "${MACHINE}-whatever-unixware212"; exit 0
-		elif [ "x$VERSION" = "x2.1.3" ]; then
-		    echo "${MACHINE}-whatever-unixware213"; exit 0
-		else
-		    echo "${MACHINE}-whatever-unixware2"; exit 0
-		fi
+		case "x${VERSION}" in
+		    x2.0*) echo "whatever-whatever-unixware20"; exit 0 ;;
+		    x2.1*) echo "whatever-whatever-unixware21"; exit 0 ;;
+		    x2*)   echo "whatever-whatever-unixware2";  exit 0 ;;
+		esac
 		;;
 	    4.2)
 		echo "whatever-whatever-unixware1"; exit 0
 		;;
-	    OpenUNIX)
-		if [ "`echo x$VERSION | sed -e 's/\..*//'`" = "x8" ]; then
-		    echo "${MACHINE}-unknown-OpenUNIX${VERSION}"; exit 0
-		fi
-		;;
 	    5)
-		if [ "`echo x$VERSION | sed -e 's/\..*//'`" = "x7" ]; then
-		    echo "${MACHINE}-sco-unixware7"; exit 0
-		fi
+		case "x${VERSION}" in
+		    # We hardcode i586 in place of ${MACHINE} for the
+		    # following reason. The catch is that even though Pentium
+		    # is minimum requirement for platforms in question,
+		    # ${MACHINE} gets always assigned to i386. Now, problem
+		    # with i386 is that it makes ./config pass 386 to
+		    # ./Configure, which in turn makes make generate
+		    # inefficient SHA-1 (for this moment) code.
+		    x7*)  echo "i586-sco-unixware7";           exit 0 ;;
+		    x8*)  echo "i586-unkn-OpenUNIX${VERSION}"; exit 0 ;;
+		esac
 		;;
 	esac
     fi
@@ -464,6 +457,10 @@ if [ "${SYSTEM}-${MACHINE}" = "Linux-alpha" ]; then
   fi
 fi
 
+if [ "${SYSTEM}" = "AIX" ]; then	# favor vendor cc over gcc
+    (cc) 2>&1 | grep -iv "not found" > /dev/null && CC=cc
+fi
+
 CCVER=${CCVER:-0}
 
 # read the output of the embedded GuessOS 
@@ -476,7 +473,7 @@ echo Operating system: $GUESSOS
 # more time that I want to waste at the moment
 case "$GUESSOS" in
   mips2-sgi-irix)
-	CPU=`(hinv -t cpu) 2>/dev/null | sed 's/^CPU:[^R]*R\([0-9]*\).*/\1/'`
+	CPU=`(hinv -t cpu) 2>/dev/null | head -1 | sed 's/^CPU:[^R]*R\([0-9]*\).*/\1/'`
 	CPU=${CPU:-0}
 	if [ $CPU -ge 4000 ]; then
 		options="$options -mips2"
@@ -484,7 +481,7 @@ case "$GUESSOS" in
 	OUT="irix-$CC"
 	;;
   mips3-sgi-irix)
-	CPU=`(hinv -t cpu) 2>/dev/null | sed 's/^CPU:[^R]*R\([0-9]*\).*/\1/'`
+	CPU=`(hinv -t cpu) 2>/dev/null | head -1 | sed 's/^CPU:[^R]*R\([0-9]*\).*/\1/'`
 	CPU=${CPU:-0}
 	if [ $CPU -ge 5000 ]; then
 		options="$options -mips4"
@@ -500,7 +497,7 @@ case "$GUESSOS" in
 	  echo "         You have about 5 seconds to press Ctrl-C to abort."
 	  (stty -icanon min 0 time 50; read waste) < /dev/tty
 	fi
-        CPU=`(hinv -t cpu) 2>/dev/null | sed 's/^CPU:[^R]*R\([0-9]*\).*/\1/'`
+        CPU=`(hinv -t cpu) 2>/dev/null | head -1 | sed 's/^CPU:[^R]*R\([0-9]*\).*/\1/'`
         CPU=${CPU:-0}
         if [ $CPU -ge 5000 ]; then
                 options="$options -mips4"
@@ -644,6 +641,7 @@ EOF
   *-*-sunos4) OUT="sunos-$CC" ;;
   alpha*-*-freebsd*) OUT="FreeBSD-alpha" ;;
   sparc64-*-freebsd*) OUT="FreeBSD-sparc64" ;;
+  ia64-*-freebsd*) OUT="FreeBSD-ia64" ;;
   *-freebsd[3-9]*) OUT="FreeBSD-elf" ;;
   *-freebsd[1-2]*) OUT="FreeBSD" ;;
   *86*-*-netbsd) OUT="NetBSD-x86" ;;

@@ -56,7 +56,7 @@
  * [including the GNU Public Licence.]
  */
 /* ====================================================================
- * Copyright (c) 1998-2002 The OpenSSL Project.  All rights reserved.
+ * Copyright (c) 1998-2003 The OpenSSL Project.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -1577,6 +1577,19 @@ err:
 	return(-1);
 	}
 
+
+static const int KDF1_SHA1_len = 20;
+static void *KDF1_SHA1(void *in, size_t inlen, void *out, size_t outlen)
+	{
+#ifndef OPENSSL_NO_SHA
+	if (outlen != SHA_DIGEST_LENGTH)
+		return NULL;
+	return SHA1(in, inlen, out);
+#else
+	return NULL;
+#endif
+	}
+
 static int ssl3_get_client_key_exchange(SSL *s)
 	{
 	int i,al,ok;
@@ -1671,7 +1684,7 @@ static int ssl3_get_client_key_exchange(SSL *s)
 		if (i != SSL_MAX_MASTER_KEY_LENGTH)
 			{
 			al=SSL_AD_DECODE_ERROR;
-			SSLerr(SSL_F_SSL3_GET_CLIENT_KEY_EXCHANGE,SSL_R_BAD_RSA_DECRYPT);
+			/* SSLerr(SSL_F_SSL3_GET_CLIENT_KEY_EXCHANGE,SSL_R_BAD_RSA_DECRYPT); */
 			}
 
 		if ((al == -1) && !((p[0] == (s->client_version>>8)) && (p[1] == (s->client_version & 0xff))))
@@ -1687,30 +1700,28 @@ static int ssl3_get_client_key_exchange(SSL *s)
 				(p[0] == (s->version>>8)) && (p[1] == (s->version & 0xff))))
 				{
 				al=SSL_AD_DECODE_ERROR;
-				SSLerr(SSL_F_SSL3_GET_CLIENT_KEY_EXCHANGE,SSL_R_BAD_PROTOCOL_VERSION_NUMBER);
-				goto f_err;
+				/* SSLerr(SSL_F_SSL3_GET_CLIENT_KEY_EXCHANGE,SSL_R_BAD_PROTOCOL_VERSION_NUMBER); */
+
+				/* The Klima-Pokorny-Rosa extension of Bleichenbacher's attack
+				 * (http://eprint.iacr.org/2003/052/) exploits the version
+				 * number check as a "bad version oracle" -- an alert would
+				 * reveal that the plaintext corresponding to some ciphertext
+				 * made up by the adversary is properly formatted except
+				 * that the version number is wrong.  To avoid such attacks,
+				 * we should treat this just like any other decryption error. */
 				}
 			}
 
 		if (al != -1)
 			{
-#if 0
-			goto f_err;
-#else
 			/* Some decryption failure -- use random value instead as countermeasure
 			 * against Bleichenbacher's attack on PKCS #1 v1.5 RSA padding
-			 * (see RFC 2246, section 7.4.7.1).
-			 * But note that due to length and protocol version checking, the
-			 * attack is impractical anyway (see section 5 in D. Bleichenbacher:
-			 * "Chosen Ciphertext Attacks Against Protocols Based on the RSA
-			 * Encryption Standard PKCS #1", CRYPTO '98, LNCS 1462, pp. 1-12).
-			 */
+			 * (see RFC 2246, section 7.4.7.1). */
 			ERR_clear_error();
 			i = SSL_MAX_MASTER_KEY_LENGTH;
 			p[0] = s->client_version >> 8;
 			p[1] = s->client_version & 0xff;
 			RAND_pseudo_bytes(p+2, i-2); /* should be RAND_bytes, but we cannot work around a failure */
-#endif
 			}
 	
 		s->session->master_key_length=
@@ -2047,7 +2058,7 @@ static int ssl3_get_client_key_exchange(SSL *s)
                         }
 
 		/* Compute the shared pre-master secret */
-                i = ECDH_compute_key(p, clnt_ecpoint, srvr_ecdh);
+                i = ECDH_compute_key(p, KDF1_SHA1_len, clnt_ecpoint, srvr_ecdh, KDF1_SHA1);
                 if (i <= 0)
                         {
                         SSLerr(SSL_F_SSL3_GET_CLIENT_KEY_EXCHANGE,

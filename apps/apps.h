@@ -121,7 +121,9 @@
 #include <openssl/lhash.h>
 #include <openssl/conf.h>
 #include <openssl/txt_db.h>
+#ifndef OPENSSL_NO_ENGINE
 #include <openssl/engine.h>
+#endif
 #include <openssl/ossl_typ.h>
 
 int app_RAND_load_file(const char *file, BIO *bio_e, int dont_warn);
@@ -179,30 +181,57 @@ extern BIO *bio_err;
 		do_pipe_sig()
 #  define apps_shutdown()
 #else
-#  if defined(OPENSSL_SYS_MSDOS) || defined(OPENSSL_SYS_WIN16) || \
-   defined(OPENSSL_SYS_WIN32)
-#    ifdef _O_BINARY
-#      define apps_startup() \
-		do { _fmode=_O_BINARY; do_pipe_sig(); CRYPTO_malloc_init(); \
-		ERR_load_crypto_strings(); OpenSSL_add_all_algorithms(); \
-		ENGINE_load_builtin_engines(); setup_ui_method(); } while(0)
+#  ifndef OPENSSL_NO_ENGINE
+#    if defined(OPENSSL_SYS_MSDOS) || defined(OPENSSL_SYS_WIN16) || \
+     defined(OPENSSL_SYS_WIN32)
+#      ifdef _O_BINARY
+#        define apps_startup() \
+			do { _fmode=_O_BINARY; do_pipe_sig(); CRYPTO_malloc_init(); \
+			ERR_load_crypto_strings(); OpenSSL_add_all_algorithms(); \
+			ENGINE_load_builtin_engines(); setup_ui_method(); } while(0)
+#      else
+#        define apps_startup() \
+			do { _fmode=O_BINARY; do_pipe_sig(); CRYPTO_malloc_init(); \
+			ERR_load_crypto_strings(); OpenSSL_add_all_algorithms(); \
+			ENGINE_load_builtin_engines(); setup_ui_method(); } while(0)
+#      endif
 #    else
 #      define apps_startup() \
-		do { _fmode=O_BINARY; do_pipe_sig(); CRYPTO_malloc_init(); \
-		ERR_load_crypto_strings(); OpenSSL_add_all_algorithms(); \
-		ENGINE_load_builtin_engines(); setup_ui_method(); } while(0)
+			do { do_pipe_sig(); OpenSSL_add_all_algorithms(); \
+			ERR_load_crypto_strings(); ENGINE_load_builtin_engines(); \
+			setup_ui_method(); } while(0)
 #    endif
+#    define apps_shutdown() \
+			do { CONF_modules_unload(1); destroy_ui_method(); \
+			EVP_cleanup(); ENGINE_cleanup(); \
+			CRYPTO_cleanup_all_ex_data(); ERR_remove_state(0); \
+			ERR_free_strings(); } while(0)
 #  else
-#    define apps_startup() \
-		do { do_pipe_sig(); OpenSSL_add_all_algorithms(); \
-		ERR_load_crypto_strings(); ENGINE_load_builtin_engines(); \
-		setup_ui_method(); } while(0)
+#    if defined(OPENSSL_SYS_MSDOS) || defined(OPENSSL_SYS_WIN16) || \
+     defined(OPENSSL_SYS_WIN32)
+#      ifdef _O_BINARY
+#        define apps_startup() \
+			do { _fmode=_O_BINARY; do_pipe_sig(); CRYPTO_malloc_init(); \
+			ERR_load_crypto_strings(); OpenSSL_add_all_algorithms(); \
+			setup_ui_method(); } while(0)
+#      else
+#        define apps_startup() \
+			do { _fmode=O_BINARY; do_pipe_sig(); CRYPTO_malloc_init(); \
+			ERR_load_crypto_strings(); OpenSSL_add_all_algorithms(); \
+			setup_ui_method(); } while(0)
+#      endif
+#    else
+#      define apps_startup() \
+			do { do_pipe_sig(); OpenSSL_add_all_algorithms(); \
+			ERR_load_crypto_strings(); \
+			setup_ui_method(); } while(0)
+#    endif
+#    define apps_shutdown() \
+			do { CONF_modules_unload(1); destroy_ui_method(); \
+			EVP_cleanup(); \
+			CRYPTO_cleanup_all_ex_data(); ERR_remove_state(0); \
+			ERR_free_strings(); } while(0)
 #  endif
-#  define apps_shutdown() \
-		do { CONF_modules_unload(1); destroy_ui_method(); \
-		EVP_cleanup(); ENGINE_cleanup(); \
-		CRYPTO_cleanup_all_ex_data(); ERR_remove_state(0); \
-		ERR_free_strings(); } while(0)
 #endif
 
 typedef struct args_st
@@ -248,7 +277,9 @@ EVP_PKEY *load_pubkey(BIO *err, const char *file, int format, int maybe_stdin,
 STACK_OF(X509) *load_certs(BIO *err, const char *file, int format,
 	const char *pass, ENGINE *e, const char *cert_descrip);
 X509_STORE *setup_verify(BIO *bp, char *CAfile, char *CApath);
+#ifndef OPENSSL_NO_ENGINE
 ENGINE *setup_engine(BIO *err, const char *engine, int debug);
+#endif
 
 int load_config(BIO *err, CONF *cnf);
 char *make_config_name(void);
@@ -256,7 +287,37 @@ char *make_config_name(void);
 /* Functions defined in ca.c and also used in ocsp.c */
 int unpack_revinfo(ASN1_TIME **prevtm, int *preason, ASN1_OBJECT **phold,
 			ASN1_GENERALIZEDTIME **pinvtm, char *str);
-int make_serial_index(TXT_DB *db);
+
+#define DB_type         0
+#define DB_exp_date     1
+#define DB_rev_date     2
+#define DB_serial       3       /* index - unique */
+#define DB_file         4       
+#define DB_name         5       /* index - unique when active and not disabled */
+#define DB_NUMBER       6
+
+#define DB_TYPE_REV	'R'
+#define DB_TYPE_EXP	'E'
+#define DB_TYPE_VAL	'V'
+
+typedef struct db_attr_st
+	{
+	int unique_subject;
+	} DB_ATTR;
+typedef struct ca_db_st
+	{
+	DB_ATTR attributes;
+	TXT_DB *db;
+	} CA_DB;
+
+BIGNUM *load_serial(char *serialfile, int create, ASN1_INTEGER **retai);
+int save_serial(char *serialfile, BIGNUM *serial, ASN1_INTEGER **retai);
+CA_DB *load_index(char *dbfile, DB_ATTR *dbattr);
+int index_index(CA_DB *db);
+int save_index(char *dbfile, char *suffix, CA_DB *db);
+int rotate_index(char *dbfile, char *new_suffix, char *old_suffix);
+void free_index(CA_DB *db);
+int index_name_cmp(const char **a, const char **b);
 
 X509_NAME *do_subject(char *str, long chtype);
 

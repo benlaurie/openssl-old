@@ -64,6 +64,8 @@ extern X509V3_EXT_METHOD v3_crl_num, v3_crl_reason, v3_crl_invdate, v3_cpols, v3
 extern X509V3_EXT_METHOD v3_ocsp_nonce, v3_ocsp_accresp, v3_ocsp_acutoff;
 extern X509V3_EXT_METHOD v3_ocsp_crlid, v3_ocsp_nocheck, v3_ocsp_serviceloc;
 extern X509V3_EXT_METHOD v3_crl_hold;
+extern X509V3_EXT_METHOD v3_policy_mappings, v3_policy_constraints;
+extern X509V3_EXT_METHOD v3_name_constraints;
 
 /* This table will be searched using OBJ_bsearch so it *must* kept in
  * order of the ext_nid values.
@@ -90,17 +92,26 @@ static X509V3_EXT_METHOD *standard_exts[] = {
 &v3_crld,
 &v3_ext_ku,
 &v3_crl_reason,
+#ifndef OPENSSL_NO_OCSP
 &v3_crl_invdate,
+#endif
 &v3_sxnet,
 &v3_info,
+#ifndef OPENSSL_NO_OCSP
 &v3_ocsp_nonce,
 &v3_ocsp_crlid,
 &v3_ocsp_accresp,
 &v3_ocsp_nocheck,
 &v3_ocsp_acutoff,
 &v3_ocsp_serviceloc,
+#endif
 &v3_sinfo,
-&v3_crl_hold
+&v3_policy_constraints,
+#ifndef OPENSSL_NO_OCSP
+&v3_crl_hold,
+#endif
+&v3_policy_mappings,
+&v3_name_constraints
 };
 
 /* Number of standard extensions */

@@ -167,6 +167,7 @@ RMD160_ASM_OBJ= asm/rm86-out.o
 
 # KRB5 stuff
 KRB5_INCLUDES=
+LIBKRB5=
 
 DIRS=   crypto ssl engines apps test tools
 SHLIBDIRS= crypto ssl
@@ -280,14 +281,18 @@ build-shared: do_$(SHLIB_TARGET) link-shared
 
 do_$(SHLIB_TARGET):
 	@ libs='-L. ${SHLIBDEPS}'; for i in ${SHLIBDIRS}; do \
+		if [ "${SHLIBDIRS}" = "ssl" -a -n "$(LIBKRB5)" ]; then \
+			libs="$(LIBKRB5) $$libs"; \
+		fi; \
 		$(NEWMAKE) -f Makefile.shared \
 			CC="$(CC)" LDFLAGS="$(LDFLAGS)" \
 			SHARED_LDFLAGS="$(SHARED_LDFLAGS)" \
 			LIBNAME=$$i LIBVERSION=${SHLIB_MAJOR}.${SHLIB_MINOR} \
 			LIBCOMPATVERSIONS=";${SHLIB_VERSION_HISTORY}" \
 			LIBDEPS="$$libs $(EX_LIBS)" \
+			LIBRPATH="$(INSTALLTOP)/lib" \
 			link_a.$(SHLIB_TARGET); \
-		libs="$$libs -l$$i"; \
+		libs="-l$$i $$libs"; \
 	done
 
 openssl.pc: Makefile.ssl
@@ -309,10 +314,10 @@ Makefile.ssl: Makefile.org
 	@false
 
 libclean:
-	rm -f *.so *.so.* engines/*.so *.a */lib */*/lib
+	rm -f *.map *.so *.so.* engines/*.so *.a */lib */*/lib
 
-clean:
-	rm -f shlib/*.o *.o core a.out fluff *.map rehash.time testlog make.log cctest cctest.c
+clean:	libclean
+	rm -f shlib/*.o *.o core a.out fluff rehash.time testlog make.log cctest cctest.c
 	@for i in $(DIRS) ;\
 	do \
 	if [ -d "$$i" ]; then \
@@ -322,7 +327,7 @@ clean:
 	fi; \
 	done;
 	rm -f openssl.pc
-	rm -f *.a *.o speed.* *.map *.so .pure core
+	rm -f speed.* .pure
 	rm -f $(TARFILE)
 	@for i in $(ONEDIRS) ;\
 	do \
@@ -372,7 +377,10 @@ rehash: rehash.time
 rehash.time: certs
 	@(OPENSSL="`pwd`/apps/openssl"; OPENSSL_DEBUG_MEMORY=on; \
 		export OPENSSL OPENSSL_DEBUG_MEMORY; \
-		LD_LIBRARY_PATH="`pwd`"; DYLD_LIBRARY_PATH="`pwd`"; SHLIB_PATH="`pwd`"; LIBPATH="`pwd`"; \
+		LD_LIBRARY_PATH="`pwd`:$$LD_LIBRARY_PATH"; \
+		DYLD_LIBRARY_PATH="`pwd`:$$DYLD_LIBRARY_PATH"; \
+		SHLIB_PATH="`pwd`:$$SHLIB_PATH"; \
+		LIBPATH="`pwd`:$$LIBPATH"; \
 		if [ "$(PLATFORM)" = "Cygwin" ]; then PATH="`pwd`:$$PATH"; fi; \
 		export LD_LIBRARY_PATH DYLD_LIBRARY_PATH SHLIB_PATH LIBPATH PATH; \
 		$(PERL) tools/c_rehash certs)
@@ -383,10 +391,13 @@ test:   tests
 tests: rehash
 	@(cd test && echo "testing..." && \
 	$(MAKE) CC='${CC}' PLATFORM='${PLATFORM}' CFLAG='${CFLAG}' SDIRS='$(SDIRS)' INSTALLTOP='${INSTALLTOP}' PEX_LIBS='${PEX_LIBS}' EX_LIBS='${EX_LIBS}' BN_ASM='${BN_ASM}' DES_ENC='${DES_ENC}' BF_ENC='${BF_ENC}' CAST_ENC='${CAST_ENC}' RC4_ENC='${RC4_ENC}' RC5_ENC='${RC5_ENC}' SHA1_ASM_OBJ='${SHA1_ASM_OBJ}' MD5_ASM_OBJ='${MD5_ASM_OBJ}' RMD160_ASM_OBJ='${RMD160_ASM_OBJ}' AR='${AR}' PROCESSOR='${PROCESSOR}' PERL='${PERL}' RANLIB='${RANLIB}' TESTS='${TESTS}' KRB5_INCLUDES='${KRB5_INCLUDES}' LIBKRB5='${LIBKRB5}' EXE_EXT='${EXE_EXT}' SHARED_LIBS='${SHARED_LIBS}' SHLIB_EXT='${SHLIB_EXT}' SHLIB_TARGET='${SHLIB_TARGET}' TESTS='${TESTS}' OPENSSL_DEBUG_MEMORY=on tests );
-	@LD_LIBRARY_PATH="`pwd`"; DYLD_LIBRARY_PATH="`pwd`"; SHLIB_PATH="`pwd`"; LIBPATH="`pwd`"; \
-		if [ "$(PLATFORM)" = "Cygwin" ]; then PATH="`pwd`:$$PATH"; fi; \
-		export LD_LIBRARY_PATH DYLD_LIBRARY_PATH SHLIB_PATH LIBPATH PATH; \
-		apps/openssl version -a
+	@LD_LIBRARY_PATH="`pwd`:$$LD_LIBRARY_PATH"; \
+	DYLD_LIBRARY_PATH="`pwd`:$$DYLD_LIBRARY_PATH"; \
+	SHLIB_PATH="`pwd`:$$SHLIB_PATH"; \
+	LIBPATH="`pwd`:$$LIBPATH"; \
+	if [ "$(PLATFORM)" = "Cygwin" ]; then PATH="`pwd`:$$PATH"; fi; \
+	export LD_LIBRARY_PATH DYLD_LIBRARY_PATH SHLIB_PATH LIBPATH PATH; \
+	apps/openssl version -a
 
 report:
 	@$(PERL) util/selftest.pl

@@ -10,7 +10,8 @@ CFLAG=		-g -static
 INSTALL_PREFIX=
 INSTALLTOP=	/usr/local/ssl
 OPENSSLDIR=	/usr/local/ssl
-MAKE=		make -f Makefile.ssl
+NEWMAKE=	make
+MAKE=		$(NEWMAKE) -f Makefile.ssl
 MAKEDEPPROG=	makedepend
 MAKEDEPEND=	$(TOP)/util/domd $(TOP) -MD $(MAKEDEPPROG)
 MAKEFILE=	Makefile.ssl
@@ -18,6 +19,7 @@ PERL=		perl
 RM=		rm -f
 # KRB5 stuff
 KRB5_INCLUDES=
+LIBKRB5=
 
 PEX_LIBS=
 EX_LIBS= 
@@ -86,7 +88,15 @@ all:	exe
 exe:	$(PROGRAM)
 
 req: sreq.o $(A_OBJ) $(DLIBCRYPTO)
-	$(CC) -o req $(CFLAG) sreq.o $(A_OBJ) $(RAND_OBJ) $(PEX_LIBS) $(LIBCRYPTO) $(EX_LIBS)
+	shlib_target=; if [ -n "$(SHARED_LIBS)" ]; then \
+		shlib_target="$(SHLIB_TARGET)"; \
+	fi; \
+	$(NEWMAKE) -f $(TOP)/Makefile.shared \
+		APPNAME=req LDFLAGS="$(CFLAG)" \
+		OBJECTS="sreq.o $(A_OBJ) $(RAND_OBJ)" \
+		LIBDEPS="$(PEX_LIBS) $(LIBCRYPTO) $(EX_LIBS)" \
+		LIBRPATH=$(INSTALLTOP)/lib \
+		link_app.$${shlib_target}
 
 sreq.o: req.c 
 	$(CC) -c $(INCLUDES) $(CFLAG) -o sreq.o req.c
@@ -143,13 +153,25 @@ $(DLIBCRYPTO):
 
 $(PROGRAM): progs.h $(E_OBJ) $(PROGRAM).o $(DLIBCRYPTO) $(DLIBSSL)
 	$(RM) $(PROGRAM)
-	if [ "$(SHLIB_TARGET)" = "hpux-shared" -o "$(SHLIB_TARGET)" = "darwin-shared" ] ; then \
-	  $(CC) -o $(PROGRAM) $(CFLAGS) $(PROGRAM).o $(E_OBJ) $(PEX_LIBS) $(DLIBSSL) $(LIBKRB5) $(DLIBCRYPTO) $(EX_LIBS) ; \
+	shlib_target=; if [ -n "$(SHARED_LIBS)" ]; then \
+		shlib_target="$(SHLIB_TARGET)"; \
+	fi; \
+	if [ "$${shlib_target}" = "hpux-shared" -o "$${shlib_target}" = "darwin-shared" ] ; then \
+	  LIBRARIES="$(DLIBSSL) $(LIBKRB5) $(DLIBCRYPTO)" ; \
 	else \
-	  $(CC) -o $(PROGRAM) $(CFLAGS) $(PROGRAM).o $(E_OBJ) $(PEX_LIBS) $(LIBSSL) $(LIBKRB5) $(LIBCRYPTO) $(EX_LIBS) ; \
-	fi
+	  LIBRARIES="$(LIBSSL) $(LIBKRB5) $(LIBCRYPTO)" ; \
+	fi; \
+	$(NEWMAKE) -f $(TOP)/Makefile.shared \
+		APPNAME=$(PROGRAM) LDFLAGS="$(CFLAG)" \
+		OBJECTS="$(PROGRAM).o $(E_OBJ)" \
+		LIBDEPS="$(PEX_LIBS) $$LIBRARIES $(EX_LIBS)" \
+		LIBRPATH=$(INSTALLTOP)/lib \
+		link_app.$${shlib_target}
 	-(cd ..; OPENSSL="`pwd`/apps/openssl"; export OPENSSL; \
-		LIBPATH="`pwd`"; LD_LIBRARY_PATH="`pwd`"; DYLD_LIBRARY_PATH="`pwd`"; SHLIB_PATH="`pwd`"; \
+		LD_LIBRARY_PATH="`pwd`:$$LD_LIBRARY_PATH"; \
+		DYLD_LIBRARY_PATH="`pwd`:$$DYLD_LIBRARY_PATH"; \
+		SHLIB_PATH="`pwd`:$$SHLIB_PATH"; \
+		LIBPATH="`pwd`:$$LIBPATH"; \
 		if [ "$(PLATFORM)" = "Cygwin" ]; then PATH="`pwd`:$$PATH"; fi; \
 		export LD_LIBRARY_PATH DYLD_LIBRARY_PATH SHLIB_PATH LIBPATH PATH; \
 		$(PERL) tools/c_rehash certs)

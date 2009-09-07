@@ -49,7 +49,7 @@ sub create_curl {
     $curl->setopt(CURLOPT_CUSTOMREQUEST, "POST");
     $curl->setopt(CURLOPT_HTTPHEADER,
 		["Content-Type: application/timestamp-query",
-		"Accept: application/timestamp-reply"]);
+		"Accept: application/timestamp-reply,application/timestamp-response"]);
     $curl->setopt(CURLOPT_READFUNCTION, \&read_body);
     $curl->setopt(CURLOPT_HEADERFUNCTION, sub { return length($_[0]); });
 
@@ -102,7 +102,8 @@ sub get_timestamp {
 	$error_string .= " ($::error_buf)" if defined($::error_buf);
     } else {
         my $ct = $curl->getinfo(CURLINFO_CONTENT_TYPE);
-	if (lc($ct) ne "application/timestamp-reply") {
+	if (lc($ct) ne "application/timestamp-reply"
+	    && lc($ct) ne "application/timestamp-response") {
 	    $error_string = "unexpected content type returned: $ct";
         }
     }

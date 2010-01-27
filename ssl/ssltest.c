@@ -113,6 +113,32 @@
  * ECC cipher suite support in OpenSSL originally developed by 
  * SUN MICROSYSTEMS, INC., and contributed to the OpenSSL project.
  */
+/* ====================================================================
+ * Copyright 2005 Nokia. All rights reserved.
+ *
+ * The portions of the attached software ("Contribution") is developed by
+ * Nokia Corporation and is licensed pursuant to the OpenSSL open source
+ * license.
+ *
+ * The Contribution, originally written by Mika Kousa and Pasi Eronen of
+ * Nokia Corporation, consists of the "PSK" (Pre-Shared Key) ciphersuites
+ * support (see RFC 4279) to OpenSSL.
+ *
+ * No patent licenses or other rights except those expressly stated in
+ * the OpenSSL open source license shall be deemed granted or received
+ * expressly, by implication, estoppel, or otherwise.
+ *
+ * No assurances are provided by Nokia that the Contribution does not
+ * infringe the patent or other intellectual property rights of any third
+ * party or that the license provides you with all the necessary rights
+ * to make use of the Contribution.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND. IN
+ * ADDITION TO THE DISCLAIMERS INCLUDED IN THE LICENSE, NOKIA
+ * SPECIFICALLY DISCLAIMS ANY LIABILITY FOR CLAIMS BROUGHT BY YOU OR ANY
+ * OTHER ENTITY BASED ON INFRINGEMENT OF INTELLECTUAL PROPERTY RIGHTS OR
+ * OTHERWISE.
+ */
 
 #define _BSD_SOURCE 1		/* Or gethostname won't be declared properly
 				   on Linux and GNU platforms. */
@@ -128,8 +154,11 @@
 #define USE_SOCKETS
 #include "e_os.h"
 
-#define _XOPEN_SOURCE 1		/* Or isascii won't be declared properly on
+#ifdef OPENSSL_SYS_VMS
+#define _XOPEN_SOURCE 500	/* Or isascii won't be declared properly on
 				   VMS (at least with DECompHP C).  */
+#endif
+
 #include <ctype.h>
 
 #include <openssl/bio.h>
@@ -143,9 +172,15 @@
 #endif
 #include <openssl/err.h>
 #include <openssl/rand.h>
+#ifndef OPENSSL_NO_RSA
 #include <openssl/rsa.h>
+#endif
+#ifndef OPENSSL_NO_DSA
 #include <openssl/dsa.h>
+#endif
+#ifndef OPENSSL_NO_DH
 #include <openssl/dh.h>
+#endif
 #include <openssl/bn.h>
 
 #define _XOPEN_SOURCE_EXTENDED	1 /* Or gethostname won't be declared properly
@@ -190,6 +225,7 @@ struct app_verify_arg
 	{
 	char *string;
 	int app_verify;
+	int allow_proxy_certs;
 	char *proxy_auth;
 	char *proxy_cond;
 	};
@@ -198,6 +234,16 @@ struct app_verify_arg
 static DH *get_dh512(void);
 static DH *get_dh1024(void);
 static DH *get_dh1024dsa(void);
+#endif
+
+
+static char *psk_key=NULL; /* by default PSK is not used */
+#ifndef OPENSSL_NO_PSK
+static unsigned int psk_client_callback(SSL *ssl, const char *hint, char *identity,
+	unsigned int max_identity_len, unsigned char *psk,
+	unsigned int max_psk_len);
+static unsigned int psk_server_callback(SSL *ssl, const char *identity, unsigned char *psk,
+	unsigned int max_psk_len);
 #endif
 
 static BIO *bio_err=NULL;
@@ -217,12 +263,14 @@ static const char rnd_seed[] = "string to make the random number generator think
 
 int doit_biopair(SSL *s_ssl,SSL *c_ssl,long bytes,clock_t *s_time,clock_t *c_time);
 int doit(SSL *s_ssl,SSL *c_ssl,long bytes);
+static int do_test_cipherlist(void);
 static void sv_usage(void)
 	{
 	fprintf(stderr,"usage: ssltest [args ...]\n");
 	fprintf(stderr,"\n");
 	fprintf(stderr," -server_auth  - check server certificate\n");
 	fprintf(stderr," -client_auth  - do client authentication\n");
+	fprintf(stderr," -proxy        - allow proxy certificates\n");
 	fprintf(stderr," -proxy_auth <val> - set proxy policy rights\n");
 	fprintf(stderr," -proxy_cond <val> - experssion to test proxy policy rights\n");
 	fprintf(stderr," -v            - more output\n");
@@ -237,6 +285,9 @@ static void sv_usage(void)
 #endif
 #ifndef OPENSSL_NO_ECDH
 	fprintf(stderr," -no_ecdhe     - disable ECDHE\n");
+#endif
+#ifndef OPENSSL_NO_PSK
+	fprintf(stderr," -psk arg      - PSK in hex (without 0x)\n");
 #endif
 #ifndef OPENSSL_NO_SSL2
 	fprintf(stderr," -ssl2         - use SSLv2\n");
@@ -264,11 +315,12 @@ static void sv_usage(void)
 	               "                 Use \"openssl ecparam -list_curves\" for all names\n"  \
 	               "                 (default is sect163r2).\n");
 #endif
+	fprintf(stderr," -test_cipherlist - verifies the order of the ssl cipher lists\n");
 	}
 
 static void print_details(SSL *c_ssl, const char *prefix)
 	{
-	SSL_CIPHER *ciph;
+	const SSL_CIPHER *ciph;
 	X509 *cert;
 		
 	ciph=SSL_get_current_cipher(c_ssl);
@@ -373,6 +425,26 @@ static void lock_dbg_cb(int mode, int type, const char *file, int line)
 		}
 	}
 
+#ifdef TLSEXT_TYPE_opaque_prf_input
+struct cb_info_st { void *input; size_t len; int ret; };
+struct cb_info_st co1 = { "C", 1, 1 }; /* try to negotiate oqaque PRF input */
+struct cb_info_st co2 = { "C", 1, 2 }; /* insist on oqaque PRF input */
+struct cb_info_st so1 = { "S", 1, 1 }; /* try to negotiate oqaque PRF input */
+struct cb_info_st so2 = { "S", 1, 2 }; /* insist on oqaque PRF input */
+
+int opaque_prf_input_cb(SSL *ssl, void *peerinput, size_t len, void *arg_)
+	{
+	struct cb_info_st *arg = arg_;
+
+	if (arg == NULL)
+		return 1;
+	
+	if (!SSL_set_tlsext_opaque_prf_input(ssl, arg->input, arg->len))
+		return 0;
+	return arg->ret;
+	}
+#endif
+
 int main(int argc, char *argv[])
 	{
 	char *CApath=NULL,*CAfile=NULL;
@@ -383,15 +455,17 @@ int main(int argc, char *argv[])
 	int client_auth=0;
 	int server_auth=0,i;
 	struct app_verify_arg app_verify_arg =
-		{ APP_CALLBACK_STRING, 0, NULL, NULL };
+		{ APP_CALLBACK_STRING, 0, 0, NULL, NULL };
 	char *server_cert=TEST_SERVER_CERT;
 	char *server_key=NULL;
 	char *client_cert=TEST_CLIENT_CERT;
 	char *client_key=NULL;
+#ifndef OPENSSL_NO_ECDH
 	char *named_curve = NULL;
+#endif
 	SSL_CTX *s_ctx=NULL;
 	SSL_CTX *c_ctx=NULL;
-	SSL_METHOD *meth=NULL;
+	const SSL_METHOD *meth=NULL;
 	SSL *c_ssl,*s_ssl;
 	int number=1,reuse=0;
 	long bytes=256L;
@@ -404,17 +478,21 @@ int main(int argc, char *argv[])
 #endif
 	int no_dhe = 0;
 	int no_ecdhe = 0;
+	int no_psk = 0;
 	int print_time = 0;
 	clock_t s_time = 0, c_time = 0;
 	int comp = 0;
+#ifndef OPENSSL_NO_COMP
 	COMP_METHOD *cm = NULL;
+#endif
 	STACK_OF(SSL_COMP) *ssl_comp_methods = NULL;
+	int test_cipherlist = 0;
 
 	verbose = 0;
 	debug = 0;
 	cipher = 0;
 
-	bio_err=BIO_new_fp(stderr,BIO_NOCLOSE);	
+	bio_err=BIO_new_fp(stderr,BIO_NOCLOSE|BIO_FP_TEXT);	
 
 	CRYPTO_set_locking_callback(lock_dbg_cb);
 
@@ -433,7 +511,7 @@ int main(int argc, char *argv[])
 
 	RAND_seed(rnd_seed, sizeof rnd_seed);
 
-	bio_stdout=BIO_new_fp(stdout,BIO_NOCLOSE);
+	bio_stdout=BIO_new_fp(stdout,BIO_NOCLOSE|BIO_FP_TEXT);
 
 	argc--;
 	argv++;
@@ -480,6 +558,20 @@ int main(int argc, char *argv[])
 			no_dhe=1;
 		else if	(strcmp(*argv,"-no_ecdhe") == 0)
 			no_ecdhe=1;
+		else if (strcmp(*argv,"-psk") == 0)
+			{
+			if (--argc < 1) goto bad;
+			psk_key=*(++argv);
+#ifndef OPENSSL_NO_PSK
+			if (strspn(psk_key, "abcdefABCDEF1234567890") != strlen(psk_key))
+				{
+				BIO_printf(bio_err,"Not a hex number '%s'\n",*argv);
+				goto bad;
+				}
+#else
+			no_psk=1;
+#endif
+			}
 		else if	(strcmp(*argv,"-ssl2") == 0)
 			ssl2=1;
 		else if	(strcmp(*argv,"-tls1") == 0)
@@ -580,6 +672,14 @@ int main(int argc, char *argv[])
 			{
 			app_verify_arg.app_verify = 1;
 			}
+		else if	(strcmp(*argv,"-proxy") == 0)
+			{
+			app_verify_arg.allow_proxy_certs = 1;
+			}
+		else if (strcmp(*argv,"-test_cipherlist") == 0)
+			{
+			test_cipherlist = 1;
+			}
 		else
 			{
 			fprintf(stderr,"unknown option %s\n",*argv);
@@ -593,6 +693,15 @@ int main(int argc, char *argv[])
 		{
 bad:
 		sv_usage();
+		goto end;
+		}
+
+	if (test_cipherlist == 1)
+		{
+		/* ensure that the cipher list are correctly sorted and exit */
+		if (do_test_cipherlist() == 0)
+			EXIT(1);
+		ret = 0;
 		goto end;
 		}
 
@@ -621,6 +730,7 @@ bad:
 	SSL_library_init();
 	SSL_load_error_strings();
 
+#ifndef OPENSSL_NO_COMP
 	if (comp == COMP_ZLIB) cm = COMP_zlib();
 	if (comp == COMP_RLE) cm = COMP_rle();
 	if (cm != NULL)
@@ -657,6 +767,7 @@ bad:
 			fprintf(stderr, "  %d: %s\n", c->id, c->name);
 			}
 	}
+#endif
 
 #if !defined(OPENSSL_NO_SSL2) && !defined(OPENSSL_NO_SSL3)
 	if (ssl2)
@@ -714,36 +825,30 @@ bad:
 #ifndef OPENSSL_NO_ECDH
 	if (!no_ecdhe)
 		{
-		ecdh = EC_KEY_new();
-		if (ecdh != NULL)
+		int nid;
+
+		if (named_curve != NULL)
 			{
-			if (named_curve)
-				{
-				int nid = OBJ_sn2nid(named_curve);
-
-				if (nid == 0)
-					{
-					BIO_printf(bio_err, "unknown curve name (%s)\n", named_curve);
-					EC_KEY_free(ecdh);
-					goto end;
-					}
-
-				ecdh->group = EC_GROUP_new_by_nid(nid);
-				if (ecdh->group == NULL)
-					{
-					BIO_printf(bio_err, "unable to create curve (%s)\n", named_curve);
-					EC_KEY_free(ecdh);
-					goto end;
-					}
+			nid = OBJ_sn2nid(named_curve);
+			if (nid == 0)
+			{
+				BIO_printf(bio_err, "unknown curve name (%s)\n", named_curve);
+				goto end;
 				}
-			
-			if (ecdh->group == NULL)
-				ecdh->group=EC_GROUP_new_by_nid(NID_sect163r2);
-
-			SSL_CTX_set_tmp_ecdh(s_ctx, ecdh);
-			SSL_CTX_set_options(s_ctx, SSL_OP_SINGLE_ECDH_USE);
-			EC_KEY_free(ecdh);
 			}
+		else
+			nid = NID_sect163r2;
+
+		ecdh = EC_KEY_new_by_curve_name(nid);
+		if (ecdh == NULL)
+			{
+			BIO_printf(bio_err, "unable to create curve\n");
+			goto end;
+			}
+
+		SSL_CTX_set_tmp_ecdh(s_ctx, ecdh);
+		SSL_CTX_set_options(s_ctx, SSL_OP_SINGLE_ECDH_USE);
+		EC_KEY_free(ecdh);
 		}
 #else
 	(void)no_ecdhe;
@@ -751,6 +856,13 @@ bad:
 
 #ifndef OPENSSL_NO_RSA
 	SSL_CTX_set_tmp_rsa_callback(s_ctx,tmp_rsa_cb);
+#endif
+
+#ifdef TLSEXT_TYPE_opaque_prf_input
+	SSL_CTX_set_tlsext_opaque_prf_input_callback(c_ctx, opaque_prf_input_cb);
+	SSL_CTX_set_tlsext_opaque_prf_input_callback(s_ctx, opaque_prf_input_cb);
+	SSL_CTX_set_tlsext_opaque_prf_input_callback_arg(c_ctx, &co1); /* or &co2 or NULL */
+	SSL_CTX_set_tlsext_opaque_prf_input_callback_arg(s_ctx, &so1); /* or &so2 or NULL */
 #endif
 
 	if (!SSL_CTX_use_certificate_file(s_ctx,server_cert,SSL_FILETYPE_PEM))
@@ -803,6 +915,31 @@ bad:
 		int session_id_context = 0;
 		SSL_CTX_set_session_id_context(s_ctx, (void *)&session_id_context, sizeof session_id_context);
 	}
+
+	/* Use PSK only if PSK key is given */
+	if (psk_key != NULL)
+		{
+		/* no_psk is used to avoid putting psk command to openssl tool */
+		if (no_psk)
+			{
+			/* if PSK is not compiled in and psk key is
+			 * given, do nothing and exit successfully */
+			ret=0;
+			goto end;
+			}
+#ifndef OPENSSL_NO_PSK
+		SSL_CTX_set_psk_client_callback(c_ctx, psk_client_callback);
+		SSL_CTX_set_psk_server_callback(s_ctx, psk_server_callback);
+		if (debug)
+			BIO_printf(bio_err,"setting PSK identity hint to s_ctx\n");
+		if (!SSL_CTX_use_psk_identity_hint(s_ctx, "ctx server identity_hint"))
+			{
+			BIO_printf(bio_err,"error setting PSK identity hint to s_ctx\n");
+			ERR_print_errors(bio_err);
+			goto end;
+			}
+#endif
+		}
 
 	c_ssl=SSL_new(c_ctx);
 	s_ssl=SSL_new(s_ctx);
@@ -880,11 +1017,12 @@ end:
 #endif
 	CRYPTO_cleanup_all_ex_data();
 	ERR_free_strings();
-	ERR_remove_state(0);
+	ERR_remove_thread_state(NULL);
 	EVP_cleanup();
 	CRYPTO_mem_leaks(bio_err);
 	if (bio_err != NULL) BIO_free(bio_err);
 	EXIT(ret);
+	return ret;
 	}
 
 int doit_biopair(SSL *s_ssl, SSL *c_ssl, long count,
@@ -1606,17 +1744,22 @@ static int MS_CALLBACK verify_callback(int ok, X509_STORE_CTX *ctx)
 			fprintf(stderr,"depth=%d %s\n",
 				ctx->error_depth,buf);
 		else
+			{
 			fprintf(stderr,"depth=%d error=%d %s\n",
 				ctx->error_depth,ctx->error,buf);
+			}
 		}
 
 	if (ok == 0)
 		{
+		fprintf(stderr,"Error string: %s\n",
+			X509_verify_cert_error_string(ctx->error));
 		switch (ctx->error)
 			{
 		case X509_V_ERR_CERT_NOT_YET_VALID:
 		case X509_V_ERR_CERT_HAS_EXPIRED:
 		case X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT:
+			fprintf(stderr,"  ... ignored.\n");
 			ok=1;
 			}
 		}
@@ -1689,7 +1832,7 @@ static int MS_CALLBACK verify_callback(int ok, X509_STORE_CTX *ctx)
 					fprintf(stderr, "  Certificate proxy rights = %*.*s", i, i, s);
 					while(i-- > 0)
 						{
-						char c = *s++;
+						int c = *s++;
 						if (isascii(c) && isalpha(c))
 							{
 							if (islower(c))
@@ -1750,11 +1893,11 @@ static int process_proxy_cond_adders(unsigned int letters[26],
 static int process_proxy_cond_val(unsigned int letters[26],
 	const char *cond, const char **cond_end, int *pos, int indent)
 	{
-	char c;
+	int c;
 	int ok = 1;
 	int negate = 0;
 
-	while(isspace(*cond))
+	while(isspace((int)*cond))
 		{
 		cond++; (*pos)++;
 		}
@@ -1769,7 +1912,7 @@ static int process_proxy_cond_val(unsigned int letters[26],
 		{
 		negate = !negate;
 		cond++; (*pos)++;
-		while(isspace(*cond))
+		while(isspace((int)*cond))
 			{
 			cond++; (*pos)++;
 			}
@@ -1784,7 +1927,7 @@ static int process_proxy_cond_val(unsigned int letters[26],
 		cond = *cond_end;
 		if (ok < 0)
 			goto end;
-		while(isspace(*cond))
+		while(isspace((int)*cond))
 			{
 			cond++; (*pos)++;
 			}
@@ -1844,7 +1987,7 @@ static int process_proxy_cond_multipliers(unsigned int letters[26],
 
 	while(ok >= 0)
 		{
-		while(isspace(*cond))
+		while(isspace((int)*cond))
 			{
 			cond++; (*pos)++;
 			}
@@ -1911,7 +2054,7 @@ static int process_proxy_cond_adders(unsigned int letters[26],
 
 	while(ok >= 0)
 		{
-		while(isspace(*cond))
+		while(isspace((int)*cond))
 			{
 			cond++; (*pos)++;
 			}
@@ -1975,8 +2118,8 @@ static int MS_CALLBACK app_verify_callback(X509_STORE_CTX *ctx, void *arg)
 
 		fprintf(stderr, "In app_verify_callback, allowing cert. ");
 		fprintf(stderr, "Arg is: %s\n", cb_arg->string);
-		fprintf(stderr, "Finished printing do we have a context? 0x%x a cert? 0x%x\n",
-			(unsigned int)ctx, (unsigned int)ctx->cert);
+		fprintf(stderr, "Finished printing do we have a context? 0x%p a cert? 0x%p\n",
+			(void *)ctx, (void *)ctx->cert);
 		if (ctx->cert)
 			s=X509_NAME_oneline(X509_get_subject_name(ctx->cert),buf,256);
 		if (s != NULL)
@@ -1994,7 +2137,7 @@ static int MS_CALLBACK app_verify_callback(X509_STORE_CTX *ctx, void *arg)
 			letters[i] = 0;
 		for(sp = cb_arg->proxy_auth; *sp; sp++)
 			{
-			char c = *sp;
+			int c = *sp;
 			if (isascii(c) && isalpha(c))
 				{
 				if (islower(c))
@@ -2018,6 +2161,10 @@ static int MS_CALLBACK app_verify_callback(X509_STORE_CTX *ctx, void *arg)
 		X509_STORE_CTX_set_ex_data(ctx,
 			get_proxy_auth_ex_data_idx(),letters);
 		}
+	if (cb_arg->allow_proxy_certs)
+		{
+		X509_STORE_CTX_set_flags(ctx, X509_V_FLAG_ALLOW_PROXY_CERTS);
+		}
 
 #ifndef OPENSSL_NO_X509_VERIFY
 # ifdef OPENSSL_FIPS
@@ -2033,7 +2180,7 @@ static int MS_CALLBACK app_verify_callback(X509_STORE_CTX *ctx, void *arg)
 
 	if (cb_arg->proxy_auth)
 		{
-		if (ok)
+		if (ok > 0)
 			{
 			const char *cond_end = NULL;
 
@@ -2196,3 +2343,123 @@ static DH *get_dh1024dsa()
 	return(dh);
 	}
 #endif
+
+#ifndef OPENSSL_NO_PSK
+/* convert the PSK key (psk_key) in ascii to binary (psk) */
+static int psk_key2bn(const char *pskkey, unsigned char *psk,
+	unsigned int max_psk_len)
+	{
+	int ret;
+	BIGNUM *bn = NULL;
+
+	ret = BN_hex2bn(&bn, pskkey);
+	if (!ret)
+		{
+		BIO_printf(bio_err,"Could not convert PSK key '%s' to BIGNUM\n", pskkey); 
+		if (bn)
+			BN_free(bn);
+		return 0;
+		}
+	if (BN_num_bytes(bn) > (int)max_psk_len)
+		{
+		BIO_printf(bio_err,"psk buffer of callback is too small (%d) for key (%d)\n",
+			max_psk_len, BN_num_bytes(bn));
+		BN_free(bn);
+		return 0;
+		}
+	ret = BN_bn2bin(bn, psk);
+	BN_free(bn);
+	return ret;
+	}
+
+static unsigned int psk_client_callback(SSL *ssl, const char *hint, char *identity,
+	unsigned int max_identity_len, unsigned char *psk,
+	unsigned int max_psk_len)
+	{
+	int ret;
+	unsigned int psk_len = 0;
+
+	ret = BIO_snprintf(identity, max_identity_len, "Client_identity");
+	if (ret < 0)
+		goto out_err;
+	if (debug)
+		fprintf(stderr, "client: created identity '%s' len=%d\n", identity, ret);
+	ret = psk_key2bn(psk_key, psk, max_psk_len);
+	if (ret < 0)
+		goto out_err;
+	psk_len = ret;
+out_err:
+	return psk_len;
+	}
+
+static unsigned int psk_server_callback(SSL *ssl, const char *identity,
+	unsigned char *psk, unsigned int max_psk_len)
+	{
+	unsigned int psk_len=0;
+
+	if (strcmp(identity, "Client_identity") != 0)
+		{
+		BIO_printf(bio_err, "server: PSK error: client identity not found\n");
+		return 0;
+		}
+	psk_len=psk_key2bn(psk_key, psk, max_psk_len);
+	return psk_len;
+	}
+#endif
+
+static int do_test_cipherlist(void)
+	{
+	int i = 0;
+	const SSL_METHOD *meth;
+	const SSL_CIPHER *ci, *tci = NULL;
+
+#ifndef OPENSSL_NO_SSL2
+	fprintf(stderr, "testing SSLv2 cipher list order: ");
+	meth = SSLv2_method();
+	while ((ci = meth->get_cipher(i++)) != NULL)
+		{
+		if (tci != NULL)
+			if (ci->id >= tci->id)
+				{
+				fprintf(stderr, "failed %lx vs. %lx\n", ci->id, tci->id);
+				return 0;
+				}
+		tci = ci;
+		}
+	fprintf(stderr, "ok\n");
+#endif
+#ifndef OPENSSL_NO_SSL3
+	fprintf(stderr, "testing SSLv3 cipher list order: ");
+	meth = SSLv3_method();
+	tci = NULL;
+	while ((ci = meth->get_cipher(i++)) != NULL)
+		{
+		if (tci != NULL)
+			if (ci->id >= tci->id)
+				{
+				fprintf(stderr, "failed %lx vs. %lx\n", ci->id, tci->id);
+				return 0;
+				}
+		tci = ci;
+		}
+	fprintf(stderr, "ok\n");
+#endif
+#ifndef OPENSSL_NO_TLS1
+	fprintf(stderr, "testing TLSv1 cipher list order: ");
+	meth = TLSv1_method();
+	tci = NULL;
+	while ((ci = meth->get_cipher(i++)) != NULL)
+		{
+		if (tci != NULL)
+			if (ci->id >= tci->id)
+				{
+				fprintf(stderr, "failed %lx vs. %lx\n", ci->id, tci->id);
+				return 0;
+				}
+		tci = ci;
+		}
+	fprintf(stderr, "ok\n");
+#endif
+
+	return 1;
+	}

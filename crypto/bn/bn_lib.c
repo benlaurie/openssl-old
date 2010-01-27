@@ -67,7 +67,7 @@
 #include "cryptlib.h"
 #include "bn_lcl.h"
 
-const char *BN_version="Big Number" OPENSSL_VERSION_PTEXT;
+const char BN_version[]="Big Number" OPENSSL_VERSION_PTEXT;
 
 /* This stuff appears to be completely unused, so is deprecated */
 #ifndef OPENSSL_NO_DEPRECATED
@@ -133,8 +133,8 @@ int BN_get_params(int which)
 
 const BIGNUM *BN_value_one(void)
 	{
-	static BN_ULONG data_one=1L;
-	static BIGNUM const_one={&data_one,1,1,0,BN_FLG_STATIC_DATA};
+	static const BN_ULONG data_one=1L;
+	static const BIGNUM const_one={(BN_ULONG *)&data_one,1,1,0,BN_FLG_STATIC_DATA};
 
 	return(&const_one);
 	}
@@ -160,7 +160,7 @@ char *BN_options(void)
 
 int BN_num_bits_word(BN_ULONG l)
 	{
-	static const char bits[256]={
+	static const unsigned char bits[256]={
 		0,1,2,2,3,3,3,3,4,4,4,4,4,4,4,4,
 		5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,
 		6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,
@@ -235,7 +235,7 @@ int BN_num_bits_word(BN_ULONG l)
 		else
 #endif
 			{
-#if defined(SIXTEEN_BIT) || defined(THIRTY_TWO_BIT) || defined(SIXTY_FOUR_BIT) || defined(SIXTY_FOUR_BIT_LONG)
+#if defined(THIRTY_TWO_BIT) || defined(SIXTY_FOUR_BIT) || defined(SIXTY_FOUR_BIT_LONG)
 			if (l & 0xff00L)
 				return(bits[(int)(l>>8)]+8);
 			else	
@@ -531,46 +531,6 @@ BIGNUM *BN_copy(BIGNUM *a, const BIGNUM *b)
 	return(a);
 	}
 
-BIGNUM *BN_ncopy(BIGNUM *a, const BIGNUM *b, size_t n)
-	{
-	int i, min;
-	BN_ULONG *A;
-	const BN_ULONG *B;
-
-	bn_check_top(b);
-	if (a == b)
-		return a;
-
-	min = (b->top < (int)n)? b->top: (int)n;
-	if (!min)
-		{
-		BN_zero(a);
-		return a;
-		}
-	if (bn_wexpand(a, min) == NULL)
-		return NULL;
-
-	A=a->d;
-	B=b->d;
-	for (i=min>>2; i>0; i--, A+=4, B+=4)
-		{
-		BN_ULONG a0,a1,a2,a3;
-		a0=B[0]; a1=B[1]; a2=B[2]; a3=B[3];
-		A[0]=a0; A[1]=a1; A[2]=a2; A[3]=a3;
-		}
-	switch (min&3)
-		{
-		case 3: A[2]=B[2];
-		case 2: A[1]=B[1];
-		case 1: A[0]=B[0];
-		case 0: ;
-		}
-	a->top = min;
-	a->neg = b->neg;
-	bn_correct_top(a);
-	return(a);
-	}
-
 void BN_swap(BIGNUM *a, BIGNUM *b)
 	{
 	int flags_old_a, flags_old_b;
@@ -803,7 +763,7 @@ int BN_is_bit_set(const BIGNUM *a, int n)
 	i=n/BN_BITS2;
 	j=n%BN_BITS2;
 	if (a->top <= i) return 0;
-	return((a->d[i]&(((BN_ULONG)1)<<j))?1:0);
+	return (int)(((a->d[i])>>j)&((BN_ULONG)1));
 	}
 
 int BN_mask_bits(BIGNUM *a, int n)
@@ -825,6 +785,14 @@ int BN_mask_bits(BIGNUM *a, int n)
 		}
 	bn_correct_top(a);
 	return(1);
+	}
+
+void BN_set_negative(BIGNUM *a, int b)
+	{
+	if (b && !BN_is_zero(a))
+		a->neg = 1;
+	else
+		a->neg = 0;
 	}
 
 int bn_cmp_words(const BN_ULONG *a, const BN_ULONG *b, int n)

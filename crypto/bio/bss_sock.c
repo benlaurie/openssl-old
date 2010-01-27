@@ -61,6 +61,9 @@
 #include <errno.h>
 #define USE_SOCKETS
 #include "cryptlib.h"
+
+#ifndef OPENSSL_NO_SOCK
+
 #include <openssl/bio.h>
 
 /* The following types are required to work in a 64-bit environment on
@@ -375,3 +378,5 @@ int BIO_sock_non_fatal_error(int err)
 		}
 	return(0);
 	}
+
+#endif  /* #ifndef OPENSSL_NO_SOCK */

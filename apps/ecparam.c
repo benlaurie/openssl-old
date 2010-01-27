@@ -3,7 +3,7 @@
  * Written by Nils Larsch for the OpenSSL project.
  */
 /* ====================================================================
- * Copyright (c) 1998-2002 The OpenSSL Project.  All rights reserved.
+ * Copyright (c) 1998-2005 The OpenSSL Project.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -68,6 +68,8 @@
  * Sheueling Chang Shantz and Douglas Stebila of Sun Microsystems Laboratories.
  *
  */
+
+#include <openssl/opensslconf.h>
 #ifndef OPENSSL_NO_EC
 #include <assert.h>
 #include <stdio.h>
@@ -349,7 +351,7 @@ bad:
 
 		crv_len = EC_get_builtin_curves(NULL, 0);
 
-		curves = OPENSSL_malloc(sizeof(EC_builtin_curve) * crv_len);
+		curves = OPENSSL_malloc((int)(sizeof(EC_builtin_curve) * crv_len));
 
 		if (curves == NULL)
 			goto end;
@@ -411,7 +413,7 @@ bad:
 			goto end;
 			}
 
-		group = EC_GROUP_new_by_nid(nid);
+		group = EC_GROUP_new_by_curve_name(nid);
 		if (group == NULL)
 			{
 			BIO_printf(bio_err, "unable to create curve (%s)\n", 
@@ -647,11 +649,11 @@ bad:
 
 		assert(need_rand);
 
-		eckey->group = group;
+		if (EC_KEY_set_group(eckey, group) == 0)
+			goto end;
 		
 		if (!EC_KEY_generate_key(eckey))
 			{
-			eckey->group = NULL;
 			EC_KEY_free(eckey);
 			goto end;
 			}
@@ -664,11 +666,9 @@ bad:
 			{
 			BIO_printf(bio_err, "bad output format specified "
 				"for outfile\n");
-			eckey->group = NULL;
 			EC_KEY_free(eckey);
 			goto end;
 			}
-		eckey->group = NULL;
 		EC_KEY_free(eckey);
 		}
 
@@ -725,4 +725,10 @@ static int ecparam_print_var(BIO *out, BIGNUM *in, const char *var,
 	BIO_printf(out, "\n\t};\n\n");
 	return 1;
 	}
+#else /* !OPENSSL_NO_EC */
+
+# if PEDANTIC
+static void *dummy=&dummy;
+# endif
+
 #endif

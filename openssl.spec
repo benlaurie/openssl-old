@@ -1,6 +1,7 @@
-%define libmaj 0
-%define libmin 9
-%define librel 8
+%define _unpackaged_files_terminate_build 0
+%define libmaj 1
+%define libmin 1
+%define librel 0
 #%define librev a
 Release: 1
 
@@ -96,6 +97,9 @@ perl util/perlpath.pl /usr/bin/perl
 %ifarch alpha
 ./Configure %{CONFIG_FLAGS} linux-alpha shared
 %endif
+%ifarch x86_64
+./Configure %{CONFIG_FLAGS} linux-x86_64 shared
+%endif
 LD_LIBRARY_PATH=`pwd` make
 LD_LIBRARY_PATH=`pwd` make rehash
 LD_LIBRARY_PATH=`pwd` make test
@@ -121,7 +125,6 @@ rm -rf $RPM_BUILD_ROOT
 
 %config %attr(0644,root,root) %{openssldir}/openssl.cnf 
 %dir %attr(0755,root,root) %{openssldir}/certs
-%dir %attr(0755,root,root) %{openssldir}/lib
 %dir %attr(0755,root,root) %{openssldir}/misc
 %dir %attr(0750,root,root) %{openssldir}/private
 
@@ -146,6 +149,8 @@ ldconfig
 ldconfig
 
 %changelog
+* Sun Jun  6 2005 Richard Levitte <richard@levitte.org>
+- Remove the incorrect installation of '%{openssldir}/lib'.
 * Wed May  7 2003 Richard Levitte <richard@levitte.org>
 - Add /usr/lib/pkgconfig/openssl.pc to the development section.
 * Thu Mar 22 2001 Richard Levitte <richard@levitte.org>

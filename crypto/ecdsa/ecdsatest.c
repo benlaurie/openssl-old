@@ -3,7 +3,7 @@
  * Written by Nils Larsch for the OpenSSL project.
  */
 /* ====================================================================
- * Copyright (c) 2000-2002 The OpenSSL Project.  All rights reserved.
+ * Copyright (c) 2000-2005 The OpenSSL Project.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -69,12 +69,6 @@
  *
  */
 
-/* Until the key-gen callbacks are modified to use newer prototypes, we allow
- * deprecated functions for openssl-internal code */
-#ifdef OPENSSL_NO_DEPRECATED
-#undef OPENSSL_NO_DEPRECATED
-#endif
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -92,8 +86,11 @@ int main(int argc, char * argv[])
 #include <openssl/crypto.h>
 #include <openssl/bio.h>
 #include <openssl/evp.h>
+#include <openssl/bn.h>
 #include <openssl/ecdsa.h>
+#ifndef OPENSSL_NO_ENGINE
 #include <openssl/engine.h>
+#endif
 #include <openssl/err.h>
 #include <openssl/rand.h>
 
@@ -201,20 +198,18 @@ int x9_62_test_internal(BIO *out, int nid, const char *r_in, const char *s_in)
 
 	BIO_printf(out, "testing %s: ", OBJ_nid2sn(nid));
 	/* create the key */
-	if ((key = EC_KEY_new()) == NULL)
-		goto x962_int_err;
-	if ((key->group = EC_GROUP_new_by_nid(nid)) == NULL)
+	if ((key = EC_KEY_new_by_curve_name(nid)) == NULL)
 		goto x962_int_err;
 	if (!EC_KEY_generate_key(key))
 		goto x962_int_err;
 	BIO_printf(out, ".");
-	BIO_flush(out);
+	(void)BIO_flush(out);
 	/* create the signature */
 	signature = ECDSA_do_sign(digest, 20, key);
 	if (signature == NULL)
 		goto x962_int_err;
 	BIO_printf(out, ".");
-	BIO_flush(out);
+	(void)BIO_flush(out);
 	/* compare the created signature with the expected signature */
 	if ((r = BN_new()) == NULL || (s = BN_new()) == NULL)
 		goto x962_int_err;
@@ -224,12 +219,12 @@ int x9_62_test_internal(BIO *out, int nid, const char *r_in, const char *s_in)
 	if (BN_cmp(signature->r ,r) || BN_cmp(signature->s, s))
 		goto x962_int_err;
 	BIO_printf(out, ".");
-	BIO_flush(out);
+	(void)BIO_flush(out);
 	/* verify the signature */
 	if (ECDSA_do_verify(digest, 20, signature, key) != 1)
 		goto x962_int_err;
 	BIO_printf(out, ".");
-	BIO_flush(out);
+	(void)BIO_flush(out);
 
 	BIO_printf(out, " ok\n");
 	ret = 1;
@@ -291,6 +286,7 @@ int test_builtin(BIO *out)
 	EC_builtin_curve *curves = NULL;
 	size_t		crv_len = 0, n = 0;
 	EC_KEY		*eckey = NULL, *wrong_eckey = NULL;
+	EC_GROUP	*group;
 	unsigned char	digest[20], wrong_digest[20];
 	unsigned char	*signature = NULL; 
 	unsigned int	sig_len;
@@ -337,9 +333,13 @@ int test_builtin(BIO *out)
 		/* create new ecdsa key (== EC_KEY) */
 		if ((eckey = EC_KEY_new()) == NULL)
 			goto builtin_err;
-		if ((eckey->group = EC_GROUP_new_by_nid(nid)) == NULL)
+		group = EC_GROUP_new_by_curve_name(nid);
+		if (group == NULL)
 			goto builtin_err;
-		if (EC_GROUP_get_degree(eckey->group) < 160)
+		if (EC_KEY_set_group(eckey, group) == 0)
+			goto builtin_err;
+		EC_GROUP_free(group);
+		if (EC_GROUP_get_degree(EC_KEY_get0_group(eckey)) < 160)
 			/* drop the curve */ 
 			{
 			EC_KEY_free(eckey);
@@ -356,8 +356,12 @@ int test_builtin(BIO *out)
 		/* create second key */
 		if ((wrong_eckey = EC_KEY_new()) == NULL)
 			goto builtin_err;
-		if ((wrong_eckey->group = EC_GROUP_new_by_nid(nid)) == NULL)
+		group = EC_GROUP_new_by_curve_name(nid);
+		if (group == NULL)
 			goto builtin_err;
+		if (EC_KEY_set_group(wrong_eckey, group) == 0)
+			goto builtin_err;
+		EC_GROUP_free(group);
 		if (!EC_KEY_generate_key(wrong_eckey))
 			{
 			BIO_printf(out, " failed\n");
@@ -365,7 +369,7 @@ int test_builtin(BIO *out)
 			}
 
 		BIO_printf(out, ".");
-		BIO_flush(out);
+		(void)BIO_flush(out);
 		/* check key */
 		if (!EC_KEY_check_key(eckey))
 			{
@@ -373,7 +377,7 @@ int test_builtin(BIO *out)
 			goto builtin_err;
 			}
 		BIO_printf(out, ".");
-		BIO_flush(out);
+		(void)BIO_flush(out);
 		/* create signature */
 		sig_len = ECDSA_size(eckey);
 		if ((signature = OPENSSL_malloc(sig_len)) == NULL)
@@ -384,7 +388,7 @@ int test_builtin(BIO *out)
 			goto builtin_err;
 			}
 		BIO_printf(out, ".");
-		BIO_flush(out);
+		(void)BIO_flush(out);
 		/* verify signature */
 		if (ECDSA_verify(0, digest, 20, signature, sig_len, eckey) != 1)
 			{
@@ -392,7 +396,7 @@ int test_builtin(BIO *out)
 			goto builtin_err;
 			}
 		BIO_printf(out, ".");
-		BIO_flush(out);
+		(void)BIO_flush(out);
 		/* verify signature with the wrong key */
 		if (ECDSA_verify(0, digest, 20, signature, sig_len, 
 			wrong_eckey) == 1)
@@ -401,7 +405,7 @@ int test_builtin(BIO *out)
 			goto builtin_err;
 			}
 		BIO_printf(out, ".");
-		BIO_flush(out);
+		(void)BIO_flush(out);
 		/* wrong digest */
 		if (ECDSA_verify(0, wrong_digest, 20, signature, sig_len,
 			eckey) == 1)
@@ -410,7 +414,7 @@ int test_builtin(BIO *out)
 			goto builtin_err;
 			}
 		BIO_printf(out, ".");
-		BIO_flush(out);
+		(void)BIO_flush(out);
 		/* modify a single byte of the signature */
 		offset = signature[10] % sig_len;
 		dirt   = signature[11];
@@ -421,7 +425,7 @@ int test_builtin(BIO *out)
 			goto builtin_err;
 			}
 		BIO_printf(out, ".");
-		BIO_flush(out);
+		(void)BIO_flush(out);
 		
 		BIO_printf(out, " ok\n");
 		/* cleanup */
@@ -439,7 +443,7 @@ builtin_err:
 		EC_KEY_free(eckey);
 	if (wrong_eckey)
 		EC_KEY_free(wrong_eckey);
-	if (signature);
+	if (signature)
 		OPENSSL_free(signature);
 	if (curves)
 		OPENSSL_free(curves);
@@ -486,7 +490,7 @@ err:
 	if (ret)
 		ERR_print_errors(out);
 	CRYPTO_cleanup_all_ex_data();
-	ERR_remove_state(0);
+	ERR_remove_thread_state(NULL);
 	ERR_free_strings();
 	CRYPTO_mem_leaks(out);
 	if (out != NULL)

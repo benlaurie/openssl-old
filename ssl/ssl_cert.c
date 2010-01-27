@@ -56,7 +56,7 @@
  * [including the GNU Public Licence.]
  */
 /* ====================================================================
- * Copyright (c) 1999 The OpenSSL Project.  All rights reserved.
+ * Copyright (c) 1998-2007 The OpenSSL Project.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -73,12 +73,12 @@
  * 3. All advertising materials mentioning features or use of this
  *    software must display the following acknowledgment:
  *    "This product includes software developed by the OpenSSL Project
- *    for use in the OpenSSL Toolkit. (http://www.OpenSSL.org/)"
+ *    for use in the OpenSSL Toolkit. (http://www.openssl.org/)"
  *
  * 4. The names "OpenSSL Toolkit" and "OpenSSL Project" must not be used to
  *    endorse or promote products derived from this software without
  *    prior written permission. For written permission, please contact
- *    openssl-core@OpenSSL.org.
+ *    openssl-core@openssl.org.
  *
  * 5. Products derived from this software may not be called "OpenSSL"
  *    nor may "OpenSSL" appear in their names without prior written
@@ -87,7 +87,7 @@
  * 6. Redistributions of any form whatsoever must retain the following
  *    acknowledgment:
  *    "This product includes software developed by the OpenSSL Project
- *    for use in the OpenSSL Toolkit (http://www.OpenSSL.org/)"
+ *    for use in the OpenSSL Toolkit (http://www.openssl.org/)"
  *
  * THIS SOFTWARE IS PROVIDED BY THE OpenSSL PROJECT ``AS IS'' AND ANY
  * EXPRESSED OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -102,6 +102,11 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  * ====================================================================
+ *
+ * This product includes cryptographic software written by Eric Young
+ * (eay@cryptsoft.com).  This product includes software written by Tim
+ * Hudson (tjh@cryptsoft.com).
+ *
  */
 /* ====================================================================
  * Copyright 2002 Sun Microsystems, Inc. ALL RIGHTS RESERVED.
@@ -121,28 +126,37 @@
 #include <openssl/bio.h>
 #include <openssl/pem.h>
 #include <openssl/x509v3.h>
+#ifndef OPENSSL_NO_DH
 #include <openssl/dh.h>
+#endif
 #include <openssl/bn.h>
 #include "ssl_locl.h"
 
 int SSL_get_ex_data_X509_STORE_CTX_idx(void)
 	{
 	static volatile int ssl_x509_store_ctx_idx= -1;
+	int got_write_lock = 0;
+
+	CRYPTO_r_lock(CRYPTO_LOCK_SSL_CTX);
 
 	if (ssl_x509_store_ctx_idx < 0)
 		{
-		/* any write lock will do; usually this branch
-		 * will only be taken once anyway */
+		CRYPTO_r_unlock(CRYPTO_LOCK_SSL_CTX);
 		CRYPTO_w_lock(CRYPTO_LOCK_SSL_CTX);
+		got_write_lock = 1;
 		
 		if (ssl_x509_store_ctx_idx < 0)
 			{
 			ssl_x509_store_ctx_idx=X509_STORE_CTX_get_ex_new_index(
 				0,"SSL for verify callback",NULL,NULL,NULL);
 			}
-		
-		CRYPTO_w_unlock(CRYPTO_LOCK_SSL_CTX);
 		}
+
+	if (got_write_lock)
+		CRYPTO_w_unlock(CRYPTO_LOCK_SSL_CTX);
+	else
+		CRYPTO_r_unlock(CRYPTO_LOCK_SSL_CTX);
+	
 	return ssl_x509_store_ctx_idx;
 	}
 
@@ -183,8 +197,10 @@ CERT *ssl_cert_dup(CERT *cert)
 	 * if you find that more readable */
 
 	ret->valid = cert->valid;
-	ret->mask = cert->mask;
-	ret->export_mask = cert->export_mask;
+	ret->mask_k = cert->mask_k;
+	ret->mask_a = cert->mask_a;
+	ret->export_mask_k = cert->export_mask_k;
+	ret->export_mask_a = cert->export_mask_a;
 
 #ifndef OPENSSL_NO_RSA
 	if (cert->rsa_tmp != NULL)
@@ -198,7 +214,6 @@ CERT *ssl_cert_dup(CERT *cert)
 #ifndef OPENSSL_NO_DH
 	if (cert->dh_tmp != NULL)
 		{
-		/* DH parameters don't have a reference count */
 		ret->dh_tmp = DHparams_dup(cert->dh_tmp);
 		if (ret->dh_tmp == NULL)
 			{
@@ -232,8 +247,12 @@ CERT *ssl_cert_dup(CERT *cert)
 #ifndef OPENSSL_NO_ECDH
 	if (cert->ecdh_tmp)
 		{
-		EC_KEY_up_ref(cert->ecdh_tmp);
-		ret->ecdh_tmp = cert->ecdh_tmp;
+		ret->ecdh_tmp = EC_KEY_dup(cert->ecdh_tmp);
+		if (ret->ecdh_tmp == NULL)
+			{
+			SSLerr(SSL_F_SSL_CERT_DUP, ERR_R_EC_LIB);
+			goto err;
+			}
 		}
 	ret->ecdh_tmp_cb = cert->ecdh_tmp_cb;
 #endif
@@ -291,7 +310,7 @@ CERT *ssl_cert_dup(CERT *cert)
 
 	return(ret);
 	
-#ifndef OPENSSL_NO_DH /* avoid 'unreferenced label' warning if OPENSSL_NO_DH is defined */
+#if !defined(OPENSSL_NO_DH) || !defined(OPENSSL_NO_ECDH)
 err:
 #endif
 #ifndef OPENSSL_NO_RSA
@@ -483,9 +502,6 @@ int ssl_verify_cert_chain(SSL *s,STACK_OF(X509) *sk)
 		SSLerr(SSL_F_SSL_VERIFY_CERT_CHAIN,ERR_R_X509_LIB);
 		return(0);
 		}
-	if (s->param)
-		X509_VERIFY_PARAM_inherit(X509_STORE_CTX_get0_param(&ctx),
-						s->param);
 #if 0
 	if (SSL_get_verify_depth(s) >= 0)
 		X509_STORE_CTX_set_depth(&ctx, SSL_get_verify_depth(s));
@@ -499,6 +515,10 @@ int ssl_verify_cert_chain(SSL *s,STACK_OF(X509) *sk)
 
 	X509_STORE_CTX_set_default(&ctx,
 				s->server ? "ssl_client" : "ssl_server");
+	/* Anything non-default in "param" should overwrite anything in the
+	 * ctx.
+	 */
+	X509_VERIFY_PARAM_set1(X509_STORE_CTX_get0_param(&ctx), s->param);
 
 	if (s->verify_callback)
 		X509_STORE_CTX_set_verify_cb(&ctx, s->verify_callback);
@@ -563,12 +583,12 @@ void SSL_CTX_set_client_CA_list(SSL_CTX *ctx,STACK_OF(X509_NAME) *name_list)
 	set_client_CA_list(&(ctx->client_CA),name_list);
 	}
 
-STACK_OF(X509_NAME) *SSL_CTX_get_client_CA_list(SSL_CTX *ctx)
+STACK_OF(X509_NAME) *SSL_CTX_get_client_CA_list(const SSL_CTX *ctx)
 	{
 	return(ctx->client_CA);
 	}
 
-STACK_OF(X509_NAME) *SSL_get_client_CA_list(SSL *s)
+STACK_OF(X509_NAME) *SSL_get_client_CA_list(const SSL *s)
 	{
 	if (s->type == SSL_ST_CONNECT)
 		{ /* we are in the client */
@@ -635,14 +655,13 @@ STACK_OF(X509_NAME) *SSL_load_client_CA_file(const char *file)
 	BIO *in;
 	X509 *x=NULL;
 	X509_NAME *xn=NULL;
-	STACK_OF(X509_NAME) *ret,*sk;
+	STACK_OF(X509_NAME) *ret = NULL,*sk;
 
-	ret=sk_X509_NAME_new_null();
 	sk=sk_X509_NAME_new(xname_cmp);
 
 	in=BIO_new(BIO_s_file_internal());
 
-	if ((ret == NULL) || (sk == NULL) || (in == NULL))
+	if ((sk == NULL) || (in == NULL))
 		{
 		SSLerr(SSL_F_SSL_LOAD_CLIENT_CA_FILE,ERR_R_MALLOC_FAILURE);
 		goto err;
@@ -655,6 +674,15 @@ STACK_OF(X509_NAME) *SSL_load_client_CA_file(const char *file)
 		{
 		if (PEM_read_bio_X509(in,&x,NULL,NULL) == NULL)
 			break;
+		if (ret == NULL)
+			{
+			ret = sk_X509_NAME_new_null();
+			if (ret == NULL)
+				{
+				SSLerr(SSL_F_SSL_LOAD_CLIENT_CA_FILE,ERR_R_MALLOC_FAILURE);
+				goto err;
+				}
+			}
 		if ((xn=X509_get_subject_name(x)) == NULL) goto err;
 		/* check for duplicates */
 		xn=X509_NAME_dup(xn);
@@ -677,6 +705,8 @@ err:
 	if (sk != NULL) sk_X509_NAME_free(sk);
 	if (in != NULL) BIO_free(in);
 	if (x != NULL) X509_free(x);
+	if (ret != NULL)
+		ERR_clear_error();
 	return(ret);
 	}
 #endif
@@ -735,7 +765,7 @@ err:
 	if(x != NULL)
 		X509_free(x);
 	
-	sk_X509_NAME_set_cmp_func(stack,oldcmp);
+	(void)sk_X509_NAME_set_cmp_func(stack,oldcmp);
 
 	return ret;
 	}

@@ -64,9 +64,15 @@
 #include <openssl/buffer.h>
 #include <openssl/dso.h>
 #include <openssl/engine.h>
+#ifndef OPENSSL_NO_RSA
 #include <openssl/rsa.h>
+#endif
+#ifndef OPENSSL_NO_DSA
 #include <openssl/dsa.h>
+#endif
+#ifndef OPENSSL_NO_DH
 #include <openssl/dh.h>
+#endif
 #include <openssl/bn.h>
 
 #ifndef OPENSSL_NO_HW
@@ -89,14 +95,14 @@ static int ubsec_finish(ENGINE *e);
 static int ubsec_ctrl(ENGINE *e, int cmd, long i, void *p, void (*f)(void));
 static int ubsec_mod_exp(BIGNUM *r, const BIGNUM *a, const BIGNUM *p,
 		const BIGNUM *m, BN_CTX *ctx);
+#ifndef OPENSSL_NO_RSA
 static int ubsec_mod_exp_crt(BIGNUM *r, const BIGNUM *a, const BIGNUM *p,
 			const BIGNUM *q, const BIGNUM *dp,
 			const BIGNUM *dq, const BIGNUM *qinv, BN_CTX *ctx);
-#ifndef OPENSSL_NO_RSA
 static int ubsec_rsa_mod_exp(BIGNUM *r0, const BIGNUM *I, RSA *rsa, BN_CTX *ctx);
-#endif
 static int ubsec_mod_exp_mont(BIGNUM *r, const BIGNUM *a, const BIGNUM *p,
 		const BIGNUM *m, BN_CTX *ctx, BN_MONT_CTX *m_ctx);
+#endif
 #ifndef OPENSSL_NO_DSA
 #ifdef NOT_USED
 static int ubsec_dsa_mod_exp(DSA *dsa, BIGNUM *rr, BIGNUM *a1,
@@ -296,10 +302,10 @@ static t_UBSEC_diffie_hellman_generate_ioctl
 	*p_UBSEC_diffie_hellman_generate_ioctl = NULL;
 static t_UBSEC_diffie_hellman_agree_ioctl *p_UBSEC_diffie_hellman_agree_ioctl = NULL;
 #endif
-/* #ifndef OPENSSL_NO_RSA */
 static t_UBSEC_rsa_mod_exp_ioctl *p_UBSEC_rsa_mod_exp_ioctl = NULL;
+#ifndef OPENSSL_NO_RSA
 static t_UBSEC_rsa_mod_exp_crt_ioctl *p_UBSEC_rsa_mod_exp_crt_ioctl = NULL;
-/* #endif */
+#endif
 #ifndef OPENSSL_NO_DSA
 static t_UBSEC_dsa_sign_ioctl *p_UBSEC_dsa_sign_ioctl = NULL;
 static t_UBSEC_dsa_verify_ioctl *p_UBSEC_dsa_verify_ioctl = NULL;
@@ -463,6 +469,7 @@ static int ubsec_init(ENGINE *e)
 err:
 	if(ubsec_dso)
 		DSO_free(ubsec_dso);
+	ubsec_dso = NULL;
 	p_UBSEC_ubsec_bytes_to_bits = NULL;
 	p_UBSEC_ubsec_bits_to_bytes = NULL;
 	p_UBSEC_ubsec_open = NULL;
@@ -573,7 +580,7 @@ static int ubsec_mod_exp(BIGNUM *r, const BIGNUM *a, const BIGNUM *p,
 
 	if ((fd = p_UBSEC_ubsec_open(UBSEC_KEY_DEVICE_NAME)) <= 0) {
 		fd = 0;
-		UBSECerr(UBSEC_F_UBSEC_INIT, UBSEC_R_UNIT_FAILURE);
+		UBSECerr(UBSEC_F_UBSEC_MOD_EXP, UBSEC_R_UNIT_FAILURE);
                 return BN_mod_exp(r, a, p, m, ctx);
 	}
 
@@ -617,7 +624,6 @@ static int ubsec_rsa_mod_exp(BIGNUM *r0, const BIGNUM *I, RSA *rsa, BN_CTX *ctx)
 err:
 	return to_return;
 	}
-#endif
 
 static int ubsec_mod_exp_crt(BIGNUM *r, const BIGNUM *a, const BIGNUM *p,
 			const BIGNUM *q, const BIGNUM *dp,
@@ -632,18 +638,18 @@ static int ubsec_mod_exp_crt(BIGNUM *r, const BIGNUM *a, const BIGNUM *p,
 
 	/* Check if hardware can't handle this argument. */
 	if (y_len > max_key_len) {
-		UBSECerr(UBSEC_F_UBSEC_MOD_EXP, UBSEC_R_SIZE_TOO_LARGE_OR_TOO_SMALL);
+		UBSECerr(UBSEC_F_UBSEC_MOD_EXP_CRT, UBSEC_R_SIZE_TOO_LARGE_OR_TOO_SMALL);
 		return FAIL_TO_SOFTWARE;
 	} 
 
 	if (!bn_wexpand(r, p->top + q->top + 1)) {
-		UBSECerr(UBSEC_F_UBSEC_RSA_MOD_EXP_CRT, UBSEC_R_BN_EXPAND_FAIL);
+		UBSECerr(UBSEC_F_UBSEC_MOD_EXP_CRT, UBSEC_R_BN_EXPAND_FAIL);
 		return 0;
 	}
 
 	if ((fd = p_UBSEC_ubsec_open(UBSEC_KEY_DEVICE_NAME)) <= 0) {
 		fd = 0;
-		UBSECerr(UBSEC_F_UBSEC_INIT, UBSEC_R_UNIT_FAILURE);
+		UBSECerr(UBSEC_F_UBSEC_MOD_EXP_CRT, UBSEC_R_UNIT_FAILURE);
 		return FAIL_TO_SOFTWARE;
 	}
 
@@ -655,7 +661,7 @@ static int ubsec_mod_exp_crt(BIGNUM *r, const BIGNUM *a, const BIGNUM *p,
 		(unsigned char *)dq->d, BN_num_bits(dq),
 		(unsigned char *)q->d, BN_num_bits(q),
 		(unsigned char *)r->d,  &y_len) != 0) {
-		UBSECerr(UBSEC_F_UBSEC_MOD_EXP, UBSEC_R_REQUEST_FAILED);
+		UBSECerr(UBSEC_F_UBSEC_MOD_EXP_CRT, UBSEC_R_REQUEST_FAILED);
                 p_UBSEC_ubsec_close(fd);
 		return FAIL_TO_SOFTWARE;
 	}
@@ -665,6 +671,7 @@ static int ubsec_mod_exp_crt(BIGNUM *r, const BIGNUM *a, const BIGNUM *p,
 	r->top = (BN_num_bits(p) + BN_num_bits(q) + BN_BITS2 - 1)/BN_BITS2;
 	return 1;
 }
+#endif
 
 #ifndef OPENSSL_NO_DSA
 #ifdef NOT_USED
@@ -697,6 +704,8 @@ static int ubsec_mod_exp_dsa(DSA *dsa, BIGNUM *r, BIGNUM *a,
 #endif
 #endif
 
+#ifndef OPENSSL_NO_RSA
+
 /*
  * This function is aliased to mod_exp (with the mont stuff dropped).
  */
@@ -705,7 +714,6 @@ static int ubsec_mod_exp_mont(BIGNUM *r, const BIGNUM *a, const BIGNUM *p,
         {
 	int ret = 0;
 
-#ifndef OPENSSL_NO_RSA
  	/* Do in software if the key is too large for the hardware. */
 	if (BN_num_bits(m) > max_key_len)
                 {
@@ -713,13 +721,13 @@ static int ubsec_mod_exp_mont(BIGNUM *r, const BIGNUM *a, const BIGNUM *p,
 		ret = (*meth->bn_mod_exp)(r, a, p, m, ctx, m_ctx);
                 }
         else
-#endif
                 {
 		ret = ubsec_mod_exp(r, a, p, m, ctx);
                 }
 	
 	return ret;
         }
+#endif
 
 #ifndef OPENSSL_NO_DH
 /* This function is aliased to mod_exp (with the dh and mont dropped). */
@@ -749,19 +757,19 @@ static DSA_SIG *ubsec_dsa_do_sign(const unsigned char *dgst, int dlen, DSA *dsa)
 
         if(!bn_wexpand(r, (160+BN_BITS2-1)/BN_BITS2) ||
        	   (!bn_wexpand(s, (160+BN_BITS2-1)/BN_BITS2))) {
-		UBSECerr(UBSEC_F_UBSEC_DSA_SIGN, UBSEC_R_BN_EXPAND_FAIL);
+		UBSECerr(UBSEC_F_UBSEC_DSA_DO_SIGN, UBSEC_R_BN_EXPAND_FAIL);
 		goto err;
 	}
 
 	if (BN_bin2bn(dgst,dlen,&m) == NULL) {
-		UBSECerr(UBSEC_F_UBSEC_DSA_SIGN, UBSEC_R_BN_EXPAND_FAIL);
+		UBSECerr(UBSEC_F_UBSEC_DSA_DO_SIGN, UBSEC_R_BN_EXPAND_FAIL);
 		goto err;
 	} 
 
 	if ((fd = p_UBSEC_ubsec_open(UBSEC_KEY_DEVICE_NAME)) <= 0) {
                 const DSA_METHOD *meth;
 		fd = 0;
-		UBSECerr(UBSEC_F_UBSEC_INIT, UBSEC_R_UNIT_FAILURE);
+		UBSECerr(UBSEC_F_UBSEC_DSA_DO_SIGN, UBSEC_R_UNIT_FAILURE);
                 meth = DSA_OpenSSL();
                 to_return =  meth->dsa_do_sign(dgst, dlen, dsa);
 		goto err;
@@ -778,7 +786,7 @@ static DSA_SIG *ubsec_dsa_do_sign(const unsigned char *dgst, int dlen, DSA *dsa)
 		(unsigned char *)s->d, &s_len ) != 0) {
                 const DSA_METHOD *meth;
 
-		UBSECerr(UBSEC_F_UBSEC_DSA_SIGN, UBSEC_R_REQUEST_FAILED);
+		UBSECerr(UBSEC_F_UBSEC_DSA_DO_SIGN, UBSEC_R_REQUEST_FAILED);
                 p_UBSEC_ubsec_close(fd);
                 meth = DSA_OpenSSL();
                 to_return = meth->dsa_do_sign(dgst, dlen, dsa);
@@ -793,7 +801,7 @@ static DSA_SIG *ubsec_dsa_do_sign(const unsigned char *dgst, int dlen, DSA *dsa)
 
 	to_return = DSA_SIG_new();
 	if(to_return == NULL) {
-		UBSECerr(UBSEC_F_UBSEC_DSA_SIGN, UBSEC_R_BN_EXPAND_FAIL);
+		UBSECerr(UBSEC_F_UBSEC_DSA_DO_SIGN, UBSEC_R_BN_EXPAND_FAIL);
 		goto err;
 	}
 
@@ -815,12 +823,12 @@ static int ubsec_dsa_verify(const unsigned char *dgst, int dgst_len,
 	int v_len, d_len;
 	int to_return = 0;
 	int fd;
-	BIGNUM v;
+	BIGNUM v, *pv = &v;
 
 	BN_init(&v);
 
-	if(!bn_wexpand(&v, dsa->p->top)) {
-		UBSECerr(UBSEC_F_UBSEC_DSA_VERIFY ,UBSEC_R_BN_EXPAND_FAIL);
+	if(!bn_wexpand(pv, dsa->p->top)) {
+		UBSECerr(UBSEC_F_UBSEC_DSA_VERIFY, UBSEC_R_BN_EXPAND_FAIL);
 		goto err;
 	}
 
@@ -831,7 +839,7 @@ static int ubsec_dsa_verify(const unsigned char *dgst, int dgst_len,
 	if ((fd = p_UBSEC_ubsec_open(UBSEC_KEY_DEVICE_NAME)) <= 0) {
                 const DSA_METHOD *meth;
 		fd = 0;
-		UBSECerr(UBSEC_F_UBSEC_INIT, UBSEC_R_UNIT_FAILURE);
+		UBSECerr(UBSEC_F_UBSEC_DSA_VERIFY, UBSEC_R_UNIT_FAILURE);
                 meth = DSA_OpenSSL();
                 to_return = meth->dsa_do_verify(dgst, dgst_len, sig, dsa);
 		goto err;
@@ -847,7 +855,7 @@ static int ubsec_dsa_verify(const unsigned char *dgst, int dgst_len,
 		(unsigned char *)sig->s->d, BN_num_bits(sig->s),
 		(unsigned char *)v.d, &v_len) != 0) {
                 const DSA_METHOD *meth;
-		UBSECerr(UBSEC_F_UBSEC_DSA_VERIFY , UBSEC_R_REQUEST_FAILED);
+		UBSECerr(UBSEC_F_UBSEC_DSA_VERIFY, UBSEC_R_REQUEST_FAILED);
                 p_UBSEC_ubsec_close(fd);
 
                 meth = DSA_OpenSSL();
@@ -866,7 +874,7 @@ err:
 #endif
 
 #ifndef OPENSSL_NO_DH
-static int ubsec_dh_compute_key (unsigned char *key,const BIGNUM *pub_key,DH *dh)
+static int ubsec_dh_compute_key(unsigned char *key,const BIGNUM *pub_key,DH *dh)
         {
         int      ret      = -1,
                  k_len,
@@ -877,7 +885,7 @@ static int ubsec_dh_compute_key (unsigned char *key,const BIGNUM *pub_key,DH *dh
         if ((fd = p_UBSEC_ubsec_open(UBSEC_KEY_DEVICE_NAME)) <= 0)
                 {
                 const DH_METHOD *meth;
-                ENGINEerr(UBSEC_F_UBSEC_INIT, UBSEC_R_UNIT_FAILURE);
+                UBSECerr(UBSEC_F_UBSEC_DH_COMPUTE_KEY, UBSEC_R_UNIT_FAILURE);
                 meth = DH_OpenSSL();
                 ret = meth->compute_key(key, pub_key, dh);
                 goto err;
@@ -891,7 +899,7 @@ static int ubsec_dh_compute_key (unsigned char *key,const BIGNUM *pub_key,DH *dh
                 {
                 /* Hardware's a no go, failover to software */
                 const DH_METHOD *meth;
-                ENGINEerr(UBSEC_F_UBSEC_DH_COMPUTE_KEY, UBSEC_R_REQUEST_FAILED);
+                UBSECerr(UBSEC_F_UBSEC_DH_COMPUTE_KEY, UBSEC_R_REQUEST_FAILED);
                 p_UBSEC_ubsec_close(fd);
 
                 meth = DH_OpenSSL();
@@ -907,7 +915,7 @@ err:
         return ret;
         }
 
-static int ubsec_dh_generate_key (DH *dh)
+static int ubsec_dh_generate_key(DH *dh)
         {
         int      ret               = 0,
                  random_bits       = 0,
@@ -953,7 +961,7 @@ static int ubsec_dh_generate_key (DH *dh)
         if ((fd = p_UBSEC_ubsec_open(UBSEC_KEY_DEVICE_NAME)) <= 0)
                 {
                 const DH_METHOD *meth;
-                ENGINEerr(UBSEC_F_UBSEC_INIT, UBSEC_R_UNIT_FAILURE);
+                UBSECerr(UBSEC_F_UBSEC_DH_GENERATE_KEY, UBSEC_R_UNIT_FAILURE);
                 meth = DH_OpenSSL();
                 ret = meth->generate_key(dh);
                 goto err;
@@ -969,7 +977,7 @@ static int ubsec_dh_generate_key (DH *dh)
                 /* Hardware's a no go, failover to software */
                 const DH_METHOD *meth;
 
-                ENGINEerr(UBSEC_F_UBSEC_DH_COMPUTE_KEY, UBSEC_R_REQUEST_FAILED);
+                UBSECerr(UBSEC_F_UBSEC_DH_GENERATE_KEY, UBSEC_R_REQUEST_FAILED);
                 p_UBSEC_ubsec_close(fd);
 
                 meth = DH_OpenSSL();
@@ -1001,7 +1009,7 @@ static int ubsec_rand_bytes(unsigned char * buf,
         if ((fd = p_UBSEC_ubsec_open(UBSEC_KEY_DEVICE_NAME)) <= 0)
                 {
                 const RAND_METHOD *meth;
-                ENGINEerr(UBSEC_F_UBSEC_INIT, UBSEC_R_UNIT_FAILURE);
+                UBSECerr(UBSEC_F_UBSEC_RAND_BYTES, UBSEC_R_UNIT_FAILURE);
                 num = p_UBSEC_ubsec_bits_to_bytes(num);
                 meth = RAND_SSLeay();
                 meth->seed(buf, num);
@@ -1019,7 +1027,7 @@ static int ubsec_rand_bytes(unsigned char * buf,
                 /* Hardware's a no go, failover to software */
                 const RAND_METHOD *meth;
 
-                ENGINEerr(UBSEC_F_UBSEC_RNG_BYTES, UBSEC_R_REQUEST_FAILED);
+                UBSECerr(UBSEC_F_UBSEC_RAND_BYTES, UBSEC_R_REQUEST_FAILED);
                 p_UBSEC_ubsec_close(fd);
 
                 num = p_UBSEC_ubsec_bits_to_bytes(num);

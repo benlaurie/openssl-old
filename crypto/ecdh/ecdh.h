@@ -85,41 +85,6 @@
 extern "C" {
 #endif
 
-/* Already defined in ossl_typ.h */
-/* typedef struct ecdh_method ECDH_METHOD; */
-
-struct ecdh_method 
-	{
-	const char *name;
-	int (*compute_key)(void *key, size_t outlen, const EC_POINT *pub_key, EC_KEY *ecdh,
-	                   void *(*KDF)(void *in, size_t inlen, void *out, size_t outlen));
-#if 0
-	int (*init)(EC_KEY *eckey);
-	int (*finish)(EC_KEY *eckey);
-#endif
-	int flags;
-	char *app_data;
-	};
-
-typedef struct ecdh_data_st {
-	/* EC_KEY_METH_DATA part */
-	int (*init)(EC_KEY *);
-	void (*finish)(EC_KEY *);
-	/* method specific part */
-	ENGINE	*engine;
-	int	flags;
-	const ECDH_METHOD *meth;
-	CRYPTO_EX_DATA ex_data;
-} ECDH_DATA; 
-
-/* ECDH_DATA functions */
-ECDH_DATA *ECDH_DATA_new(void);
-ECDH_DATA *ECDH_DATA_new_method(ENGINE *);
-void ECDH_DATA_free(ECDH_DATA *);
-
-ECDH_DATA *ecdh_check(EC_KEY *);
-
-
 const ECDH_METHOD *ECDH_OpenSSL(void);
 
 void	  ECDH_set_default_method(const ECDH_METHOD *);
@@ -127,7 +92,7 @@ const ECDH_METHOD *ECDH_get_default_method(void);
 int 	  ECDH_set_method(EC_KEY *, const ECDH_METHOD *);
 
 int ECDH_compute_key(void *out, size_t outlen, const EC_POINT *pub_key, EC_KEY *ecdh,
-                     void *(*KDF)(void *in, size_t inlen, void *out, size_t outlen));
+                     void *(*KDF)(const void *in, size_t inlen, void *out, size_t *outlen));
 
 int 	  ECDH_get_ex_new_index(long argl, void *argp, CRYPTO_EX_new 
 		*new_func, CRYPTO_EX_dup *dup_func, CRYPTO_EX_free *free_func);
@@ -145,7 +110,7 @@ void ERR_load_ECDH_strings(void);
 
 /* Function codes. */
 #define ECDH_F_ECDH_COMPUTE_KEY				 100
-#define ECDH_F_ECDH_DATA_NEW				 101
+#define ECDH_F_ECDH_DATA_NEW_METHOD			 101
 
 /* Reason codes. */
 #define ECDH_R_KDF_FAILED				 102

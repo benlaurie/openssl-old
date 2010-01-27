@@ -61,6 +61,7 @@
 #include <stdio.h>
 #include "cryptlib.h"
 #include <openssl/bn.h>
+#include <openssl/sha.h>
 #include <openssl/dsa.h>
 #include <openssl/rand.h>
 #include <openssl/asn1.h>
@@ -68,7 +69,7 @@
 static DSA_SIG *dsa_do_sign(const unsigned char *dgst, int dlen, DSA *dsa);
 static int dsa_sign_setup(DSA *dsa, BN_CTX *ctx_in, BIGNUM **kinvp, BIGNUM **rp);
 static int dsa_do_verify(const unsigned char *dgst, int dgst_len, DSA_SIG *sig,
-		  DSA *dsa);
+			 DSA *dsa);
 static int dsa_init(DSA *dsa);
 static int dsa_finish(DSA *dsa);
 
@@ -133,7 +134,7 @@ static DSA_SIG *dsa_do_sign(const unsigned char *dgst, int dlen, DSA *dsa)
 	BIGNUM m;
 	BIGNUM xr;
 	BN_CTX *ctx=NULL;
-	int i,reason=ERR_R_BN_LIB;
+	int reason=ERR_R_BN_LIB;
 	DSA_SIG *ret=NULL;
 
 	BN_init(&m);
@@ -148,8 +149,9 @@ static DSA_SIG *dsa_do_sign(const unsigned char *dgst, int dlen, DSA *dsa)
 	s=BN_new();
 	if (s == NULL) goto err;
 
-	i=BN_num_bytes(dsa->q); /* should be 20 */
-	if ((dlen > i) || (dlen > 50))
+	/* reject a excessive digest length (currently at most
+	 * dsa-with-SHA256 is supported) */
+	if (dlen > SHA256_DIGEST_LENGTH)
 		{
 		reason=DSA_R_DATA_TOO_LARGE_FOR_KEY_SIZE;
 		goto err;
@@ -170,7 +172,14 @@ static DSA_SIG *dsa_do_sign(const unsigned char *dgst, int dlen, DSA *dsa)
 		dsa->r=NULL;
 		}
 
-	if (BN_bin2bn(dgst,dlen,&m) == NULL) goto err;
+	
+	if (dlen > BN_num_bytes(dsa->q))
+		/* if the digest length is greater than the size of q use the
+		 * BN_num_bits(dsa->q) leftmost bits of the digest, see
+		 * fips 186-3, 4.2 */
+		dlen = BN_num_bytes(dsa->q);
+	if (BN_bin2bn(dgst,dlen,&m) == NULL)
+		goto err;
 
 	/* Compute  s = inv(k) (m + xr) mod q */
 	if (!BN_mod_mul(&xr,dsa->priv_key,r,dsa->q,ctx)) goto err;/* s = xr */
@@ -202,7 +211,7 @@ err:
 static int dsa_sign_setup(DSA *dsa, BN_CTX *ctx_in, BIGNUM **kinvp, BIGNUM **rp)
 	{
 	BN_CTX *ctx;
-	BIGNUM k,*kinv=NULL,*r=NULL;
+	BIGNUM k,kq,*K,*kinv=NULL,*r=NULL;
 	int ret=0;
 
 	if (!dsa->p || !dsa->q || !dsa->g)
@@ -212,6 +221,7 @@ static int dsa_sign_setup(DSA *dsa, BN_CTX *ctx_in, BIGNUM **kinvp, BIGNUM **rp)
 		}
 
 	BN_init(&k);
+	BN_init(&kq);
 
 	if (ctx_in == NULL)
 		{
@@ -221,23 +231,50 @@ static int dsa_sign_setup(DSA *dsa, BN_CTX *ctx_in, BIGNUM **kinvp, BIGNUM **rp)
 		ctx=ctx_in;
 
 	if ((r=BN_new()) == NULL) goto err;
-	kinv=NULL;
 
 	/* Get random k */
 	do
 		if (!BN_rand_range(&k, dsa->q)) goto err;
 	while (BN_is_zero(&k));
-
-	if ((dsa->method_mont_p == NULL) && (dsa->flags & DSA_FLAG_CACHE_MONT_P))
+	if ((dsa->flags & DSA_FLAG_NO_EXP_CONSTTIME) == 0)
 		{
-		if ((dsa->method_mont_p=(char *)BN_MONT_CTX_new()) != NULL)
-			if (!BN_MONT_CTX_set((BN_MONT_CTX *)dsa->method_mont_p,
-				dsa->p,ctx)) goto err;
+		BN_set_flags(&k, BN_FLG_CONSTTIME);
+		}
+
+	if (dsa->flags & DSA_FLAG_CACHE_MONT_P)
+		{
+		if (!BN_MONT_CTX_set_locked(&dsa->method_mont_p,
+						CRYPTO_LOCK_DSA,
+						dsa->p, ctx))
+			goto err;
 		}
 
 	/* Compute r = (g^k mod p) mod q */
-	DSA_BN_MOD_EXP(goto err, dsa, r, dsa->g, &k, dsa->p, ctx,
-			(BN_MONT_CTX *)dsa->method_mont_p);
+
+	if ((dsa->flags & DSA_FLAG_NO_EXP_CONSTTIME) == 0)
+		{
+		if (!BN_copy(&kq, &k)) goto err;
+
+		/* We do not want timing information to leak the length of k,
+		 * so we compute g^k using an equivalent exponent of fixed length.
+		 *
+		 * (This is a kludge that we need because the BN_mod_exp_mont()
+		 * does not let us specify the desired timing behaviour.) */
+
+		if (!BN_add(&kq, &kq, dsa->q)) goto err;
+		if (BN_num_bits(&kq) <= BN_num_bits(dsa->q))
+			{
+			if (!BN_add(&kq, &kq, dsa->q)) goto err;
+			}
+
+		K = &kq;
+		}
+	else
+		{
+		K = &k;
+		}
+	DSA_BN_MOD_EXP(goto err, dsa, r, dsa->g, K, dsa->p, ctx,
+			dsa->method_mont_p);
 	if (!BN_mod(r,r,dsa->q,ctx)) goto err;
 
 	/* Compute  part of 's = inv(k) (m + xr) mod q' */
@@ -253,25 +290,47 @@ err:
 	if (!ret)
 		{
 		DSAerr(DSA_F_DSA_SIGN_SETUP,ERR_R_BN_LIB);
-		if (kinv != NULL) BN_clear_free(kinv);
-		if (r != NULL) BN_clear_free(r);
+		if (r != NULL)
+			BN_clear_free(r);
 		}
 	if (ctx_in == NULL) BN_CTX_free(ctx);
-	if (kinv != NULL) BN_clear_free(kinv);
 	BN_clear_free(&k);
+	BN_clear_free(&kq);
 	return(ret);
 	}
 
 static int dsa_do_verify(const unsigned char *dgst, int dgst_len, DSA_SIG *sig,
-		  DSA *dsa)
+			 DSA *dsa)
 	{
 	BN_CTX *ctx;
 	BIGNUM u1,u2,t1;
 	BN_MONT_CTX *mont=NULL;
-	int ret = -1;
+	int ret = -1, i;
 	if (!dsa->p || !dsa->q || !dsa->g)
 		{
 		DSAerr(DSA_F_DSA_DO_VERIFY,DSA_R_MISSING_PARAMETERS);
+		return -1;
+		}
+
+	i = BN_num_bits(dsa->q);
+	/* fips 186-3 allows only different sizes for q */
+	if (i != 160 && i != 224 && i != 256)
+		{
+		DSAerr(DSA_F_DSA_DO_VERIFY,DSA_R_BAD_Q_VALUE);
+		return -1;
+		}
+
+	if (BN_num_bits(dsa->p) > OPENSSL_DSA_MAX_MODULUS_BITS)
+		{
+		DSAerr(DSA_F_DSA_DO_VERIFY,DSA_R_MODULUS_TOO_LARGE);
+		return -1;
+		}
+
+	/* reject a excessive digest length (currently at most
+	 * dsa-with-SHA256 is supported) */
+	if (dgst_len > SHA256_DIGEST_LENGTH)
+		{
+		DSAerr(DSA_F_DSA_DO_VERIFY,DSA_R_DATA_TOO_LARGE_FOR_KEY_SIZE);
 		return -1;
 		}
 
@@ -281,13 +340,13 @@ static int dsa_do_verify(const unsigned char *dgst, int dgst_len, DSA_SIG *sig,
 
 	if ((ctx=BN_CTX_new()) == NULL) goto err;
 
-	if (BN_is_zero(sig->r) || BN_get_sign(sig->r) ||
+	if (BN_is_zero(sig->r) || BN_is_negative(sig->r) ||
 	    BN_ucmp(sig->r, dsa->q) >= 0)
 		{
 		ret = 0;
 		goto err;
 		}
-	if (BN_is_zero(sig->s) || BN_get_sign(sig->s) ||
+	if (BN_is_zero(sig->s) || BN_is_negative(sig->s) ||
 	    BN_ucmp(sig->s, dsa->q) >= 0)
 		{
 		ret = 0;
@@ -299,6 +358,11 @@ static int dsa_do_verify(const unsigned char *dgst, int dgst_len, DSA_SIG *sig,
 	if ((BN_mod_inverse(&u2,sig->s,dsa->q,ctx)) == NULL) goto err;
 
 	/* save M in u1 */
+	if (dgst_len > (i >> 3))
+		/* if the digest length is greater than the size of q use the
+		 * BN_num_bits(dsa->q) leftmost bits of the digest, see
+		 * fips 186-3, 4.2 */
+		dgst_len = (i >> 3);
 	if (BN_bin2bn(dgst,dgst_len,&u1) == NULL) goto err;
 
 	/* u1 = M * w mod q */
@@ -307,13 +371,14 @@ static int dsa_do_verify(const unsigned char *dgst, int dgst_len, DSA_SIG *sig,
 	/* u2 = r * w mod q */
 	if (!BN_mod_mul(&u2,sig->r,&u2,dsa->q,ctx)) goto err;
 
-	if ((dsa->method_mont_p == NULL) && (dsa->flags & DSA_FLAG_CACHE_MONT_P))
+
+	if (dsa->flags & DSA_FLAG_CACHE_MONT_P)
 		{
-		if ((dsa->method_mont_p=(char *)BN_MONT_CTX_new()) != NULL)
-			if (!BN_MONT_CTX_set((BN_MONT_CTX *)dsa->method_mont_p,
-				dsa->p,ctx)) goto err;
+		mont = BN_MONT_CTX_set_locked(&dsa->method_mont_p,
+					CRYPTO_LOCK_DSA, dsa->p, ctx);
+		if (!mont)
+			goto err;
 		}
-	mont=(BN_MONT_CTX *)dsa->method_mont_p;
 
 
 	DSA_MOD_EXP(goto err, dsa, &t1, dsa->g, &u1, dsa->pub_key, &u2, dsa->p, ctx, mont);
@@ -326,6 +391,8 @@ static int dsa_do_verify(const unsigned char *dgst, int dgst_len, DSA_SIG *sig,
 	ret=(BN_ucmp(&u1, sig->r) == 0);
 
 	err:
+	/* XXX: surely this is wrong - if ret is 0, it just didn't verify;
+	   there is no error in BN. Test should be ret == -1 (Ben) */
 	if (ret != 1) DSAerr(DSA_F_DSA_DO_VERIFY,ERR_R_BN_LIB);
 	if (ctx != NULL) BN_CTX_free(ctx);
 	BN_free(&u1);
@@ -343,7 +410,7 @@ static int dsa_init(DSA *dsa)
 static int dsa_finish(DSA *dsa)
 {
 	if(dsa->method_mont_p)
-		BN_MONT_CTX_free((BN_MONT_CTX *)dsa->method_mont_p);
+		BN_MONT_CTX_free(dsa->method_mont_p);
 	return(1);
 }
 

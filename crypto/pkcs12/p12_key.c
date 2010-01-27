@@ -1,5 +1,5 @@
 /* p12_key.c */
-/* Written by Dr Stephen N Henson (shenson@bigfoot.com) for the OpenSSL
+/* Written by Dr Stephen N Henson (steve@openssl.org) for the OpenSSL
  * project 1999.
  */
 /* ====================================================================
@@ -81,15 +81,18 @@ int PKCS12_key_gen_asc(const char *pass, int passlen, unsigned char *salt,
 	int ret;
 	unsigned char *unipass;
 	int uniplen;
+
 	if(!pass) {
 		unipass = NULL;
 		uniplen = 0;
-	} else if (!asc2uni(pass, passlen, &unipass, &uniplen)) {
+	} else if (!OPENSSL_asc2uni(pass, passlen, &unipass, &uniplen)) {
 		PKCS12err(PKCS12_F_PKCS12_KEY_GEN_ASC,ERR_R_MALLOC_FAILURE);
 		return 0;
 	}
 	ret = PKCS12_key_gen_uni(unipass, uniplen, salt, saltlen,
 						 id, iter, n, out, md_type);
+	if (ret <= 0)
+	    return 0;
 	if(unipass) {
 		OPENSSL_cleanse(unipass, uniplen);	/* Clear password from memory */
 		OPENSSL_free(unipass);
@@ -129,6 +132,8 @@ int PKCS12_key_gen_uni(unsigned char *pass, int passlen, unsigned char *salt,
 #endif
 	v = EVP_MD_block_size (md_type);
 	u = EVP_MD_size (md_type);
+	if (u < 0)
+	    return 0;
 	D = OPENSSL_malloc (v);
 	Ai = OPENSSL_malloc (u);
 	B = OPENSSL_malloc (v + 1);
@@ -148,14 +153,16 @@ int PKCS12_key_gen_uni(unsigned char *pass, int passlen, unsigned char *salt,
 	for (i = 0; i < Slen; i++) *p++ = salt[i % saltlen];
 	for (i = 0; i < Plen; i++) *p++ = pass[i % passlen];
 	for (;;) {
-		EVP_DigestInit_ex(&ctx, md_type, NULL);
-		EVP_DigestUpdate(&ctx, D, v);
-		EVP_DigestUpdate(&ctx, I, Ilen);
-		EVP_DigestFinal_ex(&ctx, Ai, NULL);
+		if (!EVP_DigestInit_ex(&ctx, md_type, NULL)
+			|| !EVP_DigestUpdate(&ctx, D, v)
+			|| !EVP_DigestUpdate(&ctx, I, Ilen)
+			|| !EVP_DigestFinal_ex(&ctx, Ai, NULL))
+			goto err;
 		for (j = 1; j < iter; j++) {
-			EVP_DigestInit_ex(&ctx, md_type, NULL);
-			EVP_DigestUpdate(&ctx, Ai, u);
-			EVP_DigestFinal_ex(&ctx, Ai, NULL);
+			if (!EVP_DigestInit_ex(&ctx, md_type, NULL)
+				|| !EVP_DigestUpdate(&ctx, Ai, u)
+				|| !EVP_DigestFinal_ex(&ctx, Ai, NULL))
+			goto err;
 		}
 		memcpy (out, Ai, min (n, u));
 		if (u >= n) {
@@ -196,6 +203,9 @@ int PKCS12_key_gen_uni(unsigned char *pass, int passlen, unsigned char *salt,
 			} else BN_bn2bin (Ij, I + j);
 		}
 	}
+	err:
+	EVP_MD_CTX_cleanup(&ctx);
+	return 0;
 }
 #ifdef DEBUG_KEYGEN
 void h__dump (unsigned char *p, int len)

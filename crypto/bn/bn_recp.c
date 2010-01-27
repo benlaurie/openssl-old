@@ -191,7 +191,7 @@ int BN_div_recp(BIGNUM *dv, BIGNUM *rem, const BIGNUM *m,
 		{
 		if (j++ > 2)
 			{
-			BNerr(BN_F_BN_MOD_MUL_RECIPROCAL,BN_R_BAD_RECIPROCAL);
+			BNerr(BN_F_BN_DIV_RECP,BN_R_BAD_RECIPROCAL);
 			goto err;
 			}
 		if (!BN_usub(r,r,&(recp->N))) goto err;
@@ -204,8 +204,8 @@ int BN_div_recp(BIGNUM *dv, BIGNUM *rem, const BIGNUM *m,
 	ret=1;
 err:
 	BN_CTX_end(ctx);
-	if(dv) bn_check_top(dv);
-	if(rem) bn_check_top(rem);
+	bn_check_top(dv);
+	bn_check_top(rem);
 	return(ret);
 	} 
 

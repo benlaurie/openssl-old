@@ -126,9 +126,16 @@ err:\
 		(c.eos=ASN1_const_check_infinite_end(&c.p,c.slen)))
 
 /* Don't use this with d2i_ASN1_BOOLEAN() */
-#define M_ASN1_D2I_get(b,func) \
+#define M_ASN1_D2I_get(b, func) \
 	c.q=c.p; \
 	if (func(&(b),&c.p,c.slen) == NULL) \
+		{c.line=__LINE__; goto err; } \
+	c.slen-=(c.p-c.q);
+
+/* Don't use this with d2i_ASN1_BOOLEAN() */
+#define M_ASN1_D2I_get_x(type,b,func) \
+	c.q=c.p; \
+	if (((D2I_OF(type))func)(&(b),&c.p,c.slen) == NULL) \
 		{c.line=__LINE__; goto err; } \
 	c.slen-=(c.p-c.q);
 
@@ -144,6 +151,13 @@ err:\
 		== (V_ASN1_UNIVERSAL|(type)))) \
 		{ \
 		M_ASN1_D2I_get(b,func); \
+		}
+
+#define M_ASN1_D2I_get_int_opt(b,func,type) \
+	if ((c.slen != 0) && ((M_ASN1_next & (~V_ASN1_CONSTRUCTED)) \
+		== (V_ASN1_UNIVERSAL|(type)))) \
+		{ \
+		M_ASN1_D2I_get_int(b,func); \
 		}
 
 #define M_ASN1_D2I_get_imp(b,func, type) \

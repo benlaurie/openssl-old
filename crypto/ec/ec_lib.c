@@ -79,7 +79,7 @@ EC_GROUP *EC_GROUP_new(const EC_METHOD *meth)
 
 	if (meth == NULL)
 		{
-		ECerr(EC_F_EC_GROUP_NEW, ERR_R_PASSED_NULL_PARAMETER);
+		ECerr(EC_F_EC_GROUP_NEW, EC_R_SLOT_FULL);
 		return NULL;
 		}
 	if (meth->group_init == 0)
@@ -127,7 +127,7 @@ void EC_GROUP_free(EC_GROUP *group)
 	if (group->meth->group_finish != 0)
 		group->meth->group_finish(group);
 
-	EC_GROUP_free_all_extra_data(group);
+	EC_EX_DATA_free_all_data(&group->extra_data);
 
 	if (group->generator != NULL)
 		EC_POINT_free(group->generator);
@@ -147,10 +147,10 @@ void EC_GROUP_clear_free(EC_GROUP *group)
 
 	if (group->meth->group_clear_finish != 0)
 		group->meth->group_clear_finish(group);
-	else if (group->meth != NULL && group->meth->group_finish != 0)
+	else if (group->meth->group_finish != 0)
 		group->meth->group_finish(group);
 
-	EC_GROUP_clear_free_all_extra_data(group);
+	EC_EX_DATA_clear_free_all_data(&group->extra_data);
 
 	if (group->generator != NULL)
 		EC_POINT_clear_free(group->generator);
@@ -185,7 +185,7 @@ int EC_GROUP_copy(EC_GROUP *dest, const EC_GROUP *src)
 	if (dest == src)
 		return 1;
 	
-	EC_GROUP_free_all_extra_data(dest);
+	EC_EX_DATA_free_all_data(&dest->extra_data);
 
 	for (d = src->extra_data; d != NULL; d = d->next)
 		{
@@ -193,7 +193,7 @@ int EC_GROUP_copy(EC_GROUP *dest, const EC_GROUP *src)
 		
 		if (t == NULL)
 			return 0;
-		if (!EC_GROUP_set_extra_data(dest, t, d->dup_func, d->free_func, d->clear_free_func))
+		if (!EC_EX_DATA_set_data(&dest->extra_data, t, d->dup_func, d->free_func, d->clear_free_func))
 			return 0;
 		}
 
@@ -310,7 +310,7 @@ int EC_GROUP_set_generator(EC_GROUP *group, const EC_POINT *generator, const BIG
 	}
 
 
-EC_POINT *EC_GROUP_get0_generator(const EC_GROUP *group)
+const EC_POINT *EC_GROUP_get0_generator(const EC_GROUP *group)
 	{
 	return group->generator;
 	}
@@ -334,13 +334,13 @@ int EC_GROUP_get_cofactor(const EC_GROUP *group, BIGNUM *cofactor, BN_CTX *ctx)
 	}
 
 
-void EC_GROUP_set_nid(EC_GROUP *group, int nid)
+void EC_GROUP_set_curve_name(EC_GROUP *group, int nid)
 	{
 	group->curve_name = nid;
 	}
 
 
-int EC_GROUP_get_nid(const EC_GROUP *group)
+int EC_GROUP_get_curve_name(const EC_GROUP *group)
 	{
 	return group->curve_name;
 	}
@@ -481,8 +481,8 @@ int EC_GROUP_cmp(const EC_GROUP *a, const EC_GROUP *b, BN_CTX *ctx)
 	    EC_METHOD_get_field_type(EC_GROUP_method_of(b)))
 		return 1;
 	/* compare the curve name (if present) */
-	if (EC_GROUP_get_nid(a) && EC_GROUP_get_nid(b) &&
-	    EC_GROUP_get_nid(a) == EC_GROUP_get_nid(b))
+	if (EC_GROUP_get_curve_name(a) && EC_GROUP_get_curve_name(b) &&
+	    EC_GROUP_get_curve_name(a) == EC_GROUP_get_curve_name(b))
 		return 0;
 
 	if (!ctx)
@@ -512,7 +512,7 @@ int EC_GROUP_cmp(const EC_GROUP *a, const EC_GROUP *b, BN_CTX *ctx)
 	    !b->meth->group_get_curve(b, b1, b2, b3, ctx))
 		r = 1;
 
-	if (r || BN_cmp(a1, b2) || BN_cmp(a2, b2) || BN_cmp(a3, b3))
+	if (r || BN_cmp(a1, b1) || BN_cmp(a2, b2) || BN_cmp(a3, b3))
 		r = 1;
 
 	/* XXX EC_POINT_cmp() assumes that the methods are equal */
@@ -546,19 +546,19 @@ int EC_GROUP_cmp(const EC_GROUP *a, const EC_GROUP *b, BN_CTX *ctx)
 
 
 /* this has 'package' visibility */
-int EC_GROUP_set_extra_data(EC_GROUP *group, void *data,
+int EC_EX_DATA_set_data(EC_EXTRA_DATA **ex_data, void *data,
 	void *(*dup_func)(void *), void (*free_func)(void *), void (*clear_free_func)(void *))
 	{
 	EC_EXTRA_DATA *d;
 
-	if (group == NULL)
+	if (ex_data == NULL)
 		return 0;
 
-	for (d = group->extra_data; d != NULL; d = d->next)
+	for (d = *ex_data; d != NULL; d = d->next)
 		{
 		if (d->dup_func == dup_func && d->free_func == free_func && d->clear_free_func == clear_free_func)
 			{
-			ECerr(EC_F_EC_GROUP_SET_EXTRA_DATA, EC_R_SLOT_FULL);
+			ECerr(EC_F_EC_EX_DATA_SET_DATA, EC_R_SLOT_FULL);
 			return 0;
 			}
 		}
@@ -576,22 +576,19 @@ int EC_GROUP_set_extra_data(EC_GROUP *group, void *data,
 	d->free_func = free_func;
 	d->clear_free_func = clear_free_func;
 
-	d->next = group->extra_data;
-	group->extra_data = d;
+	d->next = *ex_data;
+	*ex_data = d;
 
 	return 1;
 	}
 
 /* this has 'package' visibility */
-void *EC_GROUP_get_extra_data(const EC_GROUP *group,
+void *EC_EX_DATA_get_data(const EC_EXTRA_DATA *ex_data,
 	void *(*dup_func)(void *), void (*free_func)(void *), void (*clear_free_func)(void *))
 	{
-	EC_EXTRA_DATA *d;
+	const EC_EXTRA_DATA *d;
 
-	if (group == NULL)
-		return NULL;
-
-	for (d = group->extra_data; d != NULL; d = d->next)
+	for (d = ex_data; d != NULL; d = d->next)
 		{
 		if (d->dup_func == dup_func && d->free_func == free_func && d->clear_free_func == clear_free_func)
 			return d->data;
@@ -601,15 +598,15 @@ void *EC_GROUP_get_extra_data(const EC_GROUP *group,
 	}
 
 /* this has 'package' visibility */
-void EC_GROUP_free_extra_data(EC_GROUP *group,
+void EC_EX_DATA_free_data(EC_EXTRA_DATA **ex_data,
 	void *(*dup_func)(void *), void (*free_func)(void *), void (*clear_free_func)(void *))
 	{
 	EC_EXTRA_DATA **p;
 
-	if (group == NULL)
+	if (ex_data == NULL)
 		return;
 
-	for (p = &group->extra_data; *p != NULL; p = &((*p)->next))
+	for (p = ex_data; *p != NULL; p = &((*p)->next))
 		{
 		if ((*p)->dup_func == dup_func && (*p)->free_func == free_func && (*p)->clear_free_func == clear_free_func)
 			{
@@ -625,15 +622,15 @@ void EC_GROUP_free_extra_data(EC_GROUP *group,
 	}
 
 /* this has 'package' visibility */
-void EC_GROUP_clear_free_extra_data(EC_GROUP *group,
+void EC_EX_DATA_clear_free_data(EC_EXTRA_DATA **ex_data,
 	void *(*dup_func)(void *), void (*free_func)(void *), void (*clear_free_func)(void *))
 	{
 	EC_EXTRA_DATA **p;
 
-	if (group == NULL)
+	if (ex_data == NULL)
 		return;
 
-	for (p = &group->extra_data; *p != NULL; p = &((*p)->next))
+	for (p = ex_data; *p != NULL; p = &((*p)->next))
 		{
 		if ((*p)->dup_func == dup_func && (*p)->free_func == free_func && (*p)->clear_free_func == clear_free_func)
 			{
@@ -649,14 +646,14 @@ void EC_GROUP_clear_free_extra_data(EC_GROUP *group,
 	}
 
 /* this has 'package' visibility */
-void EC_GROUP_free_all_extra_data(EC_GROUP *group)
+void EC_EX_DATA_free_all_data(EC_EXTRA_DATA **ex_data)
 	{
 	EC_EXTRA_DATA *d;
 
-	if (group == NULL)
+	if (ex_data == NULL)
 		return;
 
-	d = group->extra_data;
+	d = *ex_data;
 	while (d)
 		{
 		EC_EXTRA_DATA *next = d->next;
@@ -666,18 +663,18 @@ void EC_GROUP_free_all_extra_data(EC_GROUP *group)
 		
 		d = next;
 		}
-	group->extra_data = NULL;
+	*ex_data = NULL;
 	}
 
 /* this has 'package' visibility */
-void EC_GROUP_clear_free_all_extra_data(EC_GROUP *group)
+void EC_EX_DATA_clear_free_all_data(EC_EXTRA_DATA **ex_data)
 	{
 	EC_EXTRA_DATA *d;
 
-	if (group == NULL)
+	if (ex_data == NULL)
 		return;
 
-	d = group->extra_data;
+	d = *ex_data;
 	while (d)
 		{
 		EC_EXTRA_DATA *next = d->next;
@@ -687,7 +684,7 @@ void EC_GROUP_clear_free_all_extra_data(EC_GROUP *group)
 		
 		d = next;
 		}
-	group->extra_data = NULL;
+	*ex_data = NULL;
 	}
 
 
@@ -743,7 +740,7 @@ void EC_POINT_clear_free(EC_POINT *point)
 
 	if (point->meth->point_clear_finish != 0)
 		point->meth->point_clear_finish(point);
-	else if (point->meth != NULL && point->meth->point_finish != 0)
+	else if (point->meth->point_finish != 0)
 		point->meth->point_finish(point);
 	OPENSSL_cleanse(point, sizeof *point);
 	OPENSSL_free(point);
@@ -1015,12 +1012,12 @@ int EC_POINT_invert(const EC_GROUP *group, EC_POINT *a, BN_CTX *ctx)
 	{
 	if (group->meth->dbl == 0)
 		{
-		ECerr(EC_F_EC_POINT_DBL, ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED);
+		ECerr(EC_F_EC_POINT_INVERT, ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED);
 		return 0;
 		}
 	if (group->meth != a->meth)
 		{
-		ECerr(EC_F_EC_POINT_DBL, EC_R_INCOMPATIBLE_OBJECTS);
+		ECerr(EC_F_EC_POINT_INVERT, EC_R_INCOMPATIBLE_OBJECTS);
 		return 0;
 		}
 	return group->meth->invert(group, a, ctx);

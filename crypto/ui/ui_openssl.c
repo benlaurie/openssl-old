@@ -122,7 +122,9 @@
  * sigaction and fileno included. -pedantic would be more appropriate for
  * the intended purposes, but we can't prevent users from adding -ansi.
  */
-#define _POSIX_C_SOURCE 1
+#ifndef _POSIX_C_SOURCE
+#define _POSIX_C_SOURCE 2
+#endif
 #include <signal.h>
 #include <stdio.h>
 #include <string.h>
@@ -304,7 +306,7 @@ static int is_a_tty;
 
 /* Declare static functions */
 #if !defined(OPENSSL_SYS_WIN16) && !defined(OPENSSL_SYS_WINCE)
-static void read_till_nl(FILE *);
+static int read_till_nl(FILE *);
 static void recsig(int);
 static void pushsig(void);
 static void popsig(void);
@@ -397,14 +399,16 @@ static int read_string(UI *ui, UI_STRING *uis)
 
 #if !defined(OPENSSL_SYS_WIN16) && !defined(OPENSSL_SYS_WINCE)
 /* Internal functions to read a string without echoing */
-static void read_till_nl(FILE *in)
+static int read_till_nl(FILE *in)
 	{
 #define SIZE 4
 	char buf[SIZE+1];
 
 	do	{
-		fgets(buf,SIZE,in);
+		if (!fgets(buf,SIZE,in))
+			return 0;
 		} while (strchr(buf,'\n') == NULL);
+	return 1;
 	}
 
 static volatile sig_atomic_t intr_signal;
@@ -452,7 +456,8 @@ static int read_string_inner(UI *ui, UI_STRING *uis, int echo, int strip_nl)
 			*p='\0';
 		}
 	else
-		read_till_nl(tty_in);
+		if (!read_till_nl(tty_in))
+			goto error;
 	if (UI_set_result(ui, uis, result) >= 0)
 		ok=1;
 
@@ -480,7 +485,7 @@ static int open_console(UI *ui)
 	CRYPTO_w_lock(CRYPTO_LOCK_UI);
 	is_a_tty = 1;
 
-#if defined(OPENSSL_SYS_MACINTOSH_CLASSIC) || defined(OPENSSL_SYS_VXWORKS) || defined(OPENSSL_SYS_NETWARE)
+#if defined(OPENSSL_SYS_MACINTOSH_CLASSIC) || defined(OPENSSL_SYS_VXWORKS) || defined(OPENSSL_SYS_NETWARE) || defined(OPENSSL_SYS_BEOS)
 	tty_in=stdin;
 	tty_out=stderr;
 #else
@@ -585,7 +590,9 @@ static int close_console(UI *ui)
 /* Internal functions to handle signals and act on them */
 static void pushsig(void)
 	{
+#ifndef OPENSSL_SYS_WIN32
 	int i;
+#endif
 #ifdef SIGACTION
 	struct sigaction sa;
 
@@ -593,6 +600,14 @@ static void pushsig(void)
 	sa.sa_handler=recsig;
 #endif
 
+#ifdef OPENSSL_SYS_WIN32
+	savsig[SIGABRT]=signal(SIGABRT,recsig);
+	savsig[SIGFPE]=signal(SIGFPE,recsig);
+	savsig[SIGILL]=signal(SIGILL,recsig);
+	savsig[SIGINT]=signal(SIGINT,recsig);
+	savsig[SIGSEGV]=signal(SIGSEGV,recsig);
+	savsig[SIGTERM]=signal(SIGTERM,recsig);
+#else
 	for (i=1; i<NX509_SIG; i++)
 		{
 #ifdef SIGUSR1
@@ -613,6 +628,7 @@ static void pushsig(void)
 		savsig[i]=signal(i,recsig);
 #endif
 		}
+#endif
 
 #ifdef SIGWINCH
 	signal(SIGWINCH,SIG_DFL);
@@ -621,8 +637,15 @@ static void pushsig(void)
 
 static void popsig(void)
 	{
+#ifdef OPENSSL_SYS_WIN32
+	signal(SIGABRT,savsig[SIGABRT]);
+	signal(SIGFPE,savsig[SIGFPE]);
+	signal(SIGILL,savsig[SIGILL]);
+	signal(SIGINT,savsig[SIGINT]);
+	signal(SIGSEGV,savsig[SIGSEGV]);
+	signal(SIGTERM,savsig[SIGTERM]);
+#else
 	int i;
-
 	for (i=1; i<NX509_SIG; i++)
 		{
 #ifdef SIGUSR1
@@ -639,6 +662,7 @@ static void popsig(void)
 		signal(i,savsig[i]);
 #endif
 		}
+#endif
 	}
 
 static void recsig(int i)
@@ -665,6 +689,8 @@ static int noecho_fgets(char *buf, int size, FILE *tty)
 		size--;
 #ifdef WIN16TTY
 		i=_inchar();
+#elif defined(_WIN32)
+		i=_getch();
 #else
 		i=getch();
 #endif

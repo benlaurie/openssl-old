@@ -1,5 +1,5 @@
 /* p12_decr.c */
-/* Written by Dr Stephen N Henson (shenson@bigfoot.com) for the OpenSSL
+/* Written by Dr Stephen N Henson (steve@openssl.org) for the OpenSSL
  * project 1999.
  */
 /* ====================================================================
@@ -89,7 +89,14 @@ unsigned char * PKCS12_pbe_crypt(X509_ALGOR *algor, const char *pass,
 		goto err;
 	}
 
-	EVP_CipherUpdate(&ctx, out, &i, in, inlen);
+	if (!EVP_CipherUpdate(&ctx, out, &i, in, inlen))
+		{
+		OPENSSL_free(out);
+		out = NULL;
+		PKCS12err(PKCS12_F_PKCS12_PBE_CRYPT,ERR_R_EVP_LIB);
+		goto err;
+		}
+
 	outlen = i;
 	if(!EVP_CipherFinal_ex(&ctx, out + i, &i)) {
 		OPENSSL_free(out);
@@ -120,7 +127,7 @@ void * PKCS12_item_decrypt_d2i(X509_ALGOR *algor, const ASN1_ITEM *it,
 
 	if (!PKCS12_pbe_crypt(algor, pass, passlen, oct->data, oct->length,
 			       &out, &outlen, 0)) {
-		PKCS12err(PKCS12_F_PKCS12_DECRYPT_D2I,PKCS12_R_PKCS12_PBE_CRYPT_ERROR);
+		PKCS12err(PKCS12_F_PKCS12_ITEM_DECRYPT_D2I,PKCS12_R_PKCS12_PBE_CRYPT_ERROR);
 		return NULL;
 	}
 	p = out;
@@ -138,7 +145,7 @@ void * PKCS12_item_decrypt_d2i(X509_ALGOR *algor, const ASN1_ITEM *it,
 #endif
 	ret = ASN1_item_d2i(NULL, &p, outlen, it);
 	if (zbuf) OPENSSL_cleanse(out, outlen);
-	if(!ret) PKCS12err(PKCS12_F_PKCS12_DECRYPT_D2I,PKCS12_R_DECODE_ERROR);
+	if(!ret) PKCS12err(PKCS12_F_PKCS12_ITEM_DECRYPT_D2I,PKCS12_R_DECODE_ERROR);
 	OPENSSL_free(out);
 	return ret;
 }
@@ -155,17 +162,17 @@ ASN1_OCTET_STRING *PKCS12_item_i2d_encrypt(X509_ALGOR *algor, const ASN1_ITEM *i
 	unsigned char *in = NULL;
 	int inlen;
 	if (!(oct = M_ASN1_OCTET_STRING_new ())) {
-		PKCS12err(PKCS12_F_PKCS12_I2D_ENCRYPT,ERR_R_MALLOC_FAILURE);
+		PKCS12err(PKCS12_F_PKCS12_ITEM_I2D_ENCRYPT,ERR_R_MALLOC_FAILURE);
 		return NULL;
 	}
 	inlen = ASN1_item_i2d(obj, &in, it);
 	if (!in) {
-		PKCS12err(PKCS12_F_PKCS12_I2D_ENCRYPT,PKCS12_R_ENCODE_ERROR);
+		PKCS12err(PKCS12_F_PKCS12_ITEM_I2D_ENCRYPT,PKCS12_R_ENCODE_ERROR);
 		return NULL;
 	}
 	if (!PKCS12_pbe_crypt(algor, pass, passlen, in, inlen, &oct->data,
 				 &oct->length, 1)) {
-		PKCS12err(PKCS12_F_PKCS12_I2D_ENCRYPT,PKCS12_R_ENCRYPT_ERROR);
+		PKCS12err(PKCS12_F_PKCS12_ITEM_I2D_ENCRYPT,PKCS12_R_ENCRYPT_ERROR);
 		OPENSSL_free(in);
 		return NULL;
 	}

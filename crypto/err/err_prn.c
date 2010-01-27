@@ -57,9 +57,9 @@
  */
 
 #include <stdio.h>
+#include "cryptlib.h"
 #include <openssl/lhash.h>
 #include <openssl/crypto.h>
-#include "cryptlib.h"
 #include <openssl/buffer.h>
 #include <openssl/err.h>
 
@@ -72,8 +72,10 @@ void ERR_print_errors_cb(int (*cb)(const char *str, size_t len, void *u),
 	const char *file,*data;
 	int line,flags;
 	unsigned long es;
+	CRYPTO_THREADID cur;
 
-	es=CRYPTO_thread_id();
+	CRYPTO_THREADID_current(&cur);
+	es=CRYPTO_THREADID_hash(&cur);
 	while ((l=ERR_get_error_line_data(&file,&line,&data,&flags)) != 0)
 		{
 		ERR_error_string_n(l, buf, sizeof buf);
@@ -86,7 +88,12 @@ void ERR_print_errors_cb(int (*cb)(const char *str, size_t len, void *u),
 #ifndef OPENSSL_NO_FP_API
 static int print_fp(const char *str, size_t len, void *fp)
 	{
-	return fprintf((FILE *)fp, "%s", str);
+	BIO bio;
+
+	BIO_set(&bio,BIO_s_file());
+	BIO_set_fp(&bio,fp,BIO_NOCLOSE);
+
+	return BIO_printf(&bio, "%s", str);
 	}
 void ERR_print_errors_fp(FILE *fp)
 	{

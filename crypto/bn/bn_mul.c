@@ -389,6 +389,7 @@ BN_ULONG bn_add_part_words(BN_ULONG *r,
  * a[0]*b[0]+a[1]*b[1]+(a[0]-a[1])*(b[1]-b[0])
  * a[1]*b[1]
  */
+/* dnX may not be positive, but n2/2+dnX has to be */
 void bn_mul_recursive(BN_ULONG *r, BN_ULONG *a, BN_ULONG *b, int n2,
 	int dna, int dnb, BN_ULONG *t)
 	{
@@ -398,7 +399,7 @@ void bn_mul_recursive(BN_ULONG *r, BN_ULONG *a, BN_ULONG *b, int n2,
 	BN_ULONG ln,lo,*p;
 
 # ifdef BN_COUNT
-	fprintf(stderr," bn_mul_recursive %d * %d\n",n2,n2);
+	fprintf(stderr," bn_mul_recursive %d%+d * %d%+d\n",n2,dna,n2,dnb);
 # endif
 # ifdef BN_MUL_COMBA
 #  if 0
@@ -545,6 +546,7 @@ void bn_mul_recursive(BN_ULONG *r, BN_ULONG *a, BN_ULONG *b, int n2,
 
 /* n+tn is the word length
  * t needs to be n*4 is size, as does r */
+/* tnX may not be negative but less than n */
 void bn_mul_part_recursive(BN_ULONG *r, BN_ULONG *a, BN_ULONG *b, int n,
 	     int tna, int tnb, BN_ULONG *t)
 	{
@@ -553,8 +555,8 @@ void bn_mul_part_recursive(BN_ULONG *r, BN_ULONG *a, BN_ULONG *b, int n,
 	BN_ULONG ln,lo,*p;
 
 # ifdef BN_COUNT
-	fprintf(stderr," bn_mul_part_recursive (%d+%d) * (%d+%d)\n",
-		tna, n, tnb, n);
+	fprintf(stderr," bn_mul_part_recursive (%d%+d) * (%d%+d)\n",
+		n, tna, n, tnb);
 # endif
 	if (n < 8)
 		{
@@ -655,14 +657,17 @@ void bn_mul_part_recursive(BN_ULONG *r, BN_ULONG *a, BN_ULONG *b, int n,
 				for (;;)
 					{
 					i/=2;
-					if (i < tna && i < tnb)
+					/* these simplified conditions work
+					 * exclusively because difference
+					 * between tna and tnb is 1 or 0 */
+					if (i < tna || i < tnb)
 						{
 						bn_mul_part_recursive(&(r[n2]),
 							&(a[n]),&(b[n]),
 							i,tna-i,tnb-i,p);
 						break;
 						}
-					else if (i <= tna && i <= tnb)
+					else if (i == tna || i == tnb)
 						{
 						bn_mul_recursive(&(r[n2]),
 							&(a[n]),&(b[n]),
@@ -1023,17 +1028,19 @@ int BN_mul(BIGNUM *r, const BIGNUM *a, const BIGNUM *b, BN_CTX *ctx)
 			assert(j <= al || j <= bl);
 			k = j+j;
 			t = BN_CTX_get(ctx);
+			if (t == NULL)
+				goto err;
 			if (al > j || bl > j)
 				{
-				bn_wexpand(t,k*4);
-				bn_wexpand(rr,k*4);
+				if (bn_wexpand(t,k*4) == NULL) goto err;
+				if (bn_wexpand(rr,k*4) == NULL) goto err;
 				bn_mul_part_recursive(rr->d,a->d,b->d,
 					j,al-j,bl-j,t->d);
 				}
 			else	/* al <= j || bl <= j */
 				{
-				bn_wexpand(t,k*2);
-				bn_wexpand(rr,k*2);
+				if (bn_wexpand(t,k*2) == NULL) goto err;
+				if (bn_wexpand(rr,k*2) == NULL) goto err;
 				bn_mul_recursive(rr->d,a->d,b->d,
 					j,al-j,bl-j,t->d);
 				}

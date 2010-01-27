@@ -59,6 +59,12 @@
 #ifndef HEADER_STORE_H
 #define HEADER_STORE_H
 
+#include <openssl/opensslconf.h>
+
+#ifdef OPENSSL_NO_STORE
+#error STORE is disabled.
+#endif
+
 #include <openssl/ossl_typ.h>
 #ifndef OPENSSL_NO_DEPRECATED
 #include <openssl/evp.h>
@@ -408,7 +414,8 @@ int STORE_ATTR_INFO_modify_number(STORE_ATTR_INFO *attrs, STORE_ATTR_TYPES code,
 
 /* Compare on basis of a bit pattern formed by the STORE_ATTR_TYPES values
    in each contained attribute. */
-int STORE_ATTR_INFO_compare(STORE_ATTR_INFO *a, STORE_ATTR_INFO *b);
+int STORE_ATTR_INFO_compare(const STORE_ATTR_INFO * const *a,
+			    const STORE_ATTR_INFO * const *b);
 /* Check if the set of attributes in a is within the range of attributes
    set in b. */
 int STORE_ATTR_INFO_in_range(STORE_ATTR_INFO *a, STORE_ATTR_INFO *b);
@@ -427,13 +434,13 @@ void ERR_load_STORE_strings(void);
 /* Error codes for the STORE functions. */
 
 /* Function codes. */
-#define STORE_F_CTRL					 160
 #define STORE_F_MEM_DELETE				 134
 #define STORE_F_MEM_GENERATE				 135
+#define STORE_F_MEM_LIST_END				 168
 #define STORE_F_MEM_LIST_NEXT				 136
 #define STORE_F_MEM_LIST_START				 137
+#define STORE_F_MEM_MODIFY				 169
 #define STORE_F_MEM_STORE				 138
-#define STORE_F_STORE_ARBITRARY				 157
 #define STORE_F_STORE_ATTR_INFO_GET0_CSTR		 139
 #define STORE_F_STORE_ATTR_INFO_GET0_DN			 140
 #define STORE_F_STORE_ATTR_INFO_GET0_NUMBER		 141
@@ -446,8 +453,7 @@ void ERR_load_STORE_strings(void);
 #define STORE_F_STORE_ATTR_INFO_SET_DN			 148
 #define STORE_F_STORE_ATTR_INFO_SET_NUMBER		 149
 #define STORE_F_STORE_ATTR_INFO_SET_SHA1STR		 150
-#define STORE_F_STORE_CERTIFICATE			 100
-#define STORE_F_STORE_CRL				 101
+#define STORE_F_STORE_CERTIFICATE			 170
 #define STORE_F_STORE_CTRL				 161
 #define STORE_F_STORE_DELETE_ARBITRARY			 158
 #define STORE_F_STORE_DELETE_CERTIFICATE		 102
@@ -487,14 +493,19 @@ void ERR_load_STORE_strings(void);
 #define STORE_F_STORE_MODIFY_PUBLIC_KEY			 167
 #define STORE_F_STORE_NEW_ENGINE			 133
 #define STORE_F_STORE_NEW_METHOD			 132
-#define STORE_F_STORE_NUMBER				 126
 #define STORE_F_STORE_PARSE_ATTRS_END			 151
+#define STORE_F_STORE_PARSE_ATTRS_ENDP			 172
 #define STORE_F_STORE_PARSE_ATTRS_NEXT			 152
-#define STORE_F_STORE_PRIVATE_KEY			 127
-#define STORE_F_STORE_PUBLIC_KEY			 128
+#define STORE_F_STORE_PARSE_ATTRS_START			 171
 #define STORE_F_STORE_REVOKE_CERTIFICATE		 129
 #define STORE_F_STORE_REVOKE_PRIVATE_KEY		 130
 #define STORE_F_STORE_REVOKE_PUBLIC_KEY			 131
+#define STORE_F_STORE_STORE_ARBITRARY			 157
+#define STORE_F_STORE_STORE_CERTIFICATE			 100
+#define STORE_F_STORE_STORE_CRL				 101
+#define STORE_F_STORE_STORE_NUMBER			 126
+#define STORE_F_STORE_STORE_PRIVATE_KEY			 127
+#define STORE_F_STORE_STORE_PUBLIC_KEY			 128
 
 /* Reason codes. */
 #define STORE_R_ALREADY_HAS_A_VALUE			 127

@@ -85,7 +85,7 @@
 #define CHUNKS_PER_LINE (64/4)
 #define CHAR_PER_LINE   (64+1)
 
-static unsigned char data_bin2ascii[65]="ABCDEFGHIJKLMNOPQRSTUVWXYZ\
+static const unsigned char data_bin2ascii[65]="ABCDEFGHIJKLMNOPQRSTUVWXYZ\
 abcdefghijklmnopqrstuvwxyz0123456789+/";
 
 /* 0xF0 is a EOLN
@@ -102,7 +102,7 @@ abcdefghijklmnopqrstuvwxyz0123456789+/";
 #define B64_ERROR       	0xFF
 #define B64_NOT_BASE64(a)	(((a)|0x13) == 0xF3)
 
-static unsigned char data_ascii2bin[128]={
+static const unsigned char data_ascii2bin[128]={
 	0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
 	0xFF,0xE0,0xF0,0xFF,0xFF,0xF1,0xFF,0xFF,
 	0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
@@ -313,7 +313,7 @@ int EVP_DecodeUpdate(EVP_ENCODE_CTX *ctx, unsigned char *out, int *outl,
 			/* There will never be more than two '=' */
 			}
 
-		if ((v == B64_EOF) || (n >= 64))
+		if ((v == B64_EOF && (n&3) == 0) || (n >= 64))
 			{
 			/* This is needed to work correctly on 64 byte input
 			 * lines.  We process the line and then need to
@@ -323,8 +323,8 @@ int EVP_DecodeUpdate(EVP_ENCODE_CTX *ctx, unsigned char *out, int *outl,
 			if (n > 0)
 				{
 				v=EVP_DecodeBlock(out,d,n);
-				if (v < 0) { rv=0; goto end; }
 				n=0;
+				if (v < 0) { rv=0; goto end; }
 				ret+=(v-eof);
 				}
 			else

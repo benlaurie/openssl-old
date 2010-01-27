@@ -95,6 +95,11 @@ int main(int argc, char * argv[]) { puts("Elliptic curves are disabled."); retur
 #include <openssl/rand.h>
 #include <openssl/bn.h>
 
+#if defined(_MSC_VER) && defined(_MIPS_) && (_MSC_VER/100==12)
+/* suppress "too big too optimize" warning */
+#pragma warning(disable:4959)
+#endif
+
 #define ABORT do { \
 	fflush(stdout); \
 	fprintf(stderr, "%s:%d: ABORT\n", __FILE__, __LINE__); \
@@ -226,7 +231,7 @@ void prime_field_tests()
 		EC_GROUP *tmp;
 		tmp = EC_GROUP_new(EC_GROUP_method_of(group));
 		if (!tmp) ABORT;
-		if (!EC_GROUP_copy(tmp, group));
+		if (!EC_GROUP_copy(tmp, group)) ABORT;
 		EC_GROUP_free(group);
 		group = tmp;
 	}
@@ -644,13 +649,15 @@ void prime_field_tests()
 	if (!EC_POINT_is_at_infinity(group, R)) ABORT; /* R = P + 2Q */
 
 	{
-		const EC_POINT *points[3];
-		const BIGNUM *scalars[3];
+		const EC_POINT *points[4];
+		const BIGNUM *scalars[4];
+		BIGNUM scalar3;
 	
 		if (EC_POINT_is_at_infinity(group, Q)) ABORT;
 		points[0] = Q;
 		points[1] = Q;
 		points[2] = Q;
+		points[3] = Q;
 
 		if (!BN_add(y, z, BN_value_one())) ABORT;
 		if (BN_is_odd(y)) ABORT;
@@ -672,7 +679,7 @@ void prime_field_tests()
 
 		if (!BN_pseudo_rand(y, BN_num_bits(y), 0, 0)) ABORT;
 		if (!BN_add(z, z, y)) ABORT;
-		BN_set_sign(z, 1);
+		BN_set_negative(z, 1);
 		scalars[0] = y;
 		scalars[1] = z; /* z = -(order + y) */
 
@@ -684,15 +691,21 @@ void prime_field_tests()
 
 		if (!BN_pseudo_rand(x, BN_num_bits(y) - 1, 0, 0)) ABORT;
 		if (!BN_add(z, x, y)) ABORT;
-		BN_set_sign(z, 1);
+		BN_set_negative(z, 1);
 		scalars[0] = x;
 		scalars[1] = y;
 		scalars[2] = z; /* z = -(x+y) */
 
-		if (!EC_POINTs_mul(group, P, NULL, 3, points, scalars, ctx)) ABORT;
+		BN_init(&scalar3);
+		BN_zero(&scalar3);
+		scalars[3] = &scalar3;
+
+		if (!EC_POINTs_mul(group, P, NULL, 4, points, scalars, ctx)) ABORT;
 		if (!EC_POINT_is_at_infinity(group, P)) ABORT;
 
 		fprintf(stdout, " ok\n\n");
+
+		BN_free(&scalar3);
 	}
 
 
@@ -829,7 +842,7 @@ void char2_field_tests()
 		EC_GROUP *tmp;
 		tmp = EC_GROUP_new(EC_GROUP_method_of(group));
 		if (!tmp) ABORT;
-		if (!EC_GROUP_copy(tmp, group));
+		if (!EC_GROUP_copy(tmp, group)) ABORT;
 		EC_GROUP_free(group);
 		group = tmp;
 	}
@@ -1147,7 +1160,7 @@ void char2_field_tests()
 
 		if (!BN_pseudo_rand(y, BN_num_bits(y), 0, 0)) ABORT;
 		if (!BN_add(z, z, y)) ABORT;
-		BN_set_sign(z, 1);
+		BN_set_negative(z, 1);
 		scalars[0] = y;
 		scalars[1] = z; /* z = -(order + y) */
 
@@ -1159,7 +1172,7 @@ void char2_field_tests()
 
 		if (!BN_pseudo_rand(x, BN_num_bits(y) - 1, 0, 0)) ABORT;
 		if (!BN_add(z, x, y)) ABORT;
-		BN_set_sign(z, 1);
+		BN_set_negative(z, 1);
 		scalars[0] = x;
 		scalars[1] = y;
 		scalars[2] = z; /* z = -(x+y) */
@@ -1252,10 +1265,10 @@ void internal_curve_test(void)
 		{
 		EC_GROUP *group = NULL;
 		int nid = curves[n].nid;
-		if ((group = EC_GROUP_new_by_nid(nid)) == NULL)
+		if ((group = EC_GROUP_new_by_curve_name(nid)) == NULL)
 			{
 			ok = 0;
-			fprintf(stdout, "\nEC_GROUP_new_by_nid() failed with"
+			fprintf(stdout, "\nEC_GROUP_new_curve_name() failed with"
 				" curve %s\n", OBJ_nid2sn(nid));
 			/* try next curve */
 			continue;
@@ -1313,7 +1326,7 @@ int main(int argc, char *argv[])
 #endif
 	CRYPTO_cleanup_all_ex_data();
 	ERR_free_strings();
-	ERR_remove_state(0);
+	ERR_remove_thread_state(NULL);
 	CRYPTO_mem_leaks_fp(stderr);
 	
 	return 0;

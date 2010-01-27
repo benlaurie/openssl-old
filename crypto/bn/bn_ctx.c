@@ -161,7 +161,7 @@ static void ctxdbg(BN_CTX *ctx)
 	fprintf(stderr,"(%08x): ", (unsigned int)ctx);
 	while(bnidx < ctx->used)
 		{
-		fprintf(stderr,"%02x ", item->vals[bnidx++ % BN_CTX_POOL_SIZE].dmax);
+		fprintf(stderr,"%03x ", item->vals[bnidx++ % BN_CTX_POOL_SIZE].dmax);
 		if(!(bnidx % BN_CTX_POOL_SIZE))
 			item = item->next;
 		}
@@ -171,8 +171,8 @@ static void ctxdbg(BN_CTX *ctx)
 	while(fpidx < stack->depth)
 		{
 		while(bnidx++ < stack->indexes[fpidx])
-			fprintf(stderr,"   ");
-		fprintf(stderr,"^^ ");
+			fprintf(stderr,"    ");
+		fprintf(stderr,"^^^ ");
 		bnidx++;
 		fpidx++;
 		}
@@ -230,7 +230,10 @@ BN_CTX *BN_CTX_new(void)
 
 void BN_CTX_free(BN_CTX *ctx)
 	{
+	if (ctx == NULL)
+		return;
 #ifdef BN_CTX_DEBUG
+	{
 	BN_POOL_ITEM *pool = ctx->pool.head;
 	fprintf(stderr,"BN_CTX_free, stack-size=%d, pool-bignums=%d\n",
 		ctx->stack.size, ctx->pool.size);
@@ -242,6 +245,7 @@ void BN_CTX_free(BN_CTX *ctx)
 		pool = pool->next;
 	}
 	fprintf(stderr,"\n");
+	}
 #endif
 	BN_STACK_finish(&ctx->stack);
 	BN_POOL_finish(&ctx->pool);
@@ -257,8 +261,7 @@ void BN_CTX_start(BN_CTX *ctx)
 	/* (Try to) get a new frame pointer */
 	else if(!BN_STACK_push(&ctx->stack, ctx->used))
 		{
-		/* I know this isn't BN_CTX_get, but ... */
-		BNerr(BN_F_BN_CTX_GET,BN_R_TOO_MANY_TEMPORARY_VARIABLES);
+		BNerr(BN_F_BN_CTX_START,BN_R_TOO_MANY_TEMPORARY_VARIABLES);
 		ctx->err_stack++;
 		}
 	CTXDBG_EXIT(ctx);

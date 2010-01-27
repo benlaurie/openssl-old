@@ -60,11 +60,31 @@
 #include <errno.h>
 #define USE_SOCKETS
 #include "cryptlib.h"
-#include <openssl/bio.h>
+
+#if defined(OPENSSL_NO_POSIX_IO)
+/*
+ * One can argue that one should implement dummy placeholder for
+ * BIO_s_fd here...
+ */
+#else
+/*
+ * As for unconditional usage of "UPLINK" interface in this module.
+ * Trouble is that unlike Unix file descriptors [which are indexes
+ * in kernel-side per-process table], corresponding descriptors on
+ * platforms which require "UPLINK" interface seem to be indexes
+ * in a user-land, non-global table. Well, in fact they are indexes
+ * in stdio _iob[], and recall that _iob[] was the very reason why
+ * "UPLINK" interface was introduced in first place. But one way on
+ * another. Neither libcrypto or libssl use this BIO meaning that
+ * file descriptors can only be provided by application. Therefore
+ * "UPLINK" calls are due...
+ */
+#include "bio_lcl.h"
 
 static int fd_write(BIO *h, const char *buf, int num);
 static int fd_read(BIO *h, char *buf, int size);
 static int fd_puts(BIO *h, const char *str);
+static int fd_gets(BIO *h, char *buf, int size);
 static long fd_ctrl(BIO *h, int cmd, long arg1, void *arg2);
 static int fd_new(BIO *h);
 static int fd_free(BIO *data);
@@ -76,7 +96,7 @@ static BIO_METHOD methods_fdp=
 	fd_write,
 	fd_read,
 	fd_puts,
-	NULL, /* fd_gets, */
+	fd_gets,
 	fd_ctrl,
 	fd_new,
 	fd_free,
@@ -100,9 +120,9 @@ BIO *BIO_new_fd(int fd,int close_flag)
 static int fd_new(BIO *bi)
 	{
 	bi->init=0;
-	bi->num=0;
+	bi->num=-1;
 	bi->ptr=NULL;
-	bi->flags=0;
+	bi->flags=BIO_FLAGS_UPLINK; /* essentially redundant */
 	return(1);
 	}
 
@@ -113,10 +133,10 @@ static int fd_free(BIO *a)
 		{
 		if (a->init)
 			{
-			close(a->num);
+			UP_close(a->num);
 			}
 		a->init=0;
-		a->flags=0;
+		a->flags=BIO_FLAGS_UPLINK;
 		}
 	return(1);
 	}
@@ -128,7 +148,7 @@ static int fd_read(BIO *b, char *out,int outl)
 	if (out != NULL)
 		{
 		clear_sys_error();
-		ret=read(b->num,out,outl);
+		ret=UP_read(b->num,out,outl);
 		BIO_clear_retry_flags(b);
 		if (ret <= 0)
 			{
@@ -143,7 +163,7 @@ static int fd_write(BIO *b, const char *in, int inl)
 	{
 	int ret;
 	clear_sys_error();
-	ret=write(b->num,in,inl);
+	ret=UP_write(b->num,in,inl);
 	BIO_clear_retry_flags(b);
 	if (ret <= 0)
 		{
@@ -163,11 +183,11 @@ static long fd_ctrl(BIO *b, int cmd, long num, void *ptr)
 	case BIO_CTRL_RESET:
 		num=0;
 	case BIO_C_FILE_SEEK:
-		ret=(long)lseek(b->num,num,0);
+		ret=(long)UP_lseek(b->num,num,0);
 		break;
 	case BIO_C_FILE_TELL:
 	case BIO_CTRL_INFO:
-		ret=(long)lseek(b->num,0,1);
+		ret=(long)UP_lseek(b->num,0,1);
 		break;
 	case BIO_C_SET_FD:
 		fd_free(b);
@@ -214,6 +234,22 @@ static int fd_puts(BIO *bp, const char *str)
 	ret=fd_write(bp,str,n);
 	return(ret);
 	}
+
+static int fd_gets(BIO *bp, char *buf, int size)
+        {
+	int ret=0;
+	char *ptr=buf;
+	char *end=buf+size-1;
+
+	while ( (ptr < end) && (fd_read(bp, ptr, 1) > 0) && (ptr[0] != '\n') )
+		ptr++;
+
+	ptr[0]='\0';
+
+	if (buf[0] != '\0')
+		ret=strlen(buf);
+	return(ret);
+        }
 
 int BIO_fd_should_retry(int i)
 	{
@@ -280,3 +316,4 @@ int BIO_fd_non_fatal_error(int err)
 		}
 	return(0);
 	}
+#endif

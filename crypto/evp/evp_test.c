@@ -52,6 +52,7 @@
 
 #include "../e_os.h"
 
+#include <openssl/opensslconf.h>
 #include <openssl/evp.h>
 #ifndef OPENSSL_NO_ENGINE
 #include <openssl/engine.h>
@@ -152,8 +153,8 @@ static void test1(const EVP_CIPHER *c,const unsigned char *key,int kn,
     
     if(kn != c->key_len)
 	{
-	fprintf(stderr,"Key length doesn't match, got %d expected %d\n",kn,
-		c->key_len);
+	fprintf(stderr,"Key length doesn't match, got %d expected %lu\n",kn,
+		(unsigned long)c->key_len);
 	test1_exit(5);
 	}
     EVP_CIPHER_CTX_init(&ctx);
@@ -219,18 +220,18 @@ static void test1(const EVP_CIPHER *c,const unsigned char *key,int kn,
 	    test1_exit(7);
 	    }
 
-	if(outl+outl2 != cn)
+	if(outl+outl2 != pn)
 	    {
 	    fprintf(stderr,"Plaintext length mismatch got %d expected %d\n",
-		    outl+outl2,cn);
+		    outl+outl2,pn);
 	    test1_exit(8);
 	    }
 
-	if(memcmp(out,plaintext,cn))
+	if(memcmp(out,plaintext,pn))
 	    {
 	    fprintf(stderr,"Plaintext mismatch\n");
-	    hexdump(stderr,"Got",out,cn);
-	    hexdump(stderr,"Expected",plaintext,cn);
+	    hexdump(stderr,"Got",out,pn);
+	    hexdump(stderr,"Expected",plaintext,pn);
 	    test1_exit(9);
 	    }
 	}
@@ -395,6 +396,41 @@ int main(int argc,char **argv)
 	if(!test_cipher(cipher,key,kn,iv,in,plaintext,pn,ciphertext,cn,encdec)
 	   && !test_digest(cipher,plaintext,pn,ciphertext,cn))
 	    {
+#ifdef OPENSSL_NO_AES
+	    if (strstr(cipher, "AES") == cipher)
+		{
+		fprintf(stdout, "Cipher disabled, skipping %s\n", cipher); 
+		continue;
+		}
+#endif
+#ifdef OPENSSL_NO_DES
+	    if (strstr(cipher, "DES") == cipher)
+		{
+		fprintf(stdout, "Cipher disabled, skipping %s\n", cipher); 
+		continue;
+		}
+#endif
+#ifdef OPENSSL_NO_RC4
+	    if (strstr(cipher, "RC4") == cipher)
+		{
+		fprintf(stdout, "Cipher disabled, skipping %s\n", cipher); 
+		continue;
+		}
+#endif
+#ifdef OPENSSL_NO_CAMELLIA
+	    if (strstr(cipher, "CAMELLIA") == cipher)
+		{
+		fprintf(stdout, "Cipher disabled, skipping %s\n", cipher); 
+		continue;
+		}
+#endif
+#ifdef OPENSSL_NO_SEED
+	    if (strstr(cipher, "SEED") == cipher)
+		{
+		fprintf(stdout, "Cipher disabled, skipping %s\n", cipher); 
+		continue;
+		}
+#endif
 	    fprintf(stderr,"Can't find %s\n",cipher);
 	    EXIT(3);
 	    }
@@ -405,7 +441,7 @@ int main(int argc,char **argv)
 #endif
     EVP_cleanup();
     CRYPTO_cleanup_all_ex_data();
-    ERR_remove_state(0);
+    ERR_remove_thread_state(NULL);
     ERR_free_strings();
     CRYPTO_mem_leaks_fp(stderr);
 

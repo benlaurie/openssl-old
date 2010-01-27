@@ -6,11 +6,12 @@ $!               A-Com Computing, Inc.
 $!               byer@mail.all-net.net
 $!
 $!  Changes by Richard Levitte <richard@levitte.org>
+$!             Zoltan Arpadffy <zoli@polarhome.com>   
 $!
 $!  This command files compiles and creates all the various different
 $!  "application" programs for the different types of encryption for OpenSSL.
 $!  The EXE's are placed in the directory [.xxx.EXE.APPS] where "xxx" denotes
-$!  either AXP or VAX depending on your machine architecture.
+$!  ALPHA, IA64 or VAX, depending on your machine architecture.
 $!
 $!  It was written so it would try to determine what "C" compiler to
 $!  use or you can specify which "C" compiler to use.
@@ -49,20 +50,21 @@ $ TCPIP_LIB = ""
 $!
 $! Check What Architecture We Are Using.
 $!
-$ IF (F$GETSYI("CPU").GE.128)
+$ IF (F$GETSYI("CPU").LT.128)
 $ THEN
 $!
-$!  The Architecture Is AXP.
+$!  The Architecture Is VAX.
 $!
-$   ARCH := AXP
+$   ARCH := VAX
 $!
 $! Else...
 $!
 $ ELSE
 $!
-$!  The Architecture Is VAX.
+$!  The Architecture Is Alpha, IA64 or whatever comes in the future.
 $!
-$   ARCH := VAX
+$   ARCH = F$EDIT( F$GETSYI( "ARCH_NAME"), "UPCASE")
+$   IF (ARCH .EQS. "") THEN ARCH = "UNK"
 $!
 $! End The Architecture Check.
 $!
@@ -71,22 +73,6 @@ $!
 $! Define what programs should be compiled
 $!
 $ PROGRAMS := OPENSSL
-$!$ PROGRAMS := VERIFY,ASN1PARS,REQ,DGST,DH,ENC,PASSWD,GENDH,ERRSTR,CA,CRL,-
-$!	      RSA,DSA,DSAPARAM,-
-$!	      X509,GENRSA,GENDSA,S_SERVER,S_CLIENT,SPEED,-
-$!	      S_TIME,VERSION,PKCS7,CRL2P7,SESS_ID,CIPHERS,NSEQ,
-$!
-$! Check To Make Sure We Have Valid Command Line Parameters.
-$!
-$ GOSUB CHECK_OPTIONS
-$!
-$! Initialise logical names and such
-$!
-$ GOSUB INITIALISE
-$!
-$! Tell The User What Kind of Machine We Run On.
-$!
-$ WRITE SYS$OUTPUT "Compiling On A ",ARCH," Machine."
 $!
 $! Define The CRYPTO Library.
 $!
@@ -99,6 +85,26 @@ $!
 $! Define The OBJ Directory.
 $!
 $ OBJ_DIR := SYS$DISK:[-.'ARCH'.OBJ.APPS]
+$!
+$! Define The EXE Directory.
+$!
+$ EXE_DIR := SYS$DISK:[-.'ARCH'.EXE.APPS]
+$!
+$! Define The LIS Directory.
+$!
+$ LIS_DIR := SYS$DISK:[-.'ARCH'.LIS.APPS]
+$!
+$! Check To Make Sure We Have Valid Command Line Parameters.
+$!
+$ GOSUB CHECK_OPTIONS
+$!
+$! Initialise logical names and such
+$!
+$ GOSUB INITIALISE
+$!
+$! Tell The User What Kind of Machine We Run On.
+$!
+$ WRITE SYS$OUTPUT "Compiling On A ",ARCH," Machine."
 $!
 $! Check To See If The OBJ Directory Exists.
 $!
@@ -113,11 +119,7 @@ $! End The OBJ Directory Check.
 $!
 $ ENDIF
 $!
-$! Define The LIS Directory.
-$!
-$ LIS_DIR := SYS$DISK:[-.'ARCH'.LIS.APPS]
-$!
-$! Check To See If The OBJ Directory Exists.
+$! Check To See If The LIS Directory Exists.
 $!
 $ IF (F$PARSE(LIS_DIR).EQS."")
 $ THEN
@@ -129,10 +131,6 @@ $!
 $! End The LIS Directory Check.
 $!
 $ ENDIF
-$!
-$! Define The EXE Directory.
-$!
-$ EXE_DIR := SYS$DISK:[-.'ARCH'.EXE.APPS]
 $!
 $! Check To See If The EXE Directory Exists.
 $!
@@ -156,176 +154,188 @@ $!
 $ GOSUB CHECK_OPT_FILE
 $!
 $! Define The Application Files.
+$! NOTE: Some might think this list ugly.  However, it's made this way to
+$! reflect the E_OBJ variable in Makefile as closely as possible, thereby
+$! making it fairly easy to verify that the lists are the same.
 $!
-$ LIB_FILES = "VERIFY;ASN1PARS;REQ;DGST;DH;DHPARAM;ENC;PASSWD;GENDH;ERRSTR;"+-
-	      "CA;PKCS7;CRL2P7;CRL;"+-
-	      "RSA;RSAUTL;DSA;DSAPARAM;EC;ECPARAM;"+-
-	      "X509;GENRSA;GENDSA;TERM_SOCK;S_SERVER;S_CLIENT;SPEED;"+-
-	      "S_TIME;APPS;S_CB;S_SOCKET;APP_RAND;VERSION;SESS_ID;"+-
-	      "CIPHERS;NSEQ;PKCS12;PKCS8;SPKAC;SMIME;RAND;ENGINE;OCSP"
-$ APP_FILES := OPENSSL,'OBJ_DIR'VERIFY.OBJ,ASN1PARS.OBJ,REQ.OBJ,DGST.OBJ,DH.OBJ,DHPARAM.OBJ,ENC.OBJ,PASSWD.OBJ,GENDH.OBJ,ERRSTR.OBJ,-
-	       CA.OBJ,PKCS7.OBJ,CRL2P7.OBJ,CRL.OBJ,-
-	       RSA.OBJ,RSAUTL.OBJ,DSA.OBJ,DSAPARAM.OBJ,EC.OBJ,ECPARAM.OBJ,-
-	       X509.OBJ,GENRSA.OBJ,GENDSA.OBJ,TERM_SOCK.OBJ,S_SERVER.OBJ,S_CLIENT.OBJ,SPEED.OBJ,-
-	       S_TIME.OBJ,APPS.OBJ,S_CB.OBJ,S_SOCKET.OBJ,APP_RAND.OBJ,VERSION.OBJ,SESS_ID.OBJ,-
-	       CIPHERS.OBJ,NSEQ.OBJ,PKCS12.OBJ,PKCS8.OBJ,SPKAC.OBJ,SMIME.OBJ,RAND.OBJ,ENGINE.OBJ,OCSP.OBJ
+$ LIB_OPENSSL = "VERIFY,ASN1PARS,REQ,DGST,DH,DHPARAM,ENC,PASSWD,GENDH,ERRSTR,"+-
+	     	"CA,PKCS7,CRL2P7,CRL,"+-
+	      	"RSA,RSAUTL,DSA,DSAPARAM,EC,ECPARAM,"+-
+	      	"X509,GENRSA,GENDSA,GENPKEY,S_SERVER,S_CLIENT,SPEED,"+-
+	      	"S_TIME,APPS,S_CB,S_SOCKET,APP_RAND,VERSION,SESS_ID,"+-
+	      	"CIPHERS,NSEQ,PKCS12,PKCS8,PKEY,PKEYPARAM,PKEYUTL,"+ -
+	      	"SPKAC,SMIME,CMS,RAND,ENGINE,OCSP,PRIME,TS"
 $ TCPIP_PROGRAMS = ",,"
 $ IF COMPILER .EQS. "VAXC" THEN -
      TCPIP_PROGRAMS = ",OPENSSL,"
-$!$ APP_FILES := VERIFY;ASN1PARS;REQ;DGST;DH;ENC;GENDH;ERRSTR;CA;-
-$!	       PKCS7;CRL2P7;CRL;-
-$!	       RSA;DSA;DSAPARAM;-
-$!	       X509;GENRSA;GENDSA;-
-$!	       S_SERVER,'OBJ_DIR'S_SOCKET.OBJ,'OBJ_DIR'S_CB.OBJ;-
-$!	       S_CLIENT,'OBJ_DIR'S_SOCKET.OBJ,'OBJ_DIR'S_CB.OBJ;-
-$!	       SPEED;-
-$!	       S_TIME,'OBJ_DIR'S_CB.OBJ;VERSION;SESS_ID;CIPHERS;NSEQ
-$!$ TCPIP_PROGRAMS = ",,"
-$!$ IF COMPILER .EQS. "VAXC" THEN -
-$!     TCPIP_PROGRAMS = ",S_SERVER,S_CLIENT,SESS_ID,CIPHERS,S_TIME,"
 $!
 $! Setup exceptional compilations
 $!
-$ COMPILEWITH_CC2 = ",S_SERVER,S_CLIENT,"
+$ COMPILEWITH_CC2 = ",S_SOCKET,S_SERVER,S_CLIENT,"
 $ COMPILEWITH_CC3 = ",TERM_SOCK,"
 $!
 $ PHASE := LIB
 $!
 $ RESTART: 
 $!
-$!  Define A File Counter And Set It To "0".
+$!  Define An App Counter And Set It To "0".
 $!
-$ FILE_COUNTER = 0
+$ APP_COUNTER = 0
 $!
-$! Top Of The File Loop.
+$!  Top Of The App Loop.
 $!
-$ NEXT_FILE:
+$ NEXT_APP:
 $!
-$! O.K, Extract The File Name From The File List.
+$!  Make The Application File Name
 $!
-$ FILE_NAME0 = F$EDIT(F$ELEMENT(FILE_COUNTER,";",'PHASE'_FILES),"TRIM")
-$ FILE_NAME = F$EDIT(F$ELEMENT(0,",",FILE_NAME0),"TRIM")
-$ EXTRA_OBJ = FILE_NAME0 - FILE_NAME
+$ CURRENT_APP = F$EDIT(F$ELEMENT(APP_COUNTER,",",PROGRAMS),"TRIM")
 $!
-$! Check To See If We Are At The End Of The File List.
+$!  Create The Executable File Name.
 $!
-$ IF (FILE_NAME0.EQS.";")
+$   EXE_FILE = EXE_DIR + CURRENT_APP + ".EXE"
+$!
+$!  Check To See If We Are At The End Of The File List.
+$!
+$ IF (CURRENT_APP.EQS.",")
 $ THEN
 $   IF (PHASE.EQS."LIB")
 $   THEN
 $     PHASE := APP
 $     GOTO RESTART
 $   ELSE
-$     GOTO FILE_DONE
+$     GOTO APP_DONE
 $   ENDIF
 $ ENDIF
 $!
-$! Increment The Counter.
+$!  Increment The Counter.
 $!
-$ FILE_COUNTER = FILE_COUNTER + 1
+$ APP_COUNTER = APP_COUNTER + 1
 $!
-$! Check to see if this program should actually be compiled
-$!
-$ IF PHASE .EQS. "APP" .AND. -
-     ","+PROGRAMS+"," - (","+F$EDIT(FILE_NAME,"UPCASE")+",") .EQS. ","+PROGRAMS+","
-$ THEN
-$   GOTO NEXT_FILE
-$ ENDIF
-$!
-$! Create The Source File Name.
-$!
-$ SOURCE_FILE = "SYS$DISK:[]" + FILE_NAME + ".C"
-$!
-$! Create The Object File Name.
-$!
-$ OBJECT_FILE = OBJ_DIR + FILE_NAME + ".OBJ"
-$!
-$! Create The Listing File Name.
-$!
-$ LIST_FILE = LIS_DIR + FILE_NAME + ".LIS"
-$!
-$! Create The MAP File Name.
-$!
-$ MAP_FILE = LIS_DIR + FILE_NAME + ".MAP"
-$!
-$! Create The Executable File Name.
-$!
-$ EXE_FILE = EXE_DIR + FILE_NAME + ".EXE"
-$ ON WARNING THEN GOTO NEXT_FILE
-$!
-$! Check To See If The File We Want To Compile Actually Exists.
-$!
-$ IF (F$SEARCH(SOURCE_FILE).EQS."")
-$ THEN
-$!
-$!  Tell The User That The File Dosen't Exist.
-$!
-$   WRITE SYS$OUTPUT ""
-$   WRITE SYS$OUTPUT F$MESSAGE("%X10018290") + ".  The File ",SOURCE_FILE," Dosen't Exist."
-$   WRITE SYS$OUTPUT ""
-$!
-$!  Exit The Build.
-$!
-$   GOTO EXIT
-$!
-$! End The File Exist Check.
-$!
-$ ENDIF
-$!
-$! Tell The User What We Are Building.
+$!  Decide if we're building the object files or not.
 $!
 $ IF (PHASE.EQS."LIB")
 $ THEN
-$   WRITE SYS$OUTPUT "Compiling The ",FILE_NAME,".C File."
-$ ELSE
-$   WRITE SYS$OUTPUT "Building The ",FILE_NAME," Application Program."
-$ ENDIF
 $!
-$! Compile The File.
+$!  Define A Library File Counter And Set It To "-1".
+$!  -1 Means The Application File Name Is To Be Used.
 $!
-$ ON ERROR THEN GOTO NEXT_FILE
-$ IF COMPILEWITH_CC3 - FILE_NAME .NES. COMPILEWITH_CC3
-$ THEN
-$   CC3/OBJECT='OBJECT_FILE'/LIST='LIST_FILE'/MACHINE_CODE 'SOURCE_FILE'
-$ ELSE
-$   IF COMPILEWITH_CC2 - FILE_NAME .NES. COMPILEWITH_CC2
+$   LIB_COUNTER = -1
+$!
+$!  Create a .OPT file for the object files
+$!
+$   OPEN/WRITE OBJECTS 'EXE_DIR''CURRENT_APP'.OPT
+$!
+$!  Top Of The File Loop.
+$!
+$  NEXT_LIB:
+$!
+$!  O.K, Extract The File Name From The File List.
+$!
+$   IF LIB_COUNTER .GE. 0
 $   THEN
-$     CC2/OBJECT='OBJECT_FILE'/LIST='LIST_FILE'/MACHINE_CODE 'SOURCE_FILE'
+$     FILE_NAME = F$EDIT(F$ELEMENT(LIB_COUNTER,",",LIB_'CURRENT_APP'),"TRIM")
 $   ELSE
-$     CC/OBJECT='OBJECT_FILE'/LIST='LIST_FILE'/MACHINE_CODE 'SOURCE_FILE'
+$     FILE_NAME = CURRENT_APP
 $   ENDIF
-$ ENDIF
 $!
-$ ON WARNING THEN GOTO NEXT_FILE
+$!  Check To See If We Are At The End Of The File List.
 $!
-$ IF (PHASE.EQS."LIB") 
-$ THEN 
-$   GOTO NEXT_FILE
+$   IF (FILE_NAME.EQS.",")
+$   THEN
+$     CLOSE OBJECTS
+$     GOTO NEXT_APP
+$   ENDIF
+$!
+$!  Increment The Counter.
+$!
+$   LIB_COUNTER = LIB_COUNTER + 1
+$!
+$!  Create The Source File Name.
+$!
+$   SOURCE_FILE = "SYS$DISK:[]" + FILE_NAME + ".C"
+$!
+$!  Create The Listing File Name.
+$!
+$   LIST_FILE = LIS_DIR + FILE_NAME + ".LIS"
+$!
+$!  Create The MAP File Name.
+$!
+$   MAP_FILE = LIS_DIR + FILE_NAME + ".MAP"
+$!
+$!  Create The Object File Name.
+$!
+$   OBJECT_FILE = OBJ_DIR + FILE_NAME + ".OBJ"
+$   ON WARNING THEN GOTO NEXT_LIB
+$!
+$!  Check To See If The File We Want To Compile Actually Exists.
+$!
+$   IF (F$SEARCH(SOURCE_FILE).EQS."")
+$   THEN
+$!
+$!    Tell The User That The File Dosen't Exist.
+$!
+$     WRITE SYS$OUTPUT ""
+$     WRITE SYS$OUTPUT "The File ",SOURCE_FILE," Dosen't Exist."
+$     WRITE SYS$OUTPUT ""
+$!
+$!    Exit The Build.
+$!
+$     GOTO EXIT
+$!
+$!  End The File Exist Check.
+$!
+$   ENDIF
+$!
+$!  Tell The User What We Are Building.
+$!
+$   IF (PHASE.EQS."LIB")
+$   THEN
+$     WRITE SYS$OUTPUT "Compiling The ",FILE_NAME,".C File."
+$   ELSE
+$     WRITE SYS$OUTPUT "Building The ",FILE_NAME," Application Program."
+$   ENDIF
+$!
+$!  Compile The File.
+$!
+$   ON ERROR THEN GOTO NEXT_FILE
+$   IF COMPILEWITH_CC3 - FILE_NAME .NES. COMPILEWITH_CC3
+$   THEN
+$     CC3/OBJECT='OBJECT_FILE'/LIST='LIST_FILE'/MACHINE_CODE 'SOURCE_FILE'
+$   ELSE
+$     IF COMPILEWITH_CC2 - FILE_NAME .NES. COMPILEWITH_CC2
+$     THEN
+$	CC2/OBJECT='OBJECT_FILE'/LIST='LIST_FILE'/MACHINE_CODE 'SOURCE_FILE'
+$     ELSE
+$	CC/OBJECT='OBJECT_FILE'/LIST='LIST_FILE'/MACHINE_CODE 'SOURCE_FILE'
+$     ENDIF
+$   ENDIF
+$   WRITE OBJECTS OBJECT_FILE
+$!
+$   GOTO NEXT_LIB
 $ ENDIF
 $!
 $!  Check if this program works well without a TCPIP library
 $!
-$ IF TCPIP_LIB .EQS. "" .AND. TCPIP_PROGRAMS - FILE_NAME .NES. TCPIP_PROGRAMS
+$ IF TCPIP_LIB .EQS. "" .AND. TCPIP_PROGRAMS - CURRENT_APP .NES. TCPIP_PROGRAMS
 $ THEN
-$   WRITE SYS$OUTPUT FILE_NAME," needs a TCP/IP library.  Can't link.  Skipping..."
-$   GOTO NEXT_FILE
+$   WRITE SYS$OUTPUT CURRENT_APP," needs a TCP/IP library.  Can't link.  Skipping..."
+$   GOTO NEXT_APP
 $ ENDIF
 $!
 $! Link The Program.
 $! Check To See If We Are To Link With A Specific TCP/IP Library.
 $!
-$ _save_ver = f$verify(1)
+$ ON WARNING THEN GOTO NEXT_APP
+$!
 $ IF (TCPIP_LIB.NES."")
 $ THEN
 $!
 $!  Check To See If We Are To Link With A Specific TCP/IP Library.
 $!
-$   LINK /'DEBUGGER'/'TRACEBACK' /EXE='EXE_FILE' /MAP='MAP_FILE' /FULL/CROSS -
-	'OBJECT_FILE''EXTRA_OBJ', -
-        'SSL_LIB'/LIBRARY, -
-	'CRYPTO_LIB'/LIBRARY, -
-        'TCPIP_LIB', -
-	'OPT_FILE'/OPTION, -
+$   LINK/'DEBUGGER'/'TRACEBACK' /EXE='EXE_FILE' /MAP='MAP_FILE' /FULL/CROSS -
+	'EXE_DIR''CURRENT_APP'.OPT/OPTION, -
+        'SSL_LIB'/LIBRARY,'CRYPTO_LIB'/LIBRARY, -
+        'TCPIP_LIB','OPT_FILE'/OPTION, -
 	SYS$DISK:[-]SSL_IDENT.OPT/OPTION
 $!
 $! Else...
@@ -334,11 +344,10 @@ $ ELSE
 $!
 $!  Don't Link With TCP/IP Library.
 $!
-$   LINK /'DEBUGGER'/'TRACEBACK' /EXE='EXE_FILE' /MAP='MAP_FILE' /FULL/CROSS -
-	'OBJECT_FILE''EXTRA_OBJ', -
-        'SSL_LIB'/LIBRARY, -
-	'CRYPTO_LIB'/LIBRARY, -
-	'OPT_FILE'/OPTION, -
+$   LINK/'DEBUGGER'/'TRACEBACK' /EXE='EXE_FILE' /MAP='MAP_FILE' /FULL/CROSS -
+	'EXE_DIR''CURRENT_APP'.OPT/OPTION, -
+        'SSL_LIB'/LIBRARY,'CRYPTO_LIB'/LIBRARY, -
+        'OPT_FILE'/OPTION, -
 	SYS$DISK:[-]SSL_IDENT.OPT/OPTION
 $!
 $! End The TCP/IP Library Check.
@@ -348,11 +357,11 @@ $ _save_ver := 'f$verify(_save_ver)
 $!
 $! Go Back And Do It Again.
 $!
-$ GOTO NEXT_FILE
+$ GOTO NEXT_APP
 $!
 $! All Done With This File.
 $!
-$ FILE_DONE:
+$ APP_DONE:
 $ EXIT:
 $!
 $! All Done, Time To Clean Up And Exit.
@@ -453,19 +462,19 @@ $!    Else...
 $!
 $     ELSE
 $!
-$!      Create The AXP Linker Option File.
+$!      Create The non-VAX Linker Option File.
 $!
 $       CREATE 'OPT_FILE'
 $DECK
 !
-! Default System Options File For AXP To Link Agianst 
+! Default System Options File For non-VAX To Link Agianst 
 ! The Sharable C Runtime Library.
 !
 SYS$SHARE:CMA$OPEN_LIB_SHR/SHARE
 SYS$SHARE:CMA$OPEN_RTL/SHARE
 $EOD
 $!
-$!    End The VAX/AXP DEC C Option File Check.
+$!    End The DEC C Option File Check.
 $!
 $     ENDIF
 $!
@@ -614,7 +623,7 @@ $   ELSE
 $!
 $!  Check To See If We Have VAXC Or DECC.
 $!
-$     IF (ARCH.EQS."AXP").OR.(F$TRNLNM("DECC$CC_DEFAULT").NES."")
+$     IF (ARCH.NES."VAX").OR.(F$TRNLNM("DECC$CC_DEFAULT").NES."")
 $     THEN 
 $!
 $!      Looks Like DECC, Set To Use DECC.
@@ -691,7 +700,7 @@ $ CCDEFS = "MONOLITH"
 $ IF F$TYPE(USER_CCDEFS) .NES. "" THEN CCDEFS = CCDEFS + "," + USER_CCDEFS
 $ CCEXTRAFLAGS = ""
 $ IF F$TYPE(USER_CCFLAGS) .NES. "" THEN CCEXTRAFLAGS = USER_CCFLAGS
-$ CCDISABLEWARNINGS = "LONGLONGTYPE,LONGLONGSUFX"
+$ CCDISABLEWARNINGS = "LONGLONGTYPE,LONGLONGSUFX,FOUNDCR"
 $ IF F$TYPE(USER_CCDISABLEWARNINGS) .NES. "" THEN -
 	CCDISABLEWARNINGS = CCDISABLEWARNINGS + "," + USER_CCDISABLEWARNINGS
 $!
@@ -724,7 +733,7 @@ $     CC = CC + "/''CC_OPTIMIZE'/''DEBUGGER'/STANDARD=ANSI89" + -
 $!
 $!    Define The Linker Options File Name.
 $!
-$     OPT_FILE = "SYS$DISK:[]''arch'_DECC_OPTIONS.OPT"
+$     OPT_FILE = "''EXE_DIR'''arch'_DECC_OPTIONS.OPT"
 $!
 $!  End DECC Check.
 $!
@@ -745,9 +754,9 @@ $!
 $!    Compile Using VAXC.
 $!
 $     CC = "CC"
-$     IF ARCH.EQS."AXP"
+$     IF ARCH.NES."VAX"
 $     THEN
-$	WRITE SYS$OUTPUT "There is no VAX C on Alpha!"
+$	WRITE SYS$OUTPUT "There is no VAX C on ''ARCH'!"
 $	EXIT
 $     ENDIF
 $     IF F$TRNLNM("DECC$CC_DEFAULT").EQS."/DECC" THEN CC = "CC/VAXC"
@@ -761,7 +770,7 @@ $     DEFINE/NOLOG SYS SYS$COMMON:[SYSLIB]
 $!
 $!    Define The Linker Options File Name.
 $!
-$     OPT_FILE = "SYS$DISK:[]''arch'_VAXC_OPTIONS.OPT"
+$     OPT_FILE = "''EXE_DIR'''arch'_VAXC_OPTIONS.OPT"
 $!
 $!  End VAXC Check
 $!
@@ -788,7 +797,7 @@ $     CC = GCC+"/NOCASE_HACK/''GCC_OPTIMIZE'/''DEBUGGER'" + -
 $!
 $!    Define The Linker Options File Name.
 $!
-$     OPT_FILE = "SYS$DISK:[]''arch'_GNUC_OPTIONS.OPT"
+$     OPT_FILE = "''EXE_DIR'''arch'_GNUC_OPTIONS.OPT"
 $!
 $!  End The GNU C Check.
 $!

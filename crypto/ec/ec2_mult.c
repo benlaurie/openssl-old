@@ -76,7 +76,7 @@
  * coordinates.
  * Uses algorithm Mdouble in appendix of 
  *     Lopez, J. and Dahab, R.  "Fast multiplication on elliptic curves over 
- *     GF(2^m) without precomputation".
+ *     GF(2^m) without precomputation" (CHES '99, LNCS 1717).
  * modified to not require precomputation of c=b^{2^{m-1}}.
  */
 static int gf2m_Mdouble(const EC_GROUP *group, BIGNUM *x, BIGNUM *z, BN_CTX *ctx)
@@ -107,8 +107,8 @@ static int gf2m_Mdouble(const EC_GROUP *group, BIGNUM *x, BIGNUM *z, BN_CTX *ctx
 /* Compute the x-coordinate x1/z1 for the point (x1/z1)+(x2/x2) in Montgomery 
  * projective coordinates.
  * Uses algorithm Madd in appendix of 
- *     Lopex, J. and Dahab, R.  "Fast multiplication on elliptic curves over 
- *     GF(2^m) without precomputation".
+ *     Lopez, J. and Dahab, R.  "Fast multiplication on elliptic curves over 
+ *     GF(2^m) without precomputation" (CHES '99, LNCS 1717).
  */
 static int gf2m_Madd(const EC_GROUP *group, const BIGNUM *x, BIGNUM *x1, BIGNUM *z1, 
 	const BIGNUM *x2, const BIGNUM *z2, BN_CTX *ctx)
@@ -140,8 +140,8 @@ static int gf2m_Madd(const EC_GROUP *group, const BIGNUM *x, BIGNUM *x1, BIGNUM 
 
 /* Compute the x, y affine coordinates from the point (x1, z1) (x2, z2) 
  * using Montgomery point multiplication algorithm Mxy() in appendix of 
- *     Lopex, J. and Dahab, R.  "Fast multiplication on elliptic curves over 
- *     GF(2^m) without precomputation".
+ *     Lopez, J. and Dahab, R.  "Fast multiplication on elliptic curves over 
+ *     GF(2^m) without precomputation" (CHES '99, LNCS 1717).
  * Returns:
  *     0 on error
  *     1 if return value should be the point at infinity
@@ -209,19 +209,19 @@ static int gf2m_Mxy(const EC_GROUP *group, const BIGNUM *x, const BIGNUM *y, BIG
 /* Computes scalar*point and stores the result in r.
  * point can not equal r.
  * Uses algorithm 2P of
- *     Lopex, J. and Dahab, R.  "Fast multiplication on elliptic curves over 
- *     GF(2^m) without precomputation".
+ *     Lopez, J. and Dahab, R.  "Fast multiplication on elliptic curves over 
+ *     GF(2^m) without precomputation" (CHES '99, LNCS 1717).
  */
 static int ec_GF2m_montgomery_point_multiply(const EC_GROUP *group, EC_POINT *r, const BIGNUM *scalar,
 	const EC_POINT *point, BN_CTX *ctx)
 	{
 	BIGNUM *x1, *x2, *z1, *z2;
-	int ret = 0, i, j;
-	BN_ULONG mask;
+	int ret = 0, i;
+	BN_ULONG mask,word;
 
 	if (r == point)
 		{
-		ECerr(EC_F_EC_POINT_MUL, EC_R_INVALID_ARGUMENT);
+		ECerr(EC_F_EC_GF2M_MONTGOMERY_POINT_MULTIPLY, EC_R_INVALID_ARGUMENT);
 		return 0;
 		}
 	
@@ -251,22 +251,24 @@ static int ec_GF2m_montgomery_point_multiply(const EC_GROUP *group, EC_POINT *r,
 	if (!BN_GF2m_add(x2, x2, &group->b)) goto err; /* x2 = x^4 + b */
 
 	/* find top most bit and go one past it */
-	i = scalar->top - 1; j = BN_BITS2 - 1;
+	i = scalar->top - 1;
 	mask = BN_TBIT;
-	while (!(scalar->d[i] & mask)) { mask >>= 1; j--; }
-	mask >>= 1; j--;
+	word = scalar->d[i];
+	while (!(word & mask)) mask >>= 1;
+	mask >>= 1;
 	/* if top most bit was at word break, go to next word */
 	if (!mask) 
 		{
-		i--; j = BN_BITS2 - 1;
+		i--;
 		mask = BN_TBIT;
 		}
 
 	for (; i >= 0; i--)
 		{
-		for (; j >= 0; j--)
+		word = scalar->d[i];
+		while (mask)
 			{
-			if (scalar->d[i] & mask)
+			if (word & mask)
 				{
 				if (!gf2m_Madd(group, &point->X, x1, z1, x2, z2, ctx)) goto err;
 				if (!gf2m_Mdouble(group, x2, z2, ctx)) goto err;
@@ -278,7 +280,6 @@ static int ec_GF2m_montgomery_point_multiply(const EC_GROUP *group, EC_POINT *r,
 				}
 			mask >>= 1;
 			}
-		j = BN_BITS2 - 1;
 		mask = BN_TBIT;
 		}
 
@@ -296,8 +297,8 @@ static int ec_GF2m_montgomery_point_multiply(const EC_GROUP *group, EC_POINT *r,
 		}
 
 	/* GF(2^m) field elements should always have BIGNUM::neg = 0 */
-	BN_set_sign(&r->X, 0);
-	BN_set_sign(&r->Y, 0);
+	BN_set_negative(&r->X, 0);
+	BN_set_negative(&r->Y, 0);
 
 	ret = 1;
 
@@ -343,7 +344,7 @@ int ec_GF2m_simple_mul(const EC_GROUP *group, EC_POINT *r, const BIGNUM *scalar,
 	if (scalar)
 		{
 		if (!ec_GF2m_montgomery_point_multiply(group, p, scalar, group->generator, ctx)) goto err;
-		if (BN_get_sign(scalar)) 
+		if (BN_is_negative(scalar)) 
 			if (!group->meth->invert(group, p, ctx)) goto err;
 		if (!group->meth->add(group, r, r, p, ctx)) goto err;
 		}
@@ -351,7 +352,7 @@ int ec_GF2m_simple_mul(const EC_GROUP *group, EC_POINT *r, const BIGNUM *scalar,
 	for (i = 0; i < num; i++)
 		{
 		if (!ec_GF2m_montgomery_point_multiply(group, p, scalars[i], points[i], ctx)) goto err;
-		if (BN_get_sign(scalars[i]))
+		if (BN_is_negative(scalars[i]))
 			if (!group->meth->invert(group, p, ctx)) goto err;
 		if (!group->meth->add(group, r, r, p, ctx)) goto err;
 		}

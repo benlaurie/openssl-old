@@ -79,7 +79,7 @@
 #include <openssl/bn.h>         /* To get BN_LLONG properly defined */
 #include <openssl/bio.h>
 
-#ifdef BN_LLONG
+#if defined(BN_LLONG) || defined(SIXTY_FOUR_BIT)
 # ifndef HAVE_LONG_LONG
 #  define HAVE_LONG_LONG 1
 # endif
@@ -115,9 +115,9 @@
 #define LDOUBLE double
 #endif
 
-#if HAVE_LONG_LONG
-# if defined(OPENSSL_SYS_WIN32) && !defined(__GNUC__)
-# define LLONG _int64
+#ifdef HAVE_LONG_LONG
+# if defined(_WIN32) && !defined(__GNUC__)
+# define LLONG __int64
 # else
 # define LLONG long long
 # endif
@@ -482,7 +482,7 @@ fmtint(
     int flags)
 {
     int signvalue = 0;
-    char *prefix = "";
+    const char *prefix = "";
     unsigned LLONG uvalue;
     char convert[DECIMAL_SIZE(value)+3];
     int place = 0;
@@ -576,7 +576,7 @@ abs_val(LDOUBLE value)
 }
 
 static LDOUBLE
-pow10(int in_exp)
+pow_10(int in_exp)
 {
     LDOUBLE result = 1;
     while (in_exp) {
@@ -640,8 +640,8 @@ fmtfp(
 
     /* we "cheat" by converting the fractional part to integer by
        multiplying by a factor of 10 */
-    max10 = roundv(pow10(max));
-    fracpart = roundv(pow10(max) * (ufvalue - intpart));
+    max10 = roundv(pow_10(max));
+    fracpart = roundv(pow_10(max) * (ufvalue - intpart));
 
     if (fracpart >= max10) {
         intpart++;

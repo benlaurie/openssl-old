@@ -61,7 +61,7 @@
 
 #include <openssl/e_os2.h>
 
-#if defined(OPENSSL_SYS_WIN32) || defined(OPENSSL_SYS_WIN16)
+#if defined(OPENSSL_SYS_WIN32)
 #ifndef OPENSSL_SYS_MSDOS
 #define OPENSSL_SYS_MSDOS
 #endif
@@ -421,8 +421,12 @@
 	PERM_OP(l,r,tt, 4,0x0f0f0f0fL); \
 	}
 
-OPENSSL_EXTERN const DES_LONG DES_SPtrans[8][64];
+extern const DES_LONG DES_SPtrans[8][64];
 
 void fcrypt_body(DES_LONG *out,DES_key_schedule *ks,
 		 DES_LONG Eswap0, DES_LONG Eswap1);
+
+#ifdef OPENSSL_SMALL_FOOTPRINT
+#undef DES_UNROLL
+#endif
 #endif

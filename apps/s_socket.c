@@ -87,14 +87,18 @@ typedef unsigned int u_int;
 
 #ifndef OPENSSL_NO_SOCK
 
+#if defined(OPENSSL_SYS_NETWARE) && defined(NETWARE_BSDSOCK)
+#include "netdb.h"
+#endif
+
 static struct hostent *GetHostByName(char *name);
-#if defined(OPENSSL_SYS_WINDOWS) || defined(OPENSSL_SYS_NETWARE)
+#if defined(OPENSSL_SYS_WINDOWS) || (defined(OPENSSL_SYS_NETWARE) && !defined(NETWARE_BSDSOCK))
 static void ssl_sock_cleanup(void);
 #endif
 static int ssl_sock_init(void);
-static int init_client_ip(int *sock,unsigned char ip[4], int port);
-static int init_server(int *sock, int port);
-static int init_server_long(int *sock, int port,char *ip);
+static int init_client_ip(int *sock,unsigned char ip[4], int port, int type);
+static int init_server(int *sock, int port, int type);
+static int init_server_long(int *sock, int port,char *ip, int type);
 static int do_accept(int acc_sock, int *sock, char **host);
 static int host_ip(char *str, unsigned char ip[4]);
 
@@ -104,7 +108,7 @@ static int host_ip(char *str, unsigned char ip[4]);
 #define SOCKET_PROTOCOL	IPPROTO_TCP
 #endif
 
-#ifdef OPENSSL_SYS_NETWARE
+#if defined(OPENSSL_SYS_NETWARE) && !defined(NETWARE_BSDSOCK)
 static int wsa_init_done=0;
 #endif
 
@@ -156,7 +160,7 @@ static void ssl_sock_cleanup(void)
 		WSACleanup();
 		}
 	}
-#elif defined(OPENSSL_SYS_NETWARE)
+#elif defined(OPENSSL_SYS_NETWARE) && !defined(NETWARE_BSDSOCK)
 static void sock_cleanup(void)
     {
     if (wsa_init_done)
@@ -199,7 +203,7 @@ static int ssl_sock_init(void)
 		SetWindowLong(topWnd,GWL_WNDPROC,(LONG)lpTopHookProc);
 #endif /* OPENSSL_SYS_WIN16 */
 		}
-#elif defined(OPENSSL_SYS_NETWARE)
+#elif defined(OPENSSL_SYS_NETWARE) && !defined(NETWARE_BSDSOCK)
    WORD wVerReq;
    WSADATA wsaData;
    int err;
@@ -224,20 +228,18 @@ static int ssl_sock_init(void)
 	return(1);
 	}
 
-int init_client(int *sock, char *host, int port)
+int init_client(int *sock, char *host, int port, int type)
 	{
 	unsigned char ip[4];
-	short p=0;
 
 	if (!host_ip(host,&(ip[0])))
 		{
 		return(0);
 		}
-	if (p != 0) port=p;
-	return(init_client_ip(sock,ip,port));
+	return(init_client_ip(sock,ip,port,type));
 	}
 
-static int init_client_ip(int *sock, unsigned char ip[4], int port)
+static int init_client_ip(int *sock, unsigned char ip[4], int port, int type)
 	{
 	unsigned long addr;
 	struct sockaddr_in them;
@@ -255,45 +257,58 @@ static int init_client_ip(int *sock, unsigned char ip[4], int port)
 		((unsigned long)ip[3]);
 	them.sin_addr.s_addr=htonl(addr);
 
-	s=socket(AF_INET,SOCK_STREAM,SOCKET_PROTOCOL);
+	if (type == SOCK_STREAM)
+		s=socket(AF_INET,SOCK_STREAM,SOCKET_PROTOCOL);
+	else /* ( type == SOCK_DGRAM) */
+		s=socket(AF_INET,SOCK_DGRAM,IPPROTO_UDP);
+			
 	if (s == INVALID_SOCKET) { perror("socket"); return(0); }
 
-#ifndef OPENSSL_SYS_MPE
-	i=0;
-	i=setsockopt(s,SOL_SOCKET,SO_KEEPALIVE,(char *)&i,sizeof(i));
-	if (i < 0) { perror("keepalive"); return(0); }
+#if defined(SO_KEEPALIVE) && !defined(OPENSSL_SYS_MPE)
+	if (type == SOCK_STREAM)
+		{
+		i=0;
+		i=setsockopt(s,SOL_SOCKET,SO_KEEPALIVE,(char *)&i,sizeof(i));
+		if (i < 0) { perror("keepalive"); return(0); }
+		}
 #endif
 
 	if (connect(s,(struct sockaddr *)&them,sizeof(them)) == -1)
-		{ close(s); perror("connect"); return(0); }
+		{ closesocket(s); perror("connect"); return(0); }
 	*sock=s;
 	return(1);
 	}
 
-int do_server(int port, int *ret, int (*cb)(), char *context)
+int do_server(int port, int type, int *ret, int (*cb)(char *hostname, int s, unsigned char *context), unsigned char *context)
 	{
 	int sock;
-	char *name;
-	int accept_socket;
+	char *name = NULL;
+	int accept_socket = 0;
 	int i;
 
-	if (!init_server(&accept_socket,port)) return(0);
+	if (!init_server(&accept_socket,port,type)) return(0);
 
 	if (ret != NULL)
 		{
 		*ret=accept_socket;
 		/* return(1);*/
 		}
-	for (;;)
-		{
-		if (do_accept(accept_socket,&sock,&name) == 0)
+  	for (;;)
+  		{
+		if (type==SOCK_STREAM)
 			{
-			SHUTDOWN(accept_socket);
-			return(0);
+			if (do_accept(accept_socket,&sock,&name) == 0)
+				{
+				SHUTDOWN(accept_socket);
+				return(0);
+				}
 			}
+		else
+			sock = accept_socket;
 		i=(*cb)(name,sock, context);
 		if (name != NULL) OPENSSL_free(name);
-		SHUTDOWN2(sock);
+		if (type==SOCK_STREAM)
+			SHUTDOWN2(sock);
 		if (i < 0)
 			{
 			SHUTDOWN2(accept_socket);
@@ -302,7 +317,7 @@ int do_server(int port, int *ret, int (*cb)(), char *context)
 		}
 	}
 
-static int init_server_long(int *sock, int port, char *ip)
+static int init_server_long(int *sock, int port, char *ip, int type)
 	{
 	int ret=0;
 	struct sockaddr_in server;
@@ -322,7 +337,11 @@ static int init_server_long(int *sock, int port, char *ip)
 #else
 		memcpy(&server.sin_addr,ip,4);
 #endif
-	s=socket(AF_INET,SOCK_STREAM,SOCKET_PROTOCOL);
+	
+		if (type == SOCK_STREAM)
+			s=socket(AF_INET,SOCK_STREAM,SOCKET_PROTOCOL);
+		else /* type == SOCK_DGRAM */
+			s=socket(AF_INET, SOCK_DGRAM,IPPROTO_UDP);
 
 	if (s == INVALID_SOCKET) goto err;
 #if defined SOL_SOCKET && defined SO_REUSEADDR
@@ -340,7 +359,7 @@ static int init_server_long(int *sock, int port, char *ip)
 		goto err;
 		}
 	/* Make it 128 for linux */
-	if (listen(s,128) == -1) goto err;
+	if (type==SOCK_STREAM && listen(s,128) == -1) goto err;
 	i=0;
 	*sock=s;
 	ret=1;
@@ -352,9 +371,9 @@ err:
 	return(ret);
 	}
 
-static int init_server(int *sock, int port)
+static int init_server(int *sock, int port, int type)
 	{
-	return(init_server_long(sock, port, NULL));
+	return(init_server_long(sock, port, NULL, type));
 	}
 
 static int do_accept(int acc_sock, int *sock, char **host)
@@ -381,7 +400,7 @@ redoit:
 	ret=accept(acc_sock,(struct sockaddr *)&from,(void *)&len);
 	if (ret == INVALID_SOCKET)
 		{
-#if defined(OPENSSL_SYS_WINDOWS) || defined(OPENSSL_SYS_NETWARE)
+#if defined(OPENSSL_SYS_WINDOWS) || (defined(OPENSSL_SYS_NETWARE) && !defined(NETWARE_BSDSOCK))
 		i=WSAGetLastError();
 		BIO_printf(bio_err,"accept error %d\n",i);
 #else

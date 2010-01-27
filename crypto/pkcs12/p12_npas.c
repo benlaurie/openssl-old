@@ -1,5 +1,5 @@
 /* p12_npas.c */
-/* Written by Dr Stephen N Henson (shenson@bigfoot.com) for the OpenSSL
+/* Written by Dr Stephen N Henson (steve@openssl.org) for the OpenSSL
  * project 1999.
  */
 /* ====================================================================
@@ -77,28 +77,26 @@ static int alg_get(X509_ALGOR *alg, int *pnid, int *piter, int *psaltlen);
 
 int PKCS12_newpass(PKCS12 *p12, char *oldpass, char *newpass)
 {
+	/* Check for NULL PKCS12 structure */
 
-/* Check for NULL PKCS12 structure */
+	if(!p12) {
+		PKCS12err(PKCS12_F_PKCS12_NEWPASS,PKCS12_R_INVALID_NULL_PKCS12_POINTER);
+		return 0;
+	}
 
-if(!p12) {
-	PKCS12err(PKCS12_F_PKCS12_NEWPASS,PKCS12_R_INVALID_NULL_PKCS12_POINTER);
-	return 0;
-}
+	/* Check the mac */
+	
+	if (!PKCS12_verify_mac(p12, oldpass, -1)) {
+		PKCS12err(PKCS12_F_PKCS12_NEWPASS,PKCS12_R_MAC_VERIFY_FAILURE);
+		return 0;
+	}
 
-/* Check the mac */
+	if (!newpass_p12(p12, oldpass, newpass)) {
+		PKCS12err(PKCS12_F_PKCS12_NEWPASS,PKCS12_R_PARSE_ERROR);
+		return 0;
+	}
 
-if (!PKCS12_verify_mac(p12, oldpass, -1)) {
-	PKCS12err(PKCS12_F_PKCS12_NEWPASS,PKCS12_R_MAC_VERIFY_FAILURE);
-	return 0;
-}
-
-if (!newpass_p12(p12, oldpass, newpass)) {
-	PKCS12err(PKCS12_F_PKCS12_NEWPASS,PKCS12_R_PARSE_ERROR);
-	return 0;
-}
-
-return 1;
-
+	return 1;
 }
 
 /* Parse the outer PKCS#12 structure */

@@ -73,14 +73,15 @@
 
 #include "cryptlib.h"
 
-#include <openssl/ecdh.h>
+#include "ech_locl.h"
 #include <openssl/err.h>
 #include <openssl/sha.h>
 #include <openssl/obj_mac.h>
 #include <openssl/bn.h>
 
-static int ecdh_compute_key(void *out, size_t len, const EC_POINT *pub_key, EC_KEY *ecdh,
-                            void *(*KDF)(void *in, size_t inlen, void *out, size_t outlen));
+static int ecdh_compute_key(void *out, size_t len, const EC_POINT *pub_key,
+	EC_KEY *ecdh, 
+	void *(*KDF)(const void *in, size_t inlen, void *out, size_t *outlen));
 
 static ECDH_METHOD openssl_ecdh_meth = {
 	"OpenSSL ECDH method",
@@ -104,12 +105,15 @@ const ECDH_METHOD *ECDH_OpenSSL(void)
  *  - ECSVDP-DH
  * Finally an optional KDF is applied.
  */
-static int ecdh_compute_key(void *out, size_t outlen, const EC_POINT *pub_key, EC_KEY *ecdh,
-                            void *(*KDF)(void *in, size_t inlen, void *out, size_t outlen))
+static int ecdh_compute_key(void *out, size_t outlen, const EC_POINT *pub_key,
+	EC_KEY *ecdh,
+	void *(*KDF)(const void *in, size_t inlen, void *out, size_t *outlen))
 	{
 	BN_CTX *ctx;
 	EC_POINT *tmp=NULL;
 	BIGNUM *x=NULL, *y=NULL;
+	const BIGNUM *priv_key;
+	const EC_GROUP* group;
 	int ret= -1;
 	size_t buflen, len;
 	unsigned char *buf=NULL;
@@ -125,27 +129,29 @@ static int ecdh_compute_key(void *out, size_t outlen, const EC_POINT *pub_key, E
 	x = BN_CTX_get(ctx);
 	y = BN_CTX_get(ctx);
 	
-	if (ecdh->priv_key == NULL)
+	priv_key = EC_KEY_get0_private_key(ecdh);
+	if (priv_key == NULL)
 		{
 		ECDHerr(ECDH_F_ECDH_COMPUTE_KEY,ECDH_R_NO_PRIVATE_VALUE);
 		goto err;
 		}
 
-	if ((tmp=EC_POINT_new(ecdh->group)) == NULL)
+	group = EC_KEY_get0_group(ecdh);
+	if ((tmp=EC_POINT_new(group)) == NULL)
 		{
 		ECDHerr(ECDH_F_ECDH_COMPUTE_KEY,ERR_R_MALLOC_FAILURE);
 		goto err;
 		}
 
-	if (!EC_POINT_mul(ecdh->group, tmp, NULL, pub_key, ecdh->priv_key, ctx)) 
+	if (!EC_POINT_mul(group, tmp, NULL, pub_key, priv_key, ctx)) 
 		{
 		ECDHerr(ECDH_F_ECDH_COMPUTE_KEY,ECDH_R_POINT_ARITHMETIC_FAILURE);
 		goto err;
 		}
 		
-	if (EC_METHOD_get_field_type(EC_GROUP_method_of(ecdh->group)) == NID_X9_62_prime_field) 
+	if (EC_METHOD_get_field_type(EC_GROUP_method_of(group)) == NID_X9_62_prime_field) 
 		{
-		if (!EC_POINT_get_affine_coordinates_GFp(ecdh->group, tmp, x, y, ctx)) 
+		if (!EC_POINT_get_affine_coordinates_GFp(group, tmp, x, y, ctx)) 
 			{
 			ECDHerr(ECDH_F_ECDH_COMPUTE_KEY,ECDH_R_POINT_ARITHMETIC_FAILURE);
 			goto err;
@@ -153,14 +159,14 @@ static int ecdh_compute_key(void *out, size_t outlen, const EC_POINT *pub_key, E
 		}
 	else
 		{
-		if (!EC_POINT_get_affine_coordinates_GF2m(ecdh->group, tmp, x, y, ctx)) 
+		if (!EC_POINT_get_affine_coordinates_GF2m(group, tmp, x, y, ctx)) 
 			{
 			ECDHerr(ECDH_F_ECDH_COMPUTE_KEY,ECDH_R_POINT_ARITHMETIC_FAILURE);
 			goto err;
 			}
 		}
 
-	buflen = (EC_GROUP_get_degree(ecdh->group) + 7)/8;
+	buflen = (EC_GROUP_get_degree(group) + 7)/8;
 	len = BN_num_bytes(x);
 	if (len > buflen)
 		{
@@ -182,7 +188,7 @@ static int ecdh_compute_key(void *out, size_t outlen, const EC_POINT *pub_key, E
 
 	if (KDF != 0)
 		{
-		if (KDF(buf, buflen, out, outlen) == NULL)
+		if (KDF(buf, buflen, out, &outlen) == NULL)
 			{
 			ECDHerr(ECDH_F_ECDH_COMPUTE_KEY,ECDH_R_KDF_FAILED);
 			goto err;

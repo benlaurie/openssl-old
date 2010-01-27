@@ -56,6 +56,7 @@
  * [including the GNU Public Licence.]
  */
 
+#include <openssl/opensslconf.h>	/* for OPENSSL_NO_DSA */
 /* Until the key-gen callbacks are modified to use newer prototypes, we allow
  * deprecated functions for openssl-internal code */
 #ifdef OPENSSL_NO_DEPRECATED
@@ -474,4 +475,10 @@ static int MS_CALLBACK dsa_cb(int p, int n, BN_GENCB *cb)
 #endif
 	return 1;
 	}
+#else /* !OPENSSL_NO_DSA */
+
+# if PEDANTIC
+static void *dummy=&dummy;
+# endif
+
 #endif

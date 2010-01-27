@@ -64,6 +64,8 @@
 #error RC4 is disabled.
 #endif
 
+#include <stddef.h>
+
 #ifdef  __cplusplus
 extern "C" {
 #endif
@@ -72,16 +74,12 @@ typedef struct rc4_key_st
 	{
 	RC4_INT x,y;
 	RC4_INT data[256];
-#if defined(__ia64) || defined(__ia64__) || defined(_M_IA64)
-	/* see crypto/rc4/asm/rc4-ia64.S for further details... */
-	RC4_INT pad[512-256-2];
-#endif
 	} RC4_KEY;
 
  
 const char *RC4_options(void);
 void RC4_set_key(RC4_KEY *key, int len, const unsigned char *data);
-void RC4(RC4_KEY *key, unsigned long len, const unsigned char *indata,
+void RC4(RC4_KEY *key, size_t len, const unsigned char *indata,
 		unsigned char *outdata);
 
 #ifdef  __cplusplus

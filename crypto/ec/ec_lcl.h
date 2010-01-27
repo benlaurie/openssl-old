@@ -205,11 +205,14 @@ struct ec_group_st {
 	               * irreducible polynomial defining the field.
 	               */
 
-	unsigned int poly[5]; /* Field specification for curves over GF(2^m).
-	                       * The irreducible f(t) is then of the form:
-	                       *     t^poly[0] + t^poly[1] + ... + t^poly[k]
-	                       * where m = poly[0] > poly[1] > ... > poly[k] = 0.
-	                       */
+	int poly[6]; /* Field specification for curves over GF(2^m).
+	              * The irreducible f(t) is then of the form:
+	              *     t^poly[0] + t^poly[1] + ... + t^poly[k]
+	              * where m = poly[0] > poly[1] > ... > poly[k] = 0.
+	              * The array is terminated with poly[k+1]=-1.
+	              * All elliptic curve irreducibles have at most 5
+	              * non-zero terms.
+	              */
 
 	BIGNUM a, b; /* Curve coefficients.
 	              * (Here the assumption is that BIGNUMs can be used
@@ -229,22 +232,37 @@ struct ec_group_st {
 	int (*field_mod_func)(BIGNUM *, const BIGNUM *, const BIGNUM *,	BN_CTX *); /* method-specific */
 } /* EC_GROUP */;
 
+struct ec_key_st {
+	int version;
 
-/* Basically a 'mixin' for extra data, but available for EC_GROUPs only
+	EC_GROUP *group;
+
+	EC_POINT *pub_key;
+	BIGNUM	 *priv_key;
+
+	unsigned int enc_flag;
+	point_conversion_form_t conv_form;
+
+	int 	references;
+
+	EC_EXTRA_DATA *method_data;
+} /* EC_KEY */;
+
+/* Basically a 'mixin' for extra data, but available for EC_GROUPs/EC_KEYs only
  * (with visibility limited to 'package' level for now).
  * We use the function pointers as index for retrieval; this obviates
  * global ex_data-style index tables.
  */
-int EC_GROUP_set_extra_data(EC_GROUP *, void *data,
+int EC_EX_DATA_set_data(EC_EXTRA_DATA **, void *data,
 	void *(*dup_func)(void *), void (*free_func)(void *), void (*clear_free_func)(void *));
-void *EC_GROUP_get_extra_data(const EC_GROUP *,
+void *EC_EX_DATA_get_data(const EC_EXTRA_DATA *,
 	void *(*dup_func)(void *), void (*free_func)(void *), void (*clear_free_func)(void *));
-void EC_GROUP_free_extra_data(EC_GROUP*,
+void EC_EX_DATA_free_data(EC_EXTRA_DATA **,
 	void *(*dup_func)(void *), void (*free_func)(void *), void (*clear_free_func)(void *));
-void EC_GROUP_clear_free_extra_data(EC_GROUP*,
+void EC_EX_DATA_clear_free_data(EC_EXTRA_DATA **,
 	void *(*dup_func)(void *), void (*free_func)(void *), void (*clear_free_func)(void *));
-void EC_GROUP_free_all_extra_data(EC_GROUP *);
-void EC_GROUP_clear_free_all_extra_data(EC_GROUP *);
+void EC_EX_DATA_free_all_data(EC_EXTRA_DATA **);
+void EC_EX_DATA_clear_free_all_data(EC_EXTRA_DATA **);
 
 
 
@@ -322,16 +340,6 @@ int ec_GFp_mont_field_sqr(const EC_GROUP *, BIGNUM *r, const BIGNUM *a, BN_CTX *
 int ec_GFp_mont_field_encode(const EC_GROUP *, BIGNUM *r, const BIGNUM *a, BN_CTX *);
 int ec_GFp_mont_field_decode(const EC_GROUP *, BIGNUM *r, const BIGNUM *a, BN_CTX *);
 int ec_GFp_mont_field_set_to_one(const EC_GROUP *, BIGNUM *r, BN_CTX *);
-
-
-/* method functions in ecp_recp.c */
-int ec_GFp_recp_group_init(EC_GROUP *);
-int ec_GFp_recp_group_set_curve(EC_GROUP *, const BIGNUM *p, const BIGNUM *a, const BIGNUM *b, BN_CTX *);
-void ec_GFp_recp_group_finish(EC_GROUP *);
-void ec_GFp_recp_group_clear_finish(EC_GROUP *);
-int ec_GFp_recp_group_copy(EC_GROUP *, const EC_GROUP *);
-int ec_GFp_recp_field_mul(const EC_GROUP *, BIGNUM *r, const BIGNUM *a, const BIGNUM *b, BN_CTX *);
-int ec_GFp_recp_field_sqr(const EC_GROUP *, BIGNUM *r, const BIGNUM *a, BN_CTX *);
 
 
 /* method functions in ecp_nist.c */

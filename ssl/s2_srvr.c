@@ -117,7 +117,7 @@
 #include <openssl/objects.h>
 #include <openssl/evp.h>
 
-static SSL_METHOD *ssl2_get_server_method(int ver);
+static const SSL_METHOD *ssl2_get_server_method(int ver);
 static int get_client_master_key(SSL *s);
 static int get_client_hello(SSL *s);
 static int server_hello(SSL *s); 
@@ -129,7 +129,7 @@ static int ssl_rsa_private_decrypt(CERT *c, int len, unsigned char *from,
 	unsigned char *to,int padding);
 #define BREAK	break
 
-static SSL_METHOD *ssl2_get_server_method(int ver)
+static const SSL_METHOD *ssl2_get_server_method(int ver)
 	{
 	if (ver == SSL2_VERSION)
 		return(SSLv2_server_method());
@@ -137,32 +137,14 @@ static SSL_METHOD *ssl2_get_server_method(int ver)
 		return(NULL);
 	}
 
-SSL_METHOD *SSLv2_server_method(void)
-	{
-	static int init=1;
-	static SSL_METHOD SSLv2_server_data;
-
-	if (init)
-		{
-		CRYPTO_w_lock(CRYPTO_LOCK_SSL_METHOD);
-
-		if (init)
-			{
-			memcpy((char *)&SSLv2_server_data,(char *)sslv2_base_method(),
-				sizeof(SSL_METHOD));
-			SSLv2_server_data.ssl_accept=ssl2_accept;
-			SSLv2_server_data.get_ssl_method=ssl2_get_server_method;
-			init=0;
-			}
-
-		CRYPTO_w_unlock(CRYPTO_LOCK_SSL_METHOD);
-		}
-	return(&SSLv2_server_data);
-	}
+IMPLEMENT_ssl2_meth_func(SSLv2_server_method,
+			ssl2_accept,
+			ssl_undefined_function,
+			ssl2_get_server_method)
 
 int ssl2_accept(SSL *s)
 	{
-	unsigned long l=time(NULL);
+	unsigned long l=(unsigned long)time(NULL);
 	BUF_MEM *buf=NULL;
 	int ret= -1;
 	long num1;
@@ -285,7 +267,7 @@ int ssl2_accept(SSL *s)
  		case SSL2_ST_SEND_SERVER_VERIFY_C:
  			/* get the number of bytes to write */
  			num1=BIO_ctrl(s->wbio,BIO_CTRL_INFO,0,NULL);
- 			if (num1 != 0)
+ 			if (num1 > 0)
  				{
 				s->rwstate=SSL_WRITING;
  				num1=BIO_flush(s->wbio);
@@ -384,7 +366,7 @@ static int get_client_master_key(SSL *s)
 	int is_export,i,n,keya,ek;
 	unsigned long len;
 	unsigned char *p;
-	SSL_CIPHER *cp;
+	const SSL_CIPHER *cp;
 	const EVP_CIPHER *c;
 	const EVP_MD *md;
 
@@ -469,7 +451,7 @@ static int get_client_master_key(SSL *s)
 
 	is_export=SSL_C_IS_EXPORT(s->session->cipher);
 	
-	if (!ssl_cipher_get_evp(s->session,&c,&md,NULL))
+	if (!ssl_cipher_get_evp(s->session,&c,&md,NULL,NULL,NULL))
 		{
 		ssl2_return_error(s,SSL2_PE_NO_CIPHER);
 		SSLerr(SSL_F_GET_CLIENT_MASTER_KEY,SSL_R_PROBLEMS_MAPPING_CIPHER_FUNCTIONS);
@@ -498,7 +480,8 @@ static int get_client_master_key(SSL *s)
 			i=ek;
 		else
 			i=EVP_CIPHER_key_length(c);
-		RAND_pseudo_bytes(p,i);
+		if (RAND_pseudo_bytes(p,i) <= 0)
+			return 0;
 		}
 #else
 	if (i < 0)
@@ -624,7 +607,7 @@ static int get_client_hello(SSL *s)
 	else
 		{
 		i=ssl_get_prev_session(s,&(p[s->s2->tmp.cipher_spec_length]),
-			s->s2->tmp.session_id_length);
+			s->s2->tmp.session_id_length, NULL);
 		if (i == 1)
 			{ /* previous session */
 			s->hit=1;
@@ -674,7 +657,7 @@ static int get_client_hello(SSL *s)
 			{
 			if (sk_SSL_CIPHER_find(allow,sk_SSL_CIPHER_value(prio,z)) < 0)
 				{
-				sk_SSL_CIPHER_delete(prio,z);
+				(void)sk_SSL_CIPHER_delete(prio,z);
 				z--;
 				}
 			}
@@ -796,7 +779,7 @@ static int server_hello(SSL *s)
 			/* lets send out the ciphers we like in the
 			 * prefered order */
 			sk= s->session->ciphers;
-			n=ssl_cipher_list_to_bytes(s,s->session->ciphers,d);
+			n=ssl_cipher_list_to_bytes(s,s->session->ciphers,d,0);
 			d+=n;
 			s2n(n,p);		/* add cipher length */
 			}
@@ -804,7 +787,8 @@ static int server_hello(SSL *s)
 		/* make and send conn_id */
 		s2n(SSL2_CONNECTION_ID_LENGTH,p);	/* add conn_id length */
 		s->s2->conn_id_length=SSL2_CONNECTION_ID_LENGTH;
-		RAND_pseudo_bytes(s->s2->conn_id,(int)s->s2->conn_id_length);
+		if (RAND_pseudo_bytes(s->s2->conn_id,(int)s->s2->conn_id_length) <= 0)
+			return -1;
 		memcpy(d,s->s2->conn_id,SSL2_CONNECTION_ID_LENGTH);
 		d+=SSL2_CONNECTION_ID_LENGTH;
 
@@ -950,7 +934,8 @@ static int request_certificate(SSL *s)
 		p=(unsigned char *)s->init_buf->data;
 		*(p++)=SSL2_MT_REQUEST_CERTIFICATE;
 		*(p++)=SSL2_AT_MD5_WITH_RSA_ENCRYPTION;
-		RAND_pseudo_bytes(ccd,SSL2_MIN_CERT_CHALLENGE_LENGTH);
+		if (RAND_pseudo_bytes(ccd,SSL2_MIN_CERT_CHALLENGE_LENGTH) <= 0)
+			return -1;
 		memcpy(p,ccd,SSL2_MIN_CERT_CHALLENGE_LENGTH);
 
 		s->state=SSL2_ST_SEND_REQUEST_CERTIFICATE_B;
@@ -1069,7 +1054,7 @@ static int request_certificate(SSL *s)
 
 	i=ssl_verify_cert_chain(s,sk);
 
-	if (i)	/* we like the packet, now check the chksum */
+	if (i > 0)	/* we like the packet, now check the chksum */
 		{
 		EVP_MD_CTX ctx;
 		EVP_PKEY *pkey=NULL;
@@ -1098,7 +1083,7 @@ static int request_certificate(SSL *s)
 		EVP_PKEY_free(pkey);
 		EVP_MD_CTX_cleanup(&ctx);
 
-		if (i) 
+		if (i > 0)
 			{
 			if (s->session->peer != NULL)
 				X509_free(s->session->peer);

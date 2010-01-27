@@ -163,6 +163,45 @@ extern "C" {
 
 
 
+/* BN_mod_exp_mont_conttime is based on the assumption that the
+ * L1 data cache line width of the target processor is at least
+ * the following value.
+ */
+#define MOD_EXP_CTIME_MIN_CACHE_LINE_WIDTH	( 64 )
+#define MOD_EXP_CTIME_MIN_CACHE_LINE_MASK	(MOD_EXP_CTIME_MIN_CACHE_LINE_WIDTH - 1)
+
+/* Window sizes optimized for fixed window size modular exponentiation
+ * algorithm (BN_mod_exp_mont_consttime).
+ *
+ * To achieve the security goals of BN_mode_exp_mont_consttime, the
+ * maximum size of the window must not exceed
+ * log_2(MOD_EXP_CTIME_MIN_CACHE_LINE_WIDTH). 
+ *
+ * Window size thresholds are defined for cache line sizes of 32 and 64,
+ * cache line sizes where log_2(32)=5 and log_2(64)=6 respectively. A
+ * window size of 7 should only be used on processors that have a 128
+ * byte or greater cache line size.
+ */
+#if MOD_EXP_CTIME_MIN_CACHE_LINE_WIDTH == 64
+
+#  define BN_window_bits_for_ctime_exponent_size(b) \
+		((b) > 937 ? 6 : \
+		 (b) > 306 ? 5 : \
+		 (b) >  89 ? 4 : \
+		 (b) >  22 ? 3 : 1)
+#  define BN_MAX_WINDOW_BITS_FOR_CTIME_EXPONENT_SIZE	(6)
+
+#elif MOD_EXP_CTIME_MIN_CACHE_LINE_WIDTH == 32
+
+#  define BN_window_bits_for_ctime_exponent_size(b) \
+		((b) > 306 ? 5 : \
+		 (b) >  89 ? 4 : \
+		 (b) >  22 ? 3 : 1)
+#  define BN_MAX_WINDOW_BITS_FOR_CTIME_EXPONENT_SIZE	(5)
+
+#endif
+
+
 /* Pentium pro 16,16,16,32,64 */
 /* Alpha       16,16,16,16.64 */
 #define BN_MULL_SIZE_NORMAL			(16) /* 32 */
@@ -199,7 +238,7 @@ extern "C" {
 #  if defined(__DECC)
 #   include <c_asm.h>
 #   define BN_UMULT_HIGH(a,b)	(BN_ULONG)asm("umulh %a0,%a1,%v0",(a),(b))
-#  elif defined(__GNUC__)
+#  elif defined(__GNUC__) && __GNUC__>=2
 #   define BN_UMULT_HIGH(a,b)	({	\
 	register BN_ULONG ret;		\
 	asm ("umulh	%1,%2,%0"	\
@@ -208,7 +247,7 @@ extern "C" {
 	ret;			})
 #  endif	/* compiler */
 # elif defined(_ARCH_PPC) && defined(__64BIT__) && defined(SIXTY_FOUR_BIT_LONG)
-#  if defined(__GNUC__)
+#  if defined(__GNUC__) && __GNUC__>=2
 #   define BN_UMULT_HIGH(a,b)	({	\
 	register BN_ULONG ret;		\
 	asm ("mulhdu	%0,%1,%2"	\
@@ -216,8 +255,9 @@ extern "C" {
 	     : "r"(a), "r"(b));		\
 	ret;			})
 #  endif	/* compiler */
-# elif defined(__x86_64) && defined(SIXTY_FOUR_BIT_LONG)
-#  if defined(__GNUC__)
+# elif (defined(__x86_64) || defined(__x86_64__)) && \
+       (defined(SIXTY_FOUR_BIT_LONG) || defined(SIXTY_FOUR_BIT))
+#  if defined(__GNUC__) && __GNUC__>=2
 #   define BN_UMULT_HIGH(a,b)	({	\
 	register BN_ULONG ret,discard;	\
 	asm ("mulq	%3"		\
@@ -230,6 +270,28 @@ extern "C" {
 		: "=a"(low),"=d"(high)	\
 		: "a"(a),"g"(b)		\
 		: "cc");
+#  endif
+# elif (defined(_M_AMD64) || defined(_M_X64)) && defined(SIXTY_FOUR_BIT)
+#  if defined(_MSC_VER) && _MSC_VER>=1400
+    unsigned __int64 __umulh	(unsigned __int64 a,unsigned __int64 b);
+    unsigned __int64 _umul128	(unsigned __int64 a,unsigned __int64 b,
+				 unsigned __int64 *h);
+#   pragma intrinsic(__umulh,_umul128)
+#   define BN_UMULT_HIGH(a,b)		__umulh((a),(b))
+#   define BN_UMULT_LOHI(low,high,a,b)	((low)=_umul128((a),(b),&(high)))
+#  endif
+# elif defined(__mips) && (defined(SIXTY_FOUR_BIT) || defined(SIXTY_FOUR_BIT_LONG))
+#  if defined(__GNUC__) && __GNUC__>=2
+#   define BN_UMULT_HIGH(a,b)	({	\
+	register BN_ULONG ret;		\
+	asm ("dmultu	%1,%2"		\
+	     : "=h"(ret)		\
+	     : "r"(a), "r"(b) : "l");	\
+	ret;			})
+#   define BN_UMULT_LOHI(low,high,a,b)	\
+	asm ("dmultu	%2,%3"		\
+	     : "=l"(low),"=h"(high)	\
+	     : "r"(a), "r"(b));
 #  endif
 # endif		/* cpu */
 #endif		/* OPENSSL_NO_ASM */
@@ -272,6 +334,33 @@ extern "C" {
 	t=(BN_ULLONG)(a)*(a); \
 	(r0)=Lw(t); \
 	(r1)=Hw(t); \
+	}
+
+#elif defined(BN_UMULT_LOHI)
+#define mul_add(r,a,w,c) {		\
+	BN_ULONG high,low,ret,tmp=(a);	\
+	ret =  (r);			\
+	BN_UMULT_LOHI(low,high,w,tmp);	\
+	ret += (c);			\
+	(c) =  (ret<(c))?1:0;		\
+	(c) += high;			\
+	ret += low;			\
+	(c) += (ret<low)?1:0;		\
+	(r) =  ret;			\
+	}
+
+#define mul(r,a,w,c)	{		\
+	BN_ULONG high,low,ret,ta=(a);	\
+	BN_UMULT_LOHI(low,high,w,ta);	\
+	ret =  low + (c);		\
+	(c) =  high;			\
+	(c) += (ret<low)?1:0;		\
+	(r) =  ret;			\
+	}
+
+#define sqr(r0,r1,a)	{		\
+	BN_ULONG tmp=(a);		\
+	BN_UMULT_LOHI(r0,r1,tmp,tmp);	\
 	}
 
 #elif defined(BN_UMULT_HIGH)
@@ -406,6 +495,7 @@ BN_ULONG bn_add_part_words(BN_ULONG *r, const BN_ULONG *a, const BN_ULONG *b,
 	int cl, int dl);
 BN_ULONG bn_sub_part_words(BN_ULONG *r, const BN_ULONG *a, const BN_ULONG *b,
 	int cl, int dl);
+int bn_mul_mont(BN_ULONG *rp, const BN_ULONG *ap, const BN_ULONG *bp, const BN_ULONG *np,const BN_ULONG *n0, int num);
 
 #ifdef  __cplusplus
 }

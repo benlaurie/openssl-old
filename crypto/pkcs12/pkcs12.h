@@ -1,5 +1,5 @@
 /* pkcs12.h */
-/* Written by Dr Stephen N Henson (shenson@bigfoot.com) for the OpenSSL
+/* Written by Dr Stephen N Henson (steve@openssl.org) for the OpenSSL
  * project 1999.
  */
 /* ====================================================================
@@ -107,8 +107,6 @@ ASN1_INTEGER *version;
 PKCS12_MAC_DATA *mac;
 PKCS7 *authsafes;
 } PKCS12;
-
-PREDECLARE_STACK_OF(PKCS12_SAFEBAG)
 
 typedef struct {
 ASN1_OBJECT *type;
@@ -232,8 +230,8 @@ int PKCS12_set_mac(PKCS12 *p12, const char *pass, int passlen,
 		   const EVP_MD *md_type);
 int PKCS12_setup_mac(PKCS12 *p12, int iter, unsigned char *salt,
 					 int saltlen, const EVP_MD *md_type);
-unsigned char *asc2uni(const char *asc, int asclen, unsigned char **uni, int *unilen);
-char *uni2asc(unsigned char *uni, int unilen);
+unsigned char *OPENSSL_asc2uni(const char *asc, int asclen, unsigned char **uni, int *unilen);
+char *OPENSSL_uni2asc(unsigned char *uni, int unilen);
 
 DECLARE_ASN1_FUNCTIONS(PKCS12)
 DECLARE_ASN1_FUNCTIONS(PKCS12_MAC_DATA)
@@ -273,16 +271,18 @@ void ERR_load_PKCS12_strings(void);
 /* Error codes for the PKCS12 functions. */
 
 /* Function codes. */
+#define PKCS12_F_PARSE_BAG				 129
 #define PKCS12_F_PARSE_BAGS				 103
 #define PKCS12_F_PKCS12_ADD_FRIENDLYNAME		 100
 #define PKCS12_F_PKCS12_ADD_FRIENDLYNAME_ASC		 127
 #define PKCS12_F_PKCS12_ADD_FRIENDLYNAME_UNI		 102
 #define PKCS12_F_PKCS12_ADD_LOCALKEYID			 104
 #define PKCS12_F_PKCS12_CREATE				 105
-#define PKCS12_F_PKCS12_DECRYPT_D2I			 106
 #define PKCS12_F_PKCS12_GEN_MAC				 107
-#define PKCS12_F_PKCS12_I2D_ENCRYPT			 108
 #define PKCS12_F_PKCS12_INIT				 109
+#define PKCS12_F_PKCS12_ITEM_DECRYPT_D2I		 106
+#define PKCS12_F_PKCS12_ITEM_I2D_ENCRYPT		 108
+#define PKCS12_F_PKCS12_ITEM_PACK_SAFEBAG		 117
 #define PKCS12_F_PKCS12_KEY_GEN_ASC			 110
 #define PKCS12_F_PKCS12_KEY_GEN_UNI			 111
 #define PKCS12_F_PKCS12_MAKE_KEYBAG			 112
@@ -290,18 +290,20 @@ void ERR_load_PKCS12_strings(void);
 #define PKCS12_F_PKCS12_NEWPASS				 128
 #define PKCS12_F_PKCS12_PACK_P7DATA			 114
 #define PKCS12_F_PKCS12_PACK_P7ENCDATA			 115
-#define PKCS12_F_PKCS12_PACK_SAFEBAG			 117
 #define PKCS12_F_PKCS12_PARSE				 118
 #define PKCS12_F_PKCS12_PBE_CRYPT			 119
 #define PKCS12_F_PKCS12_PBE_KEYIVGEN			 120
 #define PKCS12_F_PKCS12_SETUP_MAC			 122
 #define PKCS12_F_PKCS12_SET_MAC				 123
+#define PKCS12_F_PKCS12_UNPACK_AUTHSAFES		 130
+#define PKCS12_F_PKCS12_UNPACK_P7DATA			 131
+#define PKCS12_F_PKCS12_VERIFY_MAC			 126
 #define PKCS12_F_PKCS8_ADD_KEYUSAGE			 124
 #define PKCS12_F_PKCS8_ENCRYPT				 125
-#define PKCS12_F_VERIFY_MAC				 126
 
 /* Reason codes. */
 #define PKCS12_R_CANT_PACK_STRUCTURE			 100
+#define PKCS12_R_CONTENT_TYPE_NOT_DATA			 121
 #define PKCS12_R_DECODE_ERROR				 101
 #define PKCS12_R_ENCODE_ERROR				 102
 #define PKCS12_R_ENCRYPT_ERROR				 103

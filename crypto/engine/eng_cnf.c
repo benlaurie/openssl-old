@@ -1,5 +1,5 @@
 /* eng_cnf.c */
-/* Written by Stephen Henson (shenson@bigfoot.com) for the OpenSSL
+/* Written by Stephen Henson (steve@openssl.org) for the OpenSSL
  * project 2001.
  */
 /* ====================================================================
@@ -98,6 +98,8 @@ static int int_engine_configure(char *name, char *value, const CONF *cnf)
 	CONF_VALUE *ecmd;
 	char *ctrlname, *ctrlvalue;
 	ENGINE *e = NULL;
+	int soft = 0;
+
 	name = skip_dot(name);
 #ifdef ENGINE_CONF_DEBUG
 	fprintf(stderr, "Configuring engine %s\n", name);
@@ -125,6 +127,8 @@ static int int_engine_configure(char *name, char *value, const CONF *cnf)
 		/* Override engine name to use */
 		if (!strcmp(ctrlname, "engine_id"))
 			name = ctrlvalue;
+		else if (!strcmp(ctrlname, "soft_load"))
+			soft = 1;
 		/* Load a dynamic ENGINE */
 		else if (!strcmp(ctrlname, "dynamic_path"))
 			{
@@ -147,6 +151,11 @@ static int int_engine_configure(char *name, char *value, const CONF *cnf)
 			if (!e)
 				{
 				e = ENGINE_by_id(name);
+				if (!e && soft)
+					{
+					ERR_clear_error();
+					return 1;
+					}
 				if (!e)
 					return 0;
 				}
@@ -155,7 +164,7 @@ static int int_engine_configure(char *name, char *value, const CONF *cnf)
 		 	 */
 			if (!strcmp(ctrlvalue, "EMPTY"))
 				ctrlvalue = NULL;
-			else if (!strcmp(ctrlname, "init"))
+			if (!strcmp(ctrlname, "init"))
 				{
 				if (!NCONF_get_number_e(cnf, value, "init", &do_init))
 					goto err;
@@ -207,7 +216,7 @@ static int int_engine_module_init(CONF_IMODULE *md, const CONF *cnf)
 
 	if (!elist)
 		{
-		ENGINEerr(ENGINE_F_ENGINE_MODULE_INIT, ENGINE_R_ENGINES_SECTION_ERROR);
+		ENGINEerr(ENGINE_F_INT_ENGINE_MODULE_INIT, ENGINE_R_ENGINES_SECTION_ERROR);
 		return 0;
 		}
 

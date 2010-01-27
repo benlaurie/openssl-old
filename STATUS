@@ -4,9 +4,34 @@
 
   DEVELOPMENT STATE
 
-    o  OpenSSL 0.9.8:  Under development...
+    o  OpenSSL 1.0.0-beta1: Released on April 1st, 2009
+    o  OpenSSL 0.9.8h: Released on May       28th, 2008
+    o  OpenSSL 0.9.8g: Released on October   19th, 2007
+    o  OpenSSL 0.9.8f: Released on October   11th, 2007
+    o  OpenSSL 0.9.8e: Released on February  23rd, 2007
+    o  OpenSSL 0.9.8d: Released on September 28th, 2006
+    o  OpenSSL 0.9.8c: Released on September  5th, 2006
+    o  OpenSSL 0.9.8b: Released on May        4th, 2006
+    o  OpenSSL 0.9.8a: Released on October   11th, 2005
+    o  OpenSSL 0.9.8:  Released on July       5th, 2005
+    o  OpenSSL 0.9.7m: Released on February  23rd, 2007
+    o  OpenSSL 0.9.7l: Released on September 28th, 2006
+    o  OpenSSL 0.9.7k: Released on September  5th, 2006
+    o  OpenSSL 0.9.7j: Released on May        4th, 2006
+    o  OpenSSL 0.9.7i: Released on October   14th, 2005
+    o  OpenSSL 0.9.7h: Released on October   11th, 2005
+    o  OpenSSL 0.9.7g: Released on April     11th, 2005
+    o  OpenSSL 0.9.7f: Released on March     22nd, 2005
+    o  OpenSSL 0.9.7e: Released on October   25th, 2004
+    o  OpenSSL 0.9.7d: Released on March     17th, 2004
+    o  OpenSSL 0.9.7c: Released on September 30th, 2003
+    o  OpenSSL 0.9.7b: Released on April     10th, 2003
     o  OpenSSL 0.9.7a: Released on February  19th, 2003
     o  OpenSSL 0.9.7:  Released on December  31st, 2002
+    o  OpenSSL 0.9.6m: Released on March     17th, 2004
+    o  OpenSSL 0.9.6l: Released on November   4th, 2003
+    o  OpenSSL 0.9.6k: Released on September 30th, 2003
+    o  OpenSSL 0.9.6j: Released on April     10th, 2003
     o  OpenSSL 0.9.6i: Released on February  19th, 2003
     o  OpenSSL 0.9.6h: Released on December   5th, 2002
     o  OpenSSL 0.9.6g: Released on August     9th, 2002
@@ -25,10 +50,11 @@
     o  OpenSSL 0.9.2b: Released on March     22th, 1999
     o  OpenSSL 0.9.1c: Released on December  23th, 1998
 
-  [See also http://www.openssl.org/support/rt2.html]
+  [See also http://www.openssl.org/support/rt.html]
 
   RELEASE SHOWSTOPPERS
 
+    o The Makefiles fail with some SysV makes.
     o 
 
   AVAILABLE PATCHES
@@ -45,16 +71,8 @@
 	Private key, certificate and CRL API and implementation.
 	Developing and bugfixing PKCS#7 (S/MIME code).
         Various X509 issues: character sets, certificate request extensions.
-    o Geoff and Richard are currently working on:
-	ENGINE (the new code that gives hardware support among others).
     o Richard is currently working on:
-	UI (User Interface)
-	UTIL (a new set of library functions to support some higher level
-	      functionality that is currently missing).
-	Shared library support for VMS.
-	Kerberos 5 authentication (Heimdal)
 	Constification
-	Compression
 	Attribute Certificate support
 	Certificate Pair support
 	Storage Engines (primarly an LDAP storage engine)

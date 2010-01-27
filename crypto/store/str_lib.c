@@ -59,7 +59,9 @@
 #include <string.h>
 #include <openssl/bn.h>
 #include <openssl/err.h>
+#ifndef OPENSSL_NO_ENGINE
 #include <openssl/engine.h>
+#endif
 #include <openssl/sha.h>
 #include <openssl/x509.h>
 #include "str_locl.h"
@@ -190,7 +192,7 @@ int STORE_ctrl(STORE *store, int cmd, long i, void *p, void (*f)(void))
 	{
 	if (store == NULL)
 		{
-		STOREerr(STORE_F_CTRL,ERR_R_PASSED_NULL_PARAMETER);
+		STOREerr(STORE_F_STORE_CTRL,ERR_R_PASSED_NULL_PARAMETER);
 		return 0;
 		}
 	if (store->meth->ctrl)
@@ -234,7 +236,7 @@ const STORE_METHOD *STORE_set_method(STORE *store, const STORE_METHOD *meth)
 #define check_store(s,fncode,fnname,fnerrcode) \
 	do \
 		{ \
-		if ((s) == NULL || (s)->meth) \
+		if ((s) == NULL || (s)->meth == NULL) \
 			{ \
 			STOREerr((fncode), ERR_R_PASSED_NULL_PARAMETER); \
 			return 0; \
@@ -287,7 +289,7 @@ int STORE_store_certificate(STORE *s, X509 *data, OPENSSL_ITEM attributes[],
 	object = STORE_OBJECT_new();
 	if (!object)
 		{
-		STOREerr(STORE_F_STORE_CERTIFICATE,
+		STOREerr(STORE_F_STORE_STORE_CERTIFICATE,
 			ERR_R_MALLOC_FAILURE);
 		return 0;
 		}
@@ -305,7 +307,7 @@ int STORE_store_certificate(STORE *s, X509 *data, OPENSSL_ITEM attributes[],
 
 	if (!i)
 		{
-		STOREerr(STORE_F_STORE_CERTIFICATE,
+		STOREerr(STORE_F_STORE_STORE_CERTIFICATE,
 			STORE_R_FAILED_STORING_CERTIFICATE);
 		return 0;
 		}
@@ -491,20 +493,20 @@ int STORE_store_private_key(STORE *s, EVP_PKEY *data, OPENSSL_ITEM attributes[],
 	STORE_OBJECT *object;
 	int i;
 
-	check_store(s,STORE_F_STORE_PRIVATE_KEY,
+	check_store(s,STORE_F_STORE_STORE_PRIVATE_KEY,
 		store_object,STORE_R_NO_STORE_OBJECT_FUNCTION);
 
 	object = STORE_OBJECT_new();
 	if (!object)
 		{
-		STOREerr(STORE_F_STORE_PRIVATE_KEY,
+		STOREerr(STORE_F_STORE_STORE_PRIVATE_KEY,
 			ERR_R_MALLOC_FAILURE);
 		return 0;
 		}
 	object->data.key = EVP_PKEY_new();
 	if (!object->data.key)
 		{
-		STOREerr(STORE_F_STORE_PRIVATE_KEY,
+		STOREerr(STORE_F_STORE_STORE_PRIVATE_KEY,
 			ERR_R_MALLOC_FAILURE);
 		return 0;
 		}
@@ -522,7 +524,7 @@ int STORE_store_private_key(STORE *s, EVP_PKEY *data, OPENSSL_ITEM attributes[],
 
 	if (!i)
 		{
-		STOREerr(STORE_F_STORE_PRIVATE_KEY,
+		STOREerr(STORE_F_STORE_STORE_PRIVATE_KEY,
 			STORE_R_FAILED_STORING_KEY);
 		return 0;
 		}
@@ -686,20 +688,20 @@ int STORE_store_public_key(STORE *s, EVP_PKEY *data, OPENSSL_ITEM attributes[],
 	STORE_OBJECT *object;
 	int i;
 
-	check_store(s,STORE_F_STORE_PUBLIC_KEY,
+	check_store(s,STORE_F_STORE_STORE_PUBLIC_KEY,
 		store_object,STORE_R_NO_STORE_OBJECT_FUNCTION);
 
 	object = STORE_OBJECT_new();
 	if (!object)
 		{
-		STOREerr(STORE_F_STORE_PUBLIC_KEY,
+		STOREerr(STORE_F_STORE_STORE_PUBLIC_KEY,
 			ERR_R_MALLOC_FAILURE);
 		return 0;
 		}
 	object->data.key = EVP_PKEY_new();
 	if (!object->data.key)
 		{
-		STOREerr(STORE_F_STORE_PUBLIC_KEY,
+		STOREerr(STORE_F_STORE_STORE_PUBLIC_KEY,
 			ERR_R_MALLOC_FAILURE);
 		return 0;
 		}
@@ -717,7 +719,7 @@ int STORE_store_public_key(STORE *s, EVP_PKEY *data, OPENSSL_ITEM attributes[],
 
 	if (!i)
 		{
-		STOREerr(STORE_F_STORE_PUBLIC_KEY,
+		STOREerr(STORE_F_STORE_STORE_PUBLIC_KEY,
 			STORE_R_FAILED_STORING_KEY);
 		return 0;
 		}
@@ -907,13 +909,13 @@ int STORE_store_crl(STORE *s, X509_CRL *data, OPENSSL_ITEM attributes[],
 	STORE_OBJECT *object;
 	int i;
 
-	check_store(s,STORE_F_STORE_CRL,
+	check_store(s,STORE_F_STORE_STORE_CRL,
 		store_object,STORE_R_NO_STORE_OBJECT_FUNCTION);
 
 	object = STORE_OBJECT_new();
 	if (!object)
 		{
-		STOREerr(STORE_F_STORE_CRL,
+		STOREerr(STORE_F_STORE_STORE_CRL,
 			ERR_R_MALLOC_FAILURE);
 		return 0;
 		}
@@ -931,7 +933,7 @@ int STORE_store_crl(STORE *s, X509_CRL *data, OPENSSL_ITEM attributes[],
 
 	if (!i)
 		{
-		STOREerr(STORE_F_STORE_CRL,
+		STOREerr(STORE_F_STORE_STORE_CRL,
 			STORE_R_FAILED_STORING_KEY);
 		return 0;
 		}
@@ -1049,13 +1051,13 @@ int STORE_store_number(STORE *s, BIGNUM *data, OPENSSL_ITEM attributes[],
 	STORE_OBJECT *object;
 	int i;
 
-	check_store(s,STORE_F_STORE_NUMBER,
+	check_store(s,STORE_F_STORE_STORE_NUMBER,
 		store_object,STORE_R_NO_STORE_OBJECT_NUMBER_FUNCTION);
 
 	object = STORE_OBJECT_new();
 	if (!object)
 		{
-		STOREerr(STORE_F_STORE_NUMBER,
+		STOREerr(STORE_F_STORE_STORE_NUMBER,
 			ERR_R_MALLOC_FAILURE);
 		return 0;
 		}
@@ -1069,7 +1071,7 @@ int STORE_store_number(STORE *s, BIGNUM *data, OPENSSL_ITEM attributes[],
 
 	if (!i)
 		{
-		STOREerr(STORE_F_STORE_NUMBER,
+		STOREerr(STORE_F_STORE_STORE_NUMBER,
 			STORE_R_FAILED_STORING_NUMBER);
 		return 0;
 		}
@@ -1139,13 +1141,13 @@ int STORE_store_arbitrary(STORE *s, BUF_MEM *data, OPENSSL_ITEM attributes[],
 	STORE_OBJECT *object;
 	int i;
 
-	check_store(s,STORE_F_STORE_ARBITRARY,
+	check_store(s,STORE_F_STORE_STORE_ARBITRARY,
 		store_object,STORE_R_NO_STORE_OBJECT_ARBITRARY_FUNCTION);
 
 	object = STORE_OBJECT_new();
 	if (!object)
 		{
-		STOREerr(STORE_F_STORE_ARBITRARY,
+		STOREerr(STORE_F_STORE_STORE_ARBITRARY,
 			ERR_R_MALLOC_FAILURE);
 		return 0;
 		}
@@ -1159,7 +1161,7 @@ int STORE_store_arbitrary(STORE *s, BUF_MEM *data, OPENSSL_ITEM attributes[],
 
 	if (!i)
 		{
-		STOREerr(STORE_F_STORE_ARBITRARY,
+		STOREerr(STORE_F_STORE_STORE_ARBITRARY,
 			STORE_R_FAILED_STORING_ARBITRARY);
 		return 0;
 		}
@@ -1414,7 +1416,7 @@ int STORE_ATTR_INFO_set_sha1str(STORE_ATTR_INFO *attrs, STORE_ATTR_TYPES code,
 			    (unsigned char *)BUF_memdup(sha1str,
 				    sha1str_size)))
 			return 1;
-		STOREerr(STORE_F_STORE_ATTR_INFO_SET_CSTR,
+		STOREerr(STORE_F_STORE_ATTR_INFO_SET_SHA1STR,
 			ERR_R_MALLOC_FAILURE);
 		return 0;
 		}
@@ -1434,7 +1436,7 @@ int STORE_ATTR_INFO_set_dn(STORE_ATTR_INFO *attrs, STORE_ATTR_TYPES code,
 		{
 		if ((attrs->values[code].dn = X509_NAME_dup(dn)))
 			return 1;
-		STOREerr(STORE_F_STORE_ATTR_INFO_SET_CSTR,
+		STOREerr(STORE_F_STORE_ATTR_INFO_SET_DN,
 			ERR_R_MALLOC_FAILURE);
 		return 0;
 		}
@@ -1454,7 +1456,7 @@ int STORE_ATTR_INFO_set_number(STORE_ATTR_INFO *attrs, STORE_ATTR_TYPES code,
 		{
 		if ((attrs->values[code].number = BN_dup(number)))
 			return 1;
-		STOREerr(STORE_F_STORE_ATTR_INFO_SET_CSTR,
+		STOREerr(STORE_F_STORE_ATTR_INFO_SET_NUMBER,
 			ERR_R_MALLOC_FAILURE);
 		return 0;
 		}
@@ -1543,11 +1545,11 @@ void *STORE_parse_attrs_start(OPENSSL_ITEM *attributes)
 		if (context)
 			context->attributes = attributes;
 		else
-			STOREerr(STORE_F_STORE_PARSE_ATTRS_END,
+			STOREerr(STORE_F_STORE_PARSE_ATTRS_START,
 				ERR_R_MALLOC_FAILURE);
 		return context;
 		}
-	STOREerr(STORE_F_STORE_PARSE_ATTRS_END, ERR_R_PASSED_NULL_PARAMETER);
+	STOREerr(STORE_F_STORE_PARSE_ATTRS_START, ERR_R_PASSED_NULL_PARAMETER);
 	return 0;
 	}
 STORE_ATTR_INFO *STORE_parse_attrs_next(void *handle)
@@ -1663,12 +1665,12 @@ int STORE_parse_attrs_endp(void *handle)
 		{
 		return context->attributes->code == STORE_ATTR_END;
 		}
-	STOREerr(STORE_F_STORE_PARSE_ATTRS_END, ERR_R_PASSED_NULL_PARAMETER);
+	STOREerr(STORE_F_STORE_PARSE_ATTRS_ENDP, ERR_R_PASSED_NULL_PARAMETER);
 	return 0;
 	}
 
 static int attr_info_compare_compute_range(
-	unsigned char *abits, unsigned char *bbits,
+	const unsigned char *abits, const unsigned char *bbits,
 	unsigned int *alowp, unsigned int *ahighp,
 	unsigned int *blowp, unsigned int *bhighp)
 	{
@@ -1737,13 +1739,15 @@ static int attr_info_compare_compute_range(
 	return res;
 	}
 
-int STORE_ATTR_INFO_compare(STORE_ATTR_INFO *a, STORE_ATTR_INFO *b)
+int STORE_ATTR_INFO_compare(const STORE_ATTR_INFO * const *a,
+			    const STORE_ATTR_INFO * const *b)
 	{
 	if (a == b) return 0;
 	if (!a) return -1;
 	if (!b) return 1;
-	return attr_info_compare_compute_range(a->set, b->set, 0, 0, 0, 0);
+	return attr_info_compare_compute_range((*a)->set, (*b)->set, 0, 0, 0, 0);
 	}
+
 int STORE_ATTR_INFO_in_range(STORE_ATTR_INFO *a, STORE_ATTR_INFO *b)
 	{
 	unsigned int alow, ahigh, blow, bhigh;
@@ -1757,6 +1761,7 @@ int STORE_ATTR_INFO_in_range(STORE_ATTR_INFO *a, STORE_ATTR_INFO *b)
 		return 1;
 	return 0;
 	}
+
 int STORE_ATTR_INFO_in(STORE_ATTR_INFO *a, STORE_ATTR_INFO *b)
 	{
 	unsigned char *abits, *bbits;
@@ -1774,6 +1779,7 @@ int STORE_ATTR_INFO_in(STORE_ATTR_INFO *a, STORE_ATTR_INFO *b)
 		}
 	return 1;
 	}
+
 int STORE_ATTR_INFO_in_ex(STORE_ATTR_INFO *a, STORE_ATTR_INFO *b)
 	{
 	STORE_ATTR_TYPES i;

@@ -70,9 +70,8 @@ static int asn1_print_info(BIO *bp, int tag, int xclass, int constructed,
 	     int indent)
 	{
 	static const char fmt[]="%-18s";
-	static const char fmt2[]="%2d %-15s";
 	char str[128];
-	const char *p,*p2=NULL;
+	const char *p;
 
 	if (constructed & V_ASN1_CONSTRUCTED)
 		p="cons: ";
@@ -88,16 +87,13 @@ static int asn1_print_info(BIO *bp, int tag, int xclass, int constructed,
 		BIO_snprintf(str,sizeof str,"cont [ %d ]",tag);
 	else if ((xclass & V_ASN1_APPLICATION) == V_ASN1_APPLICATION)
 		BIO_snprintf(str,sizeof str,"appl [ %d ]",tag);
-	else p = ASN1_tag2str(tag);
-
-	if (p2 != NULL)
-		{
-		if (BIO_printf(bp,fmt2,tag,p2) <= 0) goto err;
-		}
+	else if (tag > 30)
+		BIO_snprintf(str,sizeof str,"<ASN1 %d>",tag);
 	else
-		{
-		if (BIO_printf(bp,fmt,p) <= 0) goto err;
-		}
+		p = ASN1_tag2str(tag);
+
+	if (BIO_printf(bp,fmt,p) <= 0)
+		goto err;
 	return(1);
 err:
 	return(0);
@@ -210,12 +206,14 @@ static int asn1_parse2(BIO *bp, const unsigned char **pp, long length, int offse
 				(tag == V_ASN1_T61STRING) ||
 				(tag == V_ASN1_IA5STRING) ||
 				(tag == V_ASN1_VISIBLESTRING) ||
+				(tag == V_ASN1_NUMERICSTRING) ||
+				(tag == V_ASN1_UTF8STRING) ||
 				(tag == V_ASN1_UTCTIME) ||
 				(tag == V_ASN1_GENERALIZEDTIME))
 				{
 				if (BIO_write(bp,":",1) <= 0) goto end;
 				if ((len > 0) &&
-					BIO_write(bp,(char *)p,(int)len)
+					BIO_write(bp,(const char *)p,(int)len)
 					!= (int)len)
 					goto end;
 				}
@@ -241,7 +239,7 @@ static int asn1_parse2(BIO *bp, const unsigned char **pp, long length, int offse
 				ii=d2i_ASN1_BOOLEAN(NULL,&opp,len+hl);
 				if (ii < 0)
 					{
-					if (BIO_write(bp,"Bad boolean\n",12))
+					if (BIO_write(bp,"Bad boolean\n",12) <= 0)
 						goto end;
 					}
 				BIO_printf(bp,":%d",ii);
@@ -278,7 +276,7 @@ static int asn1_parse2(BIO *bp, const unsigned char **pp, long length, int offse
 						{
 						if (BIO_write(bp,":",1) <= 0)
 							goto end;
-						if (BIO_write(bp,(char *)opp,
+						if (BIO_write(bp,(const char *)opp,
 							os->length) <= 0)
 							goto end;
 						}
@@ -303,7 +301,8 @@ static int asn1_parse2(BIO *bp, const unsigned char **pp, long length, int offse
 							if (BIO_write(bp,"\n",1) <= 0)
 								goto end;
 							}
-						if (BIO_dump_indent(bp,(char *)opp,
+						if (BIO_dump_indent(bp,
+							(const char *)opp,
 							((dump == -1 || dump > 
 							os->length)?os->length:dump),
 							dump_indent) <= 0)
@@ -388,7 +387,7 @@ static int asn1_parse2(BIO *bp, const unsigned char **pp, long length, int offse
 					if (BIO_write(bp,"\n",1) <= 0)
 						goto end;
 					}
-				if (BIO_dump_indent(bp,(char *)p,
+				if (BIO_dump_indent(bp,(const char *)p,
 					((dump == -1 || dump > len)?len:dump),
 					dump_indent) <= 0)
 					goto end;
@@ -418,7 +417,7 @@ end:
 
 const char *ASN1_tag2str(int tag)
 {
-	const static char *tag2str[] = {
+	static const char * const tag2str[] = {
 	 "EOC", "BOOLEAN", "INTEGER", "BIT STRING", "OCTET STRING", /* 0-4 */
 	 "NULL", "OBJECT", "OBJECT DESCRIPTOR", "EXTERNAL", "REAL", /* 5-9 */
 	 "ENUMERATED", "<ASN1 11>", "UTF8STRING", "<ASN1 13>", 	    /* 10-13 */

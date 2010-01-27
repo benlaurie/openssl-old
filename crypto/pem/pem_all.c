@@ -110,16 +110,21 @@
  */
 
 #include <stdio.h>
-#undef SSLEAY_MACROS
 #include "cryptlib.h"
 #include <openssl/bio.h>
 #include <openssl/evp.h>
 #include <openssl/x509.h>
 #include <openssl/pkcs7.h>
 #include <openssl/pem.h>
+#ifndef OPENSSL_NO_RSA
 #include <openssl/rsa.h>
+#endif
+#ifndef OPENSSL_NO_DSA
 #include <openssl/dsa.h>
+#endif
+#ifndef OPENSSL_NO_DH
 #include <openssl/dh.h>
+#endif
 
 #ifndef OPENSSL_NO_RSA
 static RSA *pkey_get_rsa(EVP_PKEY *key, RSA **rsa);
@@ -188,8 +193,8 @@ RSA *PEM_read_RSAPrivateKey(FILE *fp, RSA **rsa, pem_password_cb *cb,
 
 #endif
 
-IMPLEMENT_PEM_write_cb(RSAPrivateKey, RSA, PEM_STRING_RSA, RSAPrivateKey)
-IMPLEMENT_PEM_rw(RSAPublicKey, RSA, PEM_STRING_RSA_PUBLIC, RSAPublicKey)
+IMPLEMENT_PEM_write_cb_const(RSAPrivateKey, RSA, PEM_STRING_RSA, RSAPrivateKey)
+IMPLEMENT_PEM_rw_const(RSAPublicKey, RSA, PEM_STRING_RSA_PUBLIC, RSAPublicKey)
 IMPLEMENT_PEM_rw(RSA_PUBKEY, RSA, PEM_STRING_PUBLIC, RSA_PUBKEY)
 
 #endif
@@ -215,10 +220,10 @@ DSA *PEM_read_bio_DSAPrivateKey(BIO *bp, DSA **dsa, pem_password_cb *cb,
 {
 	EVP_PKEY *pktmp;
 	pktmp = PEM_read_bio_PrivateKey(bp, NULL, cb, u);
-	return pkey_get_dsa(pktmp, dsa);
+	return pkey_get_dsa(pktmp, dsa);	/* will free pktmp */
 }
 
-IMPLEMENT_PEM_write_cb(DSAPrivateKey, DSA, PEM_STRING_DSA, DSAPrivateKey)
+IMPLEMENT_PEM_write_cb_const(DSAPrivateKey, DSA, PEM_STRING_DSA, DSAPrivateKey)
 IMPLEMENT_PEM_rw(DSA_PUBKEY, DSA, PEM_STRING_PUBLIC, DSA_PUBKEY)
 
 #ifndef OPENSSL_NO_FP_API
@@ -228,12 +233,12 @@ DSA *PEM_read_DSAPrivateKey(FILE *fp, DSA **dsa, pem_password_cb *cb,
 {
 	EVP_PKEY *pktmp;
 	pktmp = PEM_read_PrivateKey(fp, NULL, cb, u);
-	return pkey_get_dsa(pktmp, dsa);
+	return pkey_get_dsa(pktmp, dsa);	/* will free pktmp */
 }
 
 #endif
 
-IMPLEMENT_PEM_rw(DSAparams, DSA, PEM_STRING_DSAPARAMS, DSAparams)
+IMPLEMENT_PEM_rw_const(DSAparams, DSA, PEM_STRING_DSAPARAMS, DSAparams)
 
 #endif
 
@@ -259,10 +264,10 @@ EC_KEY *PEM_read_bio_ECPrivateKey(BIO *bp, EC_KEY **key, pem_password_cb *cb,
 {
 	EVP_PKEY *pktmp;
 	pktmp = PEM_read_bio_PrivateKey(bp, NULL, cb, u);
-	return pkey_get_eckey(pktmp, key);
+	return pkey_get_eckey(pktmp, key);	/* will free pktmp */
 }
 
-IMPLEMENT_PEM_rw(ECPKParameters, EC_GROUP, PEM_STRING_ECPARAMETERS, ECPKParameters)
+IMPLEMENT_PEM_rw_const(ECPKParameters, EC_GROUP, PEM_STRING_ECPARAMETERS, ECPKParameters)
 
 IMPLEMENT_PEM_write_cb(ECPrivateKey, EC_KEY, PEM_STRING_ECPRIVATEKEY, ECPrivateKey)
 
@@ -275,7 +280,7 @@ EC_KEY *PEM_read_ECPrivateKey(FILE *fp, EC_KEY **eckey, pem_password_cb *cb,
 {
 	EVP_PKEY *pktmp;
 	pktmp = PEM_read_PrivateKey(fp, NULL, cb, u);
-	return pkey_get_eckey(pktmp, eckey);
+	return pkey_get_eckey(pktmp, eckey);	/* will free pktmp */
 }
 
 #endif
@@ -284,19 +289,8 @@ EC_KEY *PEM_read_ECPrivateKey(FILE *fp, EC_KEY **eckey, pem_password_cb *cb,
 
 #ifndef OPENSSL_NO_DH
 
-IMPLEMENT_PEM_rw(DHparams, DH, PEM_STRING_DHPARAMS, DHparams)
+IMPLEMENT_PEM_rw_const(DHparams, DH, PEM_STRING_DHPARAMS, DHparams)
 
 #endif
 
-
-/* The PrivateKey case is not that straightforward.
- *   IMPLEMENT_PEM_rw_cb(PrivateKey, EVP_PKEY, PEM_STRING_EVP_PKEY, PrivateKey)
- * does not work, RSA and DSA keys have specific strings.
- * (When reading, parameter PEM_STRING_EVP_PKEY is a wildcard for anything
- * appropriate.)
- */
-IMPLEMENT_PEM_write_cb(PrivateKey, EVP_PKEY, ((x->type == EVP_PKEY_DSA)?PEM_STRING_DSA:\
-			(x->type == EVP_PKEY_RSA)?PEM_STRING_RSA:PEM_STRING_ECPRIVATEKEY), PrivateKey)
-
 IMPLEMENT_PEM_rw(PUBKEY, EVP_PKEY, PEM_STRING_PUBLIC, PUBKEY)
-

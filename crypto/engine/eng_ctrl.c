@@ -100,7 +100,8 @@ static int int_ctrl_cmd_by_num(const ENGINE_CMD_DEFN *defn, unsigned int num)
 	return -1;
 	}
 
-static int int_ctrl_helper(ENGINE *e, int cmd, long i, void *p, void (*f)())
+static int int_ctrl_helper(ENGINE *e, int cmd, long i, void *p,
+			   void (*f)(void))
 	{
 	int idx;
 	char *s = (char *)p;
@@ -254,7 +255,7 @@ int ENGINE_ctrl_cmd(ENGINE *e, const char *cmd_name,
 
 	if((e == NULL) || (cmd_name == NULL))
 		{
-		ENGINEerr(ENGINE_F_ENGINE_CTRL_CMD_STRING,
+		ENGINEerr(ENGINE_F_ENGINE_CTRL_CMD,
 			ERR_R_PASSED_NULL_PARAMETER);
 		return 0;
 		}
@@ -279,7 +280,7 @@ int ENGINE_ctrl_cmd(ENGINE *e, const char *cmd_name,
 		}
 	/* Force the result of the control command to 0 or 1, for the reasons
 	 * mentioned before. */
-        if (ENGINE_ctrl(e, num, i, p, f))
+        if (ENGINE_ctrl(e, num, i, p, f) > 0)
                 return 1;
         return 0;
         }
@@ -344,7 +345,7 @@ int ENGINE_ctrl_cmd_string(ENGINE *e, const char *cmd_name, const char *arg,
 		 * usage of these commands is consistent across applications and
 		 * that certain applications don't understand it one way, and
 		 * others another. */
-		if(ENGINE_ctrl(e, num, 0, (void *)arg, NULL))
+		if(ENGINE_ctrl(e, num, 0, (void *)arg, NULL) > 0)
 			return 1;
 		return 0;
 		}
@@ -359,7 +360,7 @@ int ENGINE_ctrl_cmd_string(ENGINE *e, const char *cmd_name, const char *arg,
 	if(flags & ENGINE_CMD_FLAG_STRING)
 		{
 		/* Same explanation as above */
-		if(ENGINE_ctrl(e, num, 0, (void *)arg, NULL))
+		if(ENGINE_ctrl(e, num, 0, (void *)arg, NULL) > 0)
 			return 1;
 		return 0;
 		}
@@ -382,7 +383,7 @@ int ENGINE_ctrl_cmd_string(ENGINE *e, const char *cmd_name, const char *arg,
 		}
 	/* Force the result of the control command to 0 or 1, for the reasons
 	 * mentioned before. */
-	if(ENGINE_ctrl(e, num, l, NULL, NULL))
+	if(ENGINE_ctrl(e, num, l, NULL, NULL) > 0)
 		return 1;
 	return 0;
 	}

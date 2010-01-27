@@ -64,6 +64,11 @@
 
 #include "e_os.h"
 
+#ifdef OPENSSL_USE_APPLINK
+#define BIO_FLAGS_UPLINK 0x8000
+#include "ms/uplink.h"
+#endif
+
 #include <openssl/crypto.h>
 #include <openssl/buffer.h> 
 #include <openssl/bio.h> 
@@ -94,7 +99,10 @@ extern "C" {
 #define HEX_SIZE(type)		(sizeof(type)*2)
 
 void OPENSSL_cpuid_setup(void);
-extern unsigned long OPENSSL_ia32cap_P;
+extern unsigned int OPENSSL_ia32cap_P[];
+void OPENSSL_showfatal(const char *,...);
+void *OPENSSL_stderr(void);
+extern int OPENSSL_NONPIC_relocated;
 
 #ifdef  __cplusplus
 }

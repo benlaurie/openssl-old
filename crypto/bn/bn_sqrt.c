@@ -1,4 +1,4 @@
-/* crypto/bn/bn_mod.c */
+/* crypto/bn/bn_sqrt.c */
 /* Written by Lenka Fibikova <fibikova@exp-math.uni-essen.de>
  * and Bodo Moeller for the OpenSSL project. */
 /* ====================================================================
@@ -83,7 +83,8 @@ BIGNUM *BN_mod_sqrt(BIGNUM *in, const BIGNUM *a, const BIGNUM *p, BN_CTX *ctx)
 				goto end;
 			if (!BN_set_word(ret, BN_is_bit_set(a, 0)))
 				{
-				BN_free(ret);
+				if (ret != in)
+					BN_free(ret);
 				return NULL;
 				}
 			bn_check_top(ret);
@@ -102,7 +103,8 @@ BIGNUM *BN_mod_sqrt(BIGNUM *in, const BIGNUM *a, const BIGNUM *p, BN_CTX *ctx)
 			goto end;
 		if (!BN_set_word(ret, BN_is_one(a)))
 			{
-			BN_free(ret);
+			if (ret != in)
+				BN_free(ret);
 			return NULL;
 			}
 		bn_check_top(ret);

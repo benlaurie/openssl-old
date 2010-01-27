@@ -84,14 +84,11 @@ extern "C" {
 
 /* ---------------------- Microsoft operating systems ---------------------- */
 
-/* The 16 bit environments are pretty straightforward */
-#if defined(OPENSSL_SYSNAME_WIN16) || defined(OPENSSL_SYSNAME_MSDOS)
+/* Note that MSDOS actually denotes 32-bit environments running on top of
+   MS-DOS, such as DJGPP one. */
+#if defined(OPENSSL_SYSNAME_MSDOS)
 # undef OPENSSL_SYS_UNIX
 # define OPENSSL_SYS_MSDOS
-#endif
-#if defined(OPENSSL_SYSNAME_WIN16)
-# undef OPENSSL_SYS_UNIX
-# define OPENSSL_SYS_WIN16
 #endif
 
 /* For 32 bit environment, there seems to be the CygWin environment and then
@@ -120,7 +117,7 @@ extern "C" {
 #endif
 
 /* Anything that tries to look like Microsoft is "Windows" */
-#if defined(OPENSSL_SYS_WIN16) || defined(OPENSSL_SYS_WIN32) || defined(OPENSSL_SYS_WINNT) || defined(OPENSSL_SYS_WINCE)
+#if defined(OPENSSL_SYS_WIN32) || defined(OPENSSL_SYS_WINNT) || defined(OPENSSL_SYS_WINCE)
 # undef OPENSSL_SYS_UNIX
 # define OPENSSL_SYS_WINDOWS
 # ifndef OPENSSL_SYS_MSDOS
@@ -205,15 +202,23 @@ extern "C" {
 # define OPENSSL_SYS_VXWORKS
 #endif
 
+/* --------------------------------- BeOS ---------------------------------- */
+#if defined(__BEOS__)
+# define OPENSSL_SYS_BEOS
+# include <sys/socket.h>
+# if defined(BONE_VERSION)
+#  define OPENSSL_SYS_BEOS_BONE
+# else
+#  define OPENSSL_SYS_BEOS_R5
+# endif
+#endif
+
 /**
  * That's it for OS-specific stuff
  *****************************************************************************/
 
 
 /* Specials for I/O an exit */
-#ifdef OPENSSL_SYS_WIN16
-# define OPENSSL_NO_FP_API
-#endif
 #ifdef OPENSSL_SYS_MSDOS
 # define OPENSSL_UNISTD_IO <io.h>
 # define OPENSSL_DECLARE_EXIT extern void exit(int);
@@ -246,8 +251,8 @@ extern "C" {
 # define OPENSSL_IMPORT globalref
 # define OPENSSL_GLOBAL globaldef
 #elif defined(OPENSSL_SYS_WINDOWS) && defined(OPENSSL_OPT_WINDLL)
-# define OPENSSL_EXPORT extern _declspec(dllexport)
-# define OPENSSL_IMPORT extern _declspec(dllimport)
+# define OPENSSL_EXPORT extern __declspec(dllexport)
+# define OPENSSL_IMPORT extern __declspec(dllimport)
 # define OPENSSL_GLOBAL
 #else
 # define OPENSSL_EXPORT extern
@@ -257,26 +262,31 @@ extern "C" {
 #define OPENSSL_EXTERN OPENSSL_IMPORT
 
 /* Macros to allow global variables to be reached through function calls when
-   required (if a shared library version requvres it, for example.
+   required (if a shared library version requires it, for example.
    The way it's done allows definitions like this:
 
 	// in foobar.c
-	OPENSSL_IMPLEMENT_GLOBAL(int,foobar) = 0;
+	OPENSSL_IMPLEMENT_GLOBAL(int,foobar,0)
 	// in foobar.h
 	OPENSSL_DECLARE_GLOBAL(int,foobar);
 	#define foobar OPENSSL_GLOBAL_REF(foobar)
 */
 #ifdef OPENSSL_EXPORT_VAR_AS_FUNCTION
-# define OPENSSL_IMPLEMENT_GLOBAL(type,name)			     \
-	extern type _hide_##name;				     \
-	type *_shadow_##name(void) { return &_hide_##name; }	     \
-	static type _hide_##name
+# define OPENSSL_IMPLEMENT_GLOBAL(type,name,value)			\
+	type *_shadow_##name(void)					\
+	{ static type _hide_##name=value; return &_hide_##name; }
 # define OPENSSL_DECLARE_GLOBAL(type,name) type *_shadow_##name(void)
 # define OPENSSL_GLOBAL_REF(name) (*(_shadow_##name()))
 #else
-# define OPENSSL_IMPLEMENT_GLOBAL(type,name) OPENSSL_GLOBAL type _shadow_##name
+# define OPENSSL_IMPLEMENT_GLOBAL(type,name,value) OPENSSL_GLOBAL type _shadow_##name=value;
 # define OPENSSL_DECLARE_GLOBAL(type,name) OPENSSL_EXPORT type _shadow_##name
 # define OPENSSL_GLOBAL_REF(name) _shadow_##name
+#endif
+
+#ifdef DEBUG_UNUSED
+#define __owur __attribute__((__warn_unused_result__))
+#else
+#define __owur 
 #endif
 
 #ifdef  __cplusplus

@@ -1,4 +1,7 @@
 /* crypto/ecdsa/ecdsa_vrf.c */
+/*
+ * Written by Nils Larsch for the OpenSSL project
+ */
 /* ====================================================================
  * Copyright (c) 1998-2002 The OpenSSL Project.  All rights reserved.
  *
@@ -53,7 +56,7 @@
  *
  */
 
-#include "ecdsa.h"
+#include "ecs_locl.h"
 #ifndef OPENSSL_NO_ENGINE
 #include <openssl/engine.h>
 #endif
@@ -64,7 +67,7 @@
  *     -1: error
  */
 int ECDSA_do_verify(const unsigned char *dgst, int dgst_len, 
-		ECDSA_SIG *sig, EC_KEY *eckey)
+		const ECDSA_SIG *sig, EC_KEY *eckey)
 	{
 	ECDSA_DATA *ecdsa = ecdsa_check(eckey);
 	if (ecdsa == NULL)

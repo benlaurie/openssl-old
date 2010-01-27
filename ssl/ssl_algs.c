@@ -76,15 +76,25 @@ int SSL_library_init(void)
 #endif  
 #ifndef OPENSSL_NO_RC2
 	EVP_add_cipher(EVP_rc2_cbc());
+	/* Not actually used for SSL/TLS but this makes PKCS#12 work
+	 * if an application only calls SSL_library_init().
+	 */
+	EVP_add_cipher(EVP_rc2_40_cbc());
 #endif
 #ifndef OPENSSL_NO_AES
 	EVP_add_cipher(EVP_aes_128_cbc());
 	EVP_add_cipher(EVP_aes_192_cbc());
 	EVP_add_cipher(EVP_aes_256_cbc());
 #endif
-#ifndef OPENSSL_NO_MD2
-	EVP_add_digest(EVP_md2());
+#ifndef OPENSSL_NO_CAMELLIA
+	EVP_add_cipher(EVP_camellia_128_cbc());
+	EVP_add_cipher(EVP_camellia_256_cbc());
 #endif
+
+#ifndef OPENSSL_NO_SEED
+	EVP_add_cipher(EVP_seed_cbc());
+#endif
+  
 #ifndef OPENSSL_NO_MD5
 	EVP_add_digest(EVP_md5());
 	EVP_add_digest_alias(SN_md5,"ssl2-md5");
@@ -115,6 +125,8 @@ int SSL_library_init(void)
 	   be discarded safely */
 	(void)SSL_COMP_get_compression_methods();
 #endif
+	/* initialize cipher/digest methods table */
+	ssl_load_ciphers();
 	return(1);
 	}
 

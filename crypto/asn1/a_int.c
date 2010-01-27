@@ -61,10 +61,10 @@
 #include <openssl/asn1.h>
 #include <openssl/bn.h>
 
-ASN1_INTEGER *ASN1_INTEGER_dup(ASN1_INTEGER *x)
+ASN1_INTEGER *ASN1_INTEGER_dup(const ASN1_INTEGER *x)
 { return M_ASN1_INTEGER_dup(x);}
 
-int ASN1_INTEGER_cmp(ASN1_INTEGER *x, ASN1_INTEGER *y)
+int ASN1_INTEGER_cmp(const ASN1_INTEGER *x, const ASN1_INTEGER *y)
 	{ 
 	int neg, ret;
 	/* Compare signs */
@@ -256,7 +256,7 @@ ASN1_INTEGER *c2i_ASN1_INTEGER(ASN1_INTEGER **a, const unsigned char **pp,
 	*pp=pend;
 	return(ret);
 err:
-	ASN1err(ASN1_F_D2I_ASN1_INTEGER,i);
+	ASN1err(ASN1_F_C2I_ASN1_INTEGER,i);
 	if ((ret != NULL) && ((a == NULL) || (*a != ret)))
 		M_ASN1_INTEGER_free(ret);
 	return(NULL);
@@ -373,7 +373,7 @@ int ASN1_INTEGER_set(ASN1_INTEGER *a, long v)
 	return(1);
 	}
 
-long ASN1_INTEGER_get(ASN1_INTEGER *a)
+long ASN1_INTEGER_get(const ASN1_INTEGER *a)
 	{
 	int neg=0,i;
 	long r=0;
@@ -402,7 +402,7 @@ long ASN1_INTEGER_get(ASN1_INTEGER *a)
 	return(r);
 	}
 
-ASN1_INTEGER *BN_to_ASN1_INTEGER(BIGNUM *bn, ASN1_INTEGER *ai)
+ASN1_INTEGER *BN_to_ASN1_INTEGER(const BIGNUM *bn, ASN1_INTEGER *ai)
 	{
 	ASN1_INTEGER *ret;
 	int len,j;
@@ -416,7 +416,7 @@ ASN1_INTEGER *BN_to_ASN1_INTEGER(BIGNUM *bn, ASN1_INTEGER *ai)
 		ASN1err(ASN1_F_BN_TO_ASN1_INTEGER,ERR_R_NESTED_ASN1_ERROR);
 		goto err;
 		}
-	if (BN_get_sign(bn))
+	if (BN_is_negative(bn))
 		ret->type = V_ASN1_NEG_INTEGER;
 	else ret->type=V_ASN1_INTEGER;
 	j=BN_num_bits(bn);
@@ -444,14 +444,14 @@ err:
 	return(NULL);
 	}
 
-BIGNUM *ASN1_INTEGER_to_BN(ASN1_INTEGER *ai, BIGNUM *bn)
+BIGNUM *ASN1_INTEGER_to_BN(const ASN1_INTEGER *ai, BIGNUM *bn)
 	{
 	BIGNUM *ret;
 
 	if ((ret=BN_bin2bn(ai->data,ai->length,bn)) == NULL)
 		ASN1err(ASN1_F_ASN1_INTEGER_TO_BN,ASN1_R_BN_LIB);
 	else if(ai->type == V_ASN1_NEG_INTEGER)
-		BN_set_sign(ret, 1);
+		BN_set_negative(ret, 1);
 	return(ret);
 	}
 

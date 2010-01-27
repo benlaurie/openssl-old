@@ -66,11 +66,10 @@ static int asn1_d2i_read_bio(BIO *in, BUF_MEM **pb);
 #ifndef NO_OLD_ASN1
 #ifndef OPENSSL_NO_FP_API
 
-char *ASN1_d2i_fp(char *(*xnew)(), char *(*d2i)(), FILE *in,
-	     unsigned char **x)
+void *ASN1_d2i_fp(void *(*xnew)(void), d2i_of_void *d2i, FILE *in, void **x)
         {
         BIO *b;
-        char *ret;
+        void *ret;
 
         if ((b=BIO_new(BIO_s_file())) == NULL)
 		{
@@ -84,12 +83,11 @@ char *ASN1_d2i_fp(char *(*xnew)(), char *(*d2i)(), FILE *in,
         }
 #endif
 
-char *ASN1_d2i_bio(char *(*xnew)(), char *(*d2i)(), BIO *in,
-	     unsigned char **x)
+void *ASN1_d2i_bio(void *(*xnew)(void), d2i_of_void *d2i, BIO *in, void **x)
 	{
 	BUF_MEM *b = NULL;
-	unsigned char *p;
-	char *ret=NULL;
+	const unsigned char *p;
+	void *ret=NULL;
 	int len;
 
 	len = asn1_d2i_read_bio(in, &b);
@@ -129,7 +127,7 @@ void *ASN1_item_d2i_fp(const ASN1_ITEM *it, FILE *in, void *x)
 
         if ((b=BIO_new(BIO_s_file())) == NULL)
 		{
-		ASN1err(ASN1_F_ASN1_D2I_FP,ERR_R_BUF_LIB);
+		ASN1err(ASN1_F_ASN1_ITEM_D2I_FP,ERR_R_BUF_LIB);
                 return(NULL);
 		}
         BIO_set_fp(b,in,BIO_NOCLOSE);
@@ -160,7 +158,7 @@ static int asn1_d2i_read_bio(BIO *in, BUF_MEM **pb)
 	b=BUF_MEM_new();
 	if (b == NULL)
 		{
-		ASN1err(ASN1_F_ASN1_D2I_BIO,ERR_R_MALLOC_FAILURE);
+		ASN1err(ASN1_F_ASN1_D2I_READ_BIO,ERR_R_MALLOC_FAILURE);
 		return -1;
 		}
 
@@ -173,13 +171,13 @@ static int asn1_d2i_read_bio(BIO *in, BUF_MEM **pb)
 
 			if (!BUF_MEM_grow_clean(b,len+want))
 				{
-				ASN1err(ASN1_F_ASN1_D2I_BIO,ERR_R_MALLOC_FAILURE);
+				ASN1err(ASN1_F_ASN1_D2I_READ_BIO,ERR_R_MALLOC_FAILURE);
 				goto err;
 				}
 			i=BIO_read(in,&(b->data[len]),want);
 			if ((i < 0) && ((len-off) == 0))
 				{
-				ASN1err(ASN1_F_ASN1_D2I_BIO,ASN1_R_NOT_ENOUGH_DATA);
+				ASN1err(ASN1_F_ASN1_D2I_READ_BIO,ASN1_R_NOT_ENOUGH_DATA);
 				goto err;
 				}
 			if (i > 0)
@@ -199,7 +197,7 @@ static int asn1_d2i_read_bio(BIO *in, BUF_MEM **pb)
 			if (e != ASN1_R_TOO_LONG)
 				goto err;
 			else
-				ERR_get_error(); /* clear error */
+				ERR_clear_error(); /* clear error */
 			}
 		i=c.p-p;/* header length */
 		off+=i;	/* end of data */
@@ -228,7 +226,7 @@ static int asn1_d2i_read_bio(BIO *in, BUF_MEM **pb)
 				want-=(len-off);
 				if (!BUF_MEM_grow_clean(b,len+want))
 					{
-					ASN1err(ASN1_F_ASN1_D2I_BIO,ERR_R_MALLOC_FAILURE);
+					ASN1err(ASN1_F_ASN1_D2I_READ_BIO,ERR_R_MALLOC_FAILURE);
 					goto err;
 					}
 				while (want > 0)
@@ -236,7 +234,7 @@ static int asn1_d2i_read_bio(BIO *in, BUF_MEM **pb)
 					i=BIO_read(in,&(b->data[len]),want);
 					if (i <= 0)
 						{
-						ASN1err(ASN1_F_ASN1_D2I_BIO,
+						ASN1err(ASN1_F_ASN1_D2I_READ_BIO,
 						    ASN1_R_NOT_ENOUGH_DATA);
 						goto err;
 						}

@@ -407,7 +407,7 @@ int SSL_CTX_use_certificate(SSL_CTX *ctx, X509 *x)
 		SSLerr(SSL_F_SSL_CTX_USE_CERTIFICATE,ERR_R_MALLOC_FAILURE);
 		return(0);
 		}
-	return(ssl_set_cert(ctx->cert,x));
+	return ssl_set_cert(ctx->cert, x);
 	}
 
 #ifndef OPENSSL_NO_TLSEXT

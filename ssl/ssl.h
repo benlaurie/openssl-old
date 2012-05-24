@@ -976,7 +976,7 @@ struct ssl_ctx_st
 				    void *arg);
 	void *next_proto_select_cb_arg;
 # endif
-        /* SRTP profiles we are willing to do from RFC 5764 */
+	/* SRTP profiles we are willing to do from RFC 5764 */
 	STACK_OF(SRTP_PROTECTION_PROFILE) *srtp_profiles;
 # ifndef OPENSSL_NO_EC
 	/* EC extension values inherited by SSL structure */
@@ -1781,7 +1781,6 @@ int	SSL_CTX_use_RSAPrivateKey_file(SSL_CTX *ctx, const char *file, int type);
 int	SSL_CTX_use_PrivateKey_file(SSL_CTX *ctx, const char *file, int type);
 int	SSL_CTX_use_certificate_file(SSL_CTX *ctx, const char *file, int type);
 int	SSL_CTX_use_certificate_chain_file(SSL_CTX *ctx, const char *file); /* PEM type */
-
 STACK_OF(X509_NAME) *SSL_load_client_CA_file(const char *file);
 int	SSL_add_file_cert_subjects_to_stack(STACK_OF(X509_NAME) *stackCAs,
 					    const char *file);
@@ -1819,8 +1818,9 @@ int	SSL_SESSION_print_fp(FILE *fp,const SSL_SESSION *ses);
 int	SSL_SESSION_print(BIO *fp,const SSL_SESSION *ses);
 #endif
 #ifndef OPENSSL_NO_TLSEXT
-unsigned char *SSL_SESSION_get_tlsext_authz_server_audit_proof(SSL_SESSION *s,
-	size_t *proof_length);
+unsigned char *
+SSL_SESSION_get_tlsext_authz_server_audit_proof(SSL_SESSION *s,
+						size_t *proof_length);
 #endif
 void	SSL_SESSION_free(SSL_SESSION *ses);
 int	i2d_SSL_SESSION(SSL_SESSION *in,unsigned char **pp);

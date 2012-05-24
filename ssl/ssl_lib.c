@@ -2398,8 +2398,8 @@ EVP_PKEY *ssl_get_sign_pkey(SSL *s,const SSL_CIPHER *cipher, const EVP_MD **pmd)
 	alg_a = cipher->algorithm_auth;
 	c=s->cert;
 
-	if ((alg_a & SSL_aDSS) &&
-		(c->pkeys[SSL_PKEY_DSA_SIGN].privatekey != NULL))
+	if ((alg_a & SSL_aDSS)
+	    && c->pkeys[SSL_PKEY_DSA_SIGN].privatekey != NULL)
 		idx = SSL_PKEY_DSA_SIGN;
 	else if (alg_a & SSL_aRSA)
 		{

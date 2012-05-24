@@ -423,7 +423,7 @@ int ssl3_accept(SSL *s)
 			s->state = SSL3_ST_SW_CERT_A;
 			s->init_num = 0;
 			break;
-#endif			
+#endif
 		case SSL3_ST_SW_CERT_A:
 		case SSL3_ST_SW_CERT_B:
 			/* Check if it is anon DH or anon ECDH, */

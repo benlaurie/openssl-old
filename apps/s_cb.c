@@ -261,7 +261,6 @@ int set_cert_key_stuff(SSL_CTX *ctx, X509 *cert, EVP_PKEY *key,
 		ERR_print_errors(bio_err);
 		return 0;
 		}
-
 	if (SSL_CTX_use_PrivateKey(ctx,key) <= 0)
 		{
 		BIO_printf(bio_err,"error setting private key\n");

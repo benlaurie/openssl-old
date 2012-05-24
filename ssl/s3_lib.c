@@ -3343,7 +3343,6 @@ long ssl3_ctrl(SSL *s, int cmd, long larg, void *parg)
 		ret = 1;
 		break;
 #endif
-
 #endif /* !OPENSSL_NO_TLSEXT */
 
 	case SSL_CTRL_CHAIN:
@@ -3679,6 +3678,11 @@ long ssl3_ctx_ctrl(SSL_CTX *ctx, int cmd, long larg, void *parg)
 	case SSL_CTRL_SET_ECDH_AUTO:
 		ctx->cert->ecdh_tmp_auto = larg;
 		break;
+
+	case SSL_CTRL_SET_TLSEXT_AUTHZ_SERVER_AUDIT_PROOF_CB_ARG:
+		ctx->tlsext_authz_server_audit_proof_cb_arg = parg;
+		break;
+
 #endif /* !OPENSSL_NO_TLSEXT */
 
 	/* A Thawte special :-) */
@@ -3788,6 +3792,11 @@ long ssl3_ctx_callback_ctrl(SSL_CTX *ctx, int cmd, void (*fp)(void))
 		ctx->srp_ctx.SRP_give_srp_client_pwd_callback=(char *(*)(SSL *,void *))fp;
 		break;
 #endif
+	case SSL_CTRL_SET_TLSEXT_AUTHZ_SERVER_AUDIT_PROOF_CB:
+		ctx->tlsext_authz_server_audit_proof_cb =
+			(int (*)(SSL *, void *))fp;
+		break;
+
 #endif
 	default:
 		return(0);

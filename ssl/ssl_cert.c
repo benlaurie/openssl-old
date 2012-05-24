@@ -334,6 +334,22 @@ CERT *ssl_cert_dup(CERT *cert)
 				CRYPTO_add(&x->references, 1, CRYPTO_LOCK_X509);
 				}
 			}
+                if (cert->pkeys[i].authz != NULL)
+			{
+			/* Just copy everything. */
+			ret->pkeys[i].authz_length =
+				cert->pkeys[i].authz_length;
+			ret->pkeys[i].authz =
+				OPENSSL_malloc(ret->pkeys[i].authz_length);
+			if (ret->pkeys[i].authz == NULL)
+				{
+				SSLerr(SSL_F_SSL_CERT_DUP, ERR_R_MALLOC_FAILURE);
+				return(NULL);
+				}
+			memcpy(ret->pkeys[i].authz,
+			       cert->pkeys[i].authz,
+			       cert->pkeys[i].authz_length);
+			}
 		}
 	
 	ret->references=1;
@@ -421,6 +437,10 @@ void ssl_cert_free(CERT *c)
 #if 0
 		if (c->pkeys[i].publickey != NULL)
 			EVP_PKEY_free(c->pkeys[i].publickey);
+#endif
+#ifndef OPENSSL_NO_TLSEXT
+                if (c->pkeys[i].authz != NULL)
+			OPENSSL_free(c->pkeys[i].authz);
 #endif
 		}
 	if (c->sigalgs)
@@ -930,7 +950,6 @@ err:
 	CRYPTO_w_unlock(CRYPTO_LOCK_READDIR);
 	return ret;
 	}
-
 /* Add a certificate to a BUF_MEM structure */
 
 static int ssl_add_cert_to_buf(BUF_MEM *buf, unsigned long *l, X509 *x)
